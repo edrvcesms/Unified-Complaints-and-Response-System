@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, Integer,Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class BarangayAccount(Base):

@@ -34,17 +34,3 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     )
 logger.info("FastAPI application initialized.")
 
-from sqlalchemy import text
-
-@app.get("/health/db")
-async def db_health_check():
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "connected"}
-    except Exception as e:
-        logger.error(f"Database check failed: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "database": "not connected"},
-        )

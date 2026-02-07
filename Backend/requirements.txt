@@ -4,11 +4,11 @@ sqlalchemy
 alembic
 websockets
 asyncio
-redis
 python-dotenv
 python-multipart
 bcrypt
-python-jose
 cloudinary
 fastapi-mail
 databases
+slowapi
+ 

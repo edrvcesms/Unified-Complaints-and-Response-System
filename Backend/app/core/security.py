@@ -1,7 +1,7 @@
 import bcrypt
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
 from app.core.config import settings
+from datetime import datetime, timedelta
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

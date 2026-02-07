@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger("e-taas")
+logger = logging.getLogger("UCRSLogger")
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter(

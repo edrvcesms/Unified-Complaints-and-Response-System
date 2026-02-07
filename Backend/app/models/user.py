@@ -23,11 +23,11 @@ class User(Base):
     last_login = Column(Date, nullable=True)
     created_at = Column(Date, nullable=False)
     updated_at = Column(Date, nullable=True)
-
+    
+    report = relationship("Report", back_populates="user")
     barangay_account = relationship("BarangayAccount", back_populates="user")
     comittee_account = relationship("ComitteeAccount", back_populates="user")
     complaint = relationship("Complaint", back_populates="user")
-    report = relationship("Report", back_populates="generated_by")
     attachment = relationship("Attachment", back_populates="uploader")
     response = relationship("Response", back_populates="responder")
     feedback = relationship("Feedback", back_populates="user")

@@ -11,4 +11,5 @@ cloudinary
 fastapi-mail
 databases
 slowapi
- 
+asyncpg
+psycopg2

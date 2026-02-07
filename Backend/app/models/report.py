@@ -13,7 +13,6 @@ class Report(Base):
     file_path = Column(String, nullable=False)
     generated_at = Column(Date, nullable=False)
 
-    generated_by = relationship("User", back_populates="report")
+    user = relationship("User", back_populates="report")
     barangay_account = relationship("BarangayAccount", back_populates="report")
     comittee_account = relationship("ComitteeAccount", back_populates="report")
-    complaint = relationship("Complaint", back_populates="report")

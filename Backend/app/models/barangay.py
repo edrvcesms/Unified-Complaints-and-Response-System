@@ -15,3 +15,4 @@ class Barangay(Base):
     updated_at = Column(Date, nullable=True)
     
     barangay_account = relationship("BarangayAccount", back_populates="barangay")
+    complaint = relationship("Complaint", back_populates="barangay")

@@ -10,5 +10,13 @@ class UserBase(BaseModel):
     age: int
     birthdate: Optional[datetime] = None
     phone_number: Optional[str] = None
-    email: EmailStr
     gender: str
+    barangay: str
+    full_address: str
+    zip_code: str
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+
+class UserPersonalData(UserBase):
+    pass
+

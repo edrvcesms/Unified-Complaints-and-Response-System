@@ -1,34 +1,33 @@
-from app.core.security import verify_token
-from app.dependencies.db_dependency import get_db
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends, HTTPException
-from fastapi.requests import Request
-from app.models.user import User
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from jose import JWTError
+from app.models.user import User
+from app.dependencies.db_dependency import get_db
+from app.core.security import verify_token
 
-async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
+bearer = HTTPBearer()
 
-    token = request.headers.get("Authorization")
-
+async def get_current_user(
+    token: HTTPAuthorizationCredentials = Depends(bearer),
+    db: AsyncSession = Depends(get_db)
+) -> User:
     if not token:
         raise HTTPException(status_code=401, detail="Authorization token missing")
-    
+
     try:
-        payload = verify_token(token)
-        if payload is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        user_id = payload.get("user_id")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
-        
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalars().first()
-        if user is None:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return user
-    
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
-    
+        payload = verify_token(token.credentials)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user

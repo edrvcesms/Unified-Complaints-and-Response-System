@@ -66,6 +66,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: 
 
     db.add(new_user)
     await db.commit()
+    await db.refresh(new_user)
 
     await delete_cache(f"otp:{user_data.email}")
 

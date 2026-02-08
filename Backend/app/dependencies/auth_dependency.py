@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import JWTError
 from app.models.user import User
-from app.dependencies.db_dependency import get_db
+from app.dependencies.db_dependency import get_async_db
 from app.core.security import verify_token
 
 bearer = HTTPBearer()
 
 async def get_current_user(
     token: HTTPAuthorizationCredentials = Depends(bearer),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_db)
 ) -> User:
     if not token:
         raise HTTPException(status_code=401, detail="Authorization token missing")

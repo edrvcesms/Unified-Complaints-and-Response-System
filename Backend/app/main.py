@@ -3,7 +3,7 @@ from fastapi.requests import Request
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.database.database import engine, Base
+from app.database.database import async_engine, Base
 from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
 
@@ -12,7 +12,7 @@ from app.routers import auth_routes, user_routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-  async with engine.begin() as conn:
+  async with async_engine.begin() as conn:
     logger.info("Creating database tables...")
     await conn.run_sync(Base.metadata.create_all)
   logger.info("Application startup complete.")

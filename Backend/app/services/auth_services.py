@@ -9,12 +9,11 @@ from datetime import datetime
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
-from .email_services import send_email, send_otp_email
+from app.tasks import send_otp_email
 from fastapi.responses import JSONResponse
 from app.core.security import create_access_token, create_refresh_token
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
-
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing_user = result.scalars().first()
 
@@ -24,23 +23,23 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     generated_otp = generate_otp()
-
-    await set_cache(f"otp:{user_data.email}", generated_otp, expiration=300) # OTP valid for 5 minutes
+    set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
     logger.info(f"OTP generated for {user_data.email} and stored in cache.")
-    await send_otp_email(recipient=user_data.email, otp=generated_otp)
 
-    logger.info(f"OTP generated and sent to {user_data.email} for registration.")
+    send_otp_email.delay(user_data.email, generated_otp)
+    logger.info(f"OTP task enqueued for {user_data.email}.")
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={"message": "OTP sent to your email. Please verify to complete registration."}
     )
+
     
 async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: AsyncSession):
 
-    cached_otp = await get_cache(f"otp:{user_data.email}")
+    cached_otp = get_cache(f"otp:{user_data.email}")
 
     if not cached_otp:
         logger.warning(f"OTP verification failed for {user_data.email}: OTP expired or not found.")
@@ -68,7 +67,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: 
     await db.commit()
     await db.refresh(new_user)
 
-    await delete_cache(f"otp:{user_data.email}")
+    delete_cache(f"otp:{user_data.email}")
 
     logger.info(f"User registered successfully with email: {user_data.email}")
 

@@ -1,26 +1,21 @@
 from fastapi_mail import FastMail, MessageSchema
 from app.core.email_config import conf
 from app.utils.logger import logger
+from app.celery_worker import celery_worker
+import asyncio
 
-async def send_email(subject: str, recipient: str, body: str):
-
-    message = MessageSchema(
-        subject=subject,
-        recipients=[recipient],
-        body=body,
-        subtype="html"
-    )
-
-    fm = FastMail(conf)
+@celery_worker.task
+def send_email(subject: str, recipient: str, body: str):
     try:
-        logger.info(f"Sending email to {recipient} with subject '{subject}'")
-        await fm.send_message(message)
-        return {"message": "Email sent successfully"}
+        message = MessageSchema(subject=subject, recipients=[recipient], body=body, subtype="html")
+        fm = FastMail(conf)
+        asyncio.run(fm.send_message(message))  # asynchronous send
+        logger.info(f"Email sent to {recipient} with subject '{subject}'")
     except Exception as e:
         logger.error(f"Failed to send email to {recipient}: {str(e)}")
-        return {"message": f"Failed to send email: {str(e)}"}
-    
-async def send_otp_email(recipient: str, otp: str):
+
+@celery_worker.task
+def send_otp_email(recipient: str, otp: str):
     subject = "Your OTP Code for Unified Complaints and Response System (UCRS) Registration"
     body = f"""
     <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
@@ -34,6 +29,7 @@ async def send_otp_email(recipient: str, otp: str):
             <p style="font-size: 12px; color: #999;">If you did not request this, please ignore this email.</p>
         </div>
       """
-    await send_email(subject=subject, recipient=recipient, body=body)
+    send_email.delay(subject=subject, recipient=recipient, body=body)
+    logger.info(f"OTP email task created for {recipient}")
 
     

@@ -12,4 +12,7 @@ fastapi-mail
 databases
 slowapi
 asyncpg
-psycopg2
+psycopg2-binary==2.9.11
+celery
+redis
+python-jose[cryptography]

@@ -20,3 +20,38 @@ class UserBase(BaseModel):
 class UserPersonalData(UserBase):
     pass
 
+class UserData(UserBase):
+    id: int
+    email: EmailStr
+    role: str
+    is_administrator: bool
+    profile_image: Optional[str] = None
+    last_login: Optional[datetime] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    barangay: Optional[str] = None
+    full_address: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True,  
+        "populate_by_name": True,
+        "extra": "ignore" 
+    }
+
+class VerifyEmailData(BaseModel):
+    email: EmailStr
+
+class ChangePasswordData(BaseModel):
+    email: EmailStr
+    current_password: str
+    new_password: str
+    confirm_new_password: str
+
+class VerifyResetPasswordOTPData(BaseModel):
+    email: EmailStr
+    otp: str

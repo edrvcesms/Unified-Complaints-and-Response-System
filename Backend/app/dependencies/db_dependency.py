@@ -7,9 +7,9 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db() -> Generator[Session, None, None]:
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()

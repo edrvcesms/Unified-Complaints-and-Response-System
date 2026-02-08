@@ -15,11 +15,11 @@ def send_email(subject: str, recipient: str, body: str):
         logger.error(f"Failed to send email to {recipient}: {str(e)}")
 
 @celery_worker.task
-def send_otp_email(recipient: str, otp: str):
-    subject = "Your OTP Code for Unified Complaints and Response System (UCRS) Registration"
+def send_otp_email(recipient: str, otp: str, purpose: str):
+    subject = f"Your OTP Code for Unified Complaints and Response System (UCRS) {purpose}"
     body = f"""
     <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-            <h2 style="color: #90ee90;">Your OTP Code for Unified Complaints and Response System Registration</h2>
+            <h2 style="color: #90ee90;">Your OTP Code for Unified Complaints and Response System {purpose}</h2>
             <p style="font-size: 16px; color: #333;">Use the following code to proceed:</p>
             <div style="margin: 20px 0; font-size: 24px; font-weight: bold; color: #000; letter-spacing: 4px;">
                 {otp}

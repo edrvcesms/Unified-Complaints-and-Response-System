@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
 
 # Routers
-from app.routers import auth_routes, user_routes
+from app.routers import auth_routes, user_routes, barangay_routes
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,8 +36,9 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Rate limit exceeded. Please try again later."},
     )
 logger.info("FastAPI application initialized.")
-
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 # Include Routers
 app.include_router(auth_routes.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(barangay_routes.router, prefix="/api/v1/barangay", tags=["Barangay"])
 

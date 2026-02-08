@@ -7,4 +7,7 @@ celery_worker = Celery(
     backend=settings.REDIS_URL
 )
 
+if __name__ == "__main__":
+    celery_worker.start()
+
 import app.tasks  # Import tasks to register them with Celery

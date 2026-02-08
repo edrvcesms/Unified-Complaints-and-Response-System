@@ -26,9 +26,10 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
 
     generated_otp = generate_otp()
     set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
+    print(f"OTP set in cache for {user_data.email}: {generated_otp}")
     logger.info(f"OTP generated for {user_data.email} and stored in cache.")
 
-    send_otp_email.delay(user_data.email, generated_otp)
+    send_otp_email.delay(user_data.email, generated_otp, purpose="Registration")
     logger.info(f"OTP task enqueued for {user_data.email}.")
 
     return JSONResponse(
@@ -40,6 +41,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
 async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: AsyncSession):
 
     cached_otp = get_cache(f"otp:{user_data.email}")
+    print(cached_otp)
 
     if not cached_otp:
         logger.warning(f"OTP verification failed for {user_data.email}: OTP expired or not found.")

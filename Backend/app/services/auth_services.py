@@ -1,10 +1,11 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.utils.logger import logger
 from app.schemas.auth_schema import LoginData, RegisterData, OTPVerificationData
 from sqlalchemy import select
-from app.core.security import hash_password, decrypt_password
+from app.core.security import hash_password, decrypt_password, verify_token
 from datetime import datetime
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
@@ -110,3 +111,47 @@ async def login_user(login_data: LoginData, db: AsyncSession):
     await set_cookies(response, refresh_token=refresh_token)
 
     return response
+
+async def logout_user(response: JSONResponse):
+    await clear_cookies(response)
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "Logout successful"}
+    )
+
+async def refresh_access_token(request: Request):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        logger.warning("Invalid or missing refresh token during token refresh attempt.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Expired or invalid refresh token."
+        )
+
+    try:
+        payload = verify_token(refresh_token)
+    except JWTError:
+        logger.warning("Invalid refresh token provided during token refresh attempt.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token during token refresh attempt."
+        )
+
+    user_id = payload.get("user_id")
+    if not user_id:
+        logger.warning("Invalid refresh token payload: user_id missing during token refresh attempt.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token payload during token refresh attempt."
+        )
+
+    new_access_token = create_access_token(data={"user_id": user_id})
+    logger.info(f"Access token refreshed for user_id: {user_id} during token refresh attempt.")
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": "Access token refreshed successfully",
+            "access_token": new_access_token
+        }
+    )

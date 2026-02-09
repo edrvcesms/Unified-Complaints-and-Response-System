@@ -1,8 +1,4 @@
-import redis
-from app.core.config import settings
-
-# Initialize Redis client
-redis_client = redis.Redis.from_url(settings.REDIS_URL)
+from app.core.redis import redis_client
 
 def set_cache(key: str, value: str, expiration: int = 3600):
     """Set a value in the cache with an optional expiration time."""

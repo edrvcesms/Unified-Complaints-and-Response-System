@@ -4,5 +4,4 @@ __pycache__/
 *.pyc
 alembic/
 alembic.ini
-admin/
 script.sql

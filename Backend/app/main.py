@@ -8,7 +8,8 @@ from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
 
 # Routers
-from app.routers import auth_routes, user_routes, barangay_routes
+from app.routers import auth_routes, user_routes, barangay_routes, complaint_routes
+from app.admin import _super_admin_routes as _super_admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,7 +39,8 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 logger.info("FastAPI application initialized.")
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 # Include Routers
+app.include_router(_super_admin.router, prefix="/api/v1/super-admin", tags=["Super Admin"])
 app.include_router(auth_routes.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
-app.include_router(barangay_routes.router, prefix="/api/v1/barangay", tags=["Barangay"])
-
+app.include_router(barangay_routes.router, prefix="/api/v1/barangays", tags=["Barangays"])
+app.include_router(complaint_routes.router, prefix="/api/v1/complaints", tags=["Complaints"])

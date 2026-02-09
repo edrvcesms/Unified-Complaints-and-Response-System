@@ -4,7 +4,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi.errors import RateLimitExceeded
 from app.models.user import User
-from app.services.user_services import update_user_data, request_reset_password, verify_otp_reset_password, change_password, get_user_by_id
+from app.services.user_services import request_reset_password, verify_otp_reset_password, change_password, get_user_by_id
 from app.dependencies.auth_dependency import get_current_user
 from app.schemas.user_schema import UserPersonalData, VerifyEmailData, VerifyResetPasswordOTPData, ChangePasswordData
 
@@ -45,16 +45,6 @@ async def verify_password_reset_otp (request: Request, otp_data: VerifyResetPass
 async def reset_password(request: Request, password_data: ChangePasswordData, db: AsyncSession = Depends(get_async_db)):
     try:
         return await change_password(password_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e
-
-@router.put("/update-personal-data", status_code=status.HTTP_200_OK)
-@limiter.limit("5/minute")
-async def update_personal_data(request: Request, user_data: UserPersonalData, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    try:
-        return await update_user_data(current_user.id, user_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

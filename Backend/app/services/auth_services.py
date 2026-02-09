@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, status, UploadFile
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
@@ -13,8 +13,11 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from app.tasks import send_otp_email
 from fastapi.responses import JSONResponse
 from app.core.security import create_access_token, create_refresh_token
+from app.utils.cloudinary import upload_multiple_images_to_cloudinary
 
-async def register_user(user_data: RegisterData, db: AsyncSession):
+async def register_user(
+        user_data: RegisterData,
+        db: AsyncSession):
     result = await db.execute(select(User).where(User.email == user_data.email))
     existing_user = result.scalars().first()
 
@@ -39,7 +42,14 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
     )
 
     
-async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: AsyncSession):
+async def verify_otp_and_register(
+        otp: str, 
+        user_data: OTPVerificationData, 
+        front_id: UploadFile,
+        back_id: UploadFile,
+        selfie_with_id: UploadFile,
+        db: AsyncSession
+        ):
 
     cached_otp = get_cache(f"otp:{user_data.email}")
     print(cached_otp)
@@ -57,12 +67,41 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, db: 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OTP. Please try again."
         )
+    if not front_id or not back_id or not selfie_with_id:
+        logger.warning(f"OTP verification failed for {user_data.email}: Missing ID images.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All ID images (front, back, selfie with ID) are required."
+        )
+    
+    images = [front_id, back_id, selfie_with_id]
+    image_urls = await upload_multiple_images_to_cloudinary(images, folder="ucrs/id_verification")
+    logger.info(f"ID images uploaded to Cloudinary for {user_data.email}: {image_urls}")
 
+    
     hashed_password = hash_password(user_data.password)
 
     new_user = User(
         email=user_data.email,
         hashed_password=hashed_password,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
+        middle_name=user_data.middle_name,
+        suffix=user_data.suffix,
+        age=user_data.age,
+        birthdate=user_data.birthdate,
+        phone_number=user_data.phone_number,
+        gender=user_data.gender,
+        barangay=user_data.barangay,
+        zip_code=user_data.zip_code,
+        full_address=user_data.full_address,
+        longitude=user_data.longitude,
+        latitude=user_data.latitude,
+        id_type=user_data.id_type,
+        id_number=user_data.id_number,
+        front_id=image_urls[0],
+        back_id=image_urls[1],
+        selfie_with_id=image_urls[2],
         created_at=datetime.utcnow()
     )
 

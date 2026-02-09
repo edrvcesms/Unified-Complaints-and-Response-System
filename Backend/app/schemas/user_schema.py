@@ -7,13 +7,15 @@ class UserBase(BaseModel):
     middle_name: Optional[str] = None
     last_name: str
     suffix: Optional[str] = None
-    age: int
+    age: Optional[int] = None
     birthdate: Optional[datetime] = None
     phone_number: Optional[str] = None
-    gender: str
-    barangay: str
-    full_address: str
-    zip_code: str
+    gender: Optional[str] = None
+    barangay: Optional[str] = None
+    full_address: Optional[str] = None
+    zip_code: Optional[str] = None
+    id_type: Optional[str] = None
+    id_number: Optional[str] = None
     latitude: Optional[str] = None
     longitude: Optional[str] = None
 
@@ -36,6 +38,14 @@ class UserData(UserBase):
     gender: Optional[str] = None
     barangay: Optional[str] = None
     full_address: Optional[str] = None
+    zip_code: Optional[str] = None
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    id_type: Optional[str] = None
+    id_number: Optional[str] = None
+    front_id: Optional[str] = None
+    back_id: Optional[str] = None
+    selfie_with_id: Optional[str] = None
 
     model_config = {
         "from_attributes": True,  

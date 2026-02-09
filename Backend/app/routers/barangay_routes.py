@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.services.barangay_services import create_barangay_account, get_all_barangays, get_barangay_by_id
+from app.services.barangay_services import get_all_barangays, get_barangay_by_id
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.auth_dependency import get_current_user
@@ -29,13 +29,3 @@ async def retrieve_barangay(request: Request, barangay_id: int, db: AsyncSession
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException:
         raise
-
-@router.post("/create-brgy-account", status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-async def create_barangay(request: Request, barangay_data: BarangayAccountCreate, db: AsyncSession = Depends(get_async_db)):
-    try:
-        return await create_barangay_account(barangay_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e

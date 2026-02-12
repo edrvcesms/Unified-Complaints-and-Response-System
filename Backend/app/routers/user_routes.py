@@ -17,8 +17,6 @@ async def get_profile(request: Request, db: AsyncSession = Depends(get_async_db)
         return await get_user_by_id(current_user.id, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e
 
 @router.post("/request-reset-password", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
@@ -27,8 +25,6 @@ async def request_reset_password_endpoint(request: Request, email_data: VerifyEm
         return await request_reset_password(email_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e
     
 @router.post("/verify-reset-password-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
@@ -37,8 +33,6 @@ async def verify_password_reset_otp (request: Request, otp_data: VerifyResetPass
         return await verify_otp_reset_password(otp_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e
     
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
@@ -47,5 +41,3 @@ async def reset_password(request: Request, password_data: ChangePasswordData, db
         return await change_password(password_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e

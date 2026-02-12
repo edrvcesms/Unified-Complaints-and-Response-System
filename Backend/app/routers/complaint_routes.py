@@ -18,11 +18,7 @@ async def list_complaints_by_sector(request: Request, sector_id: int, db: AsyncS
         return await get_complaints_by_sector(sector_id, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(request, e)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
+    
 @router.post("/submit-complaint", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def create_complaint(request: Request, complaint_data: ComplaintCreateData, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
@@ -30,7 +26,4 @@ async def create_complaint(request: Request, complaint_data: ComplaintCreateData
         return await submit_complaint(complaint_data, current_user.id, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(request, e)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    

@@ -17,8 +17,6 @@ async def list_barangays(request: Request, db: AsyncSession = Depends(get_async_
         return await get_all_barangays(db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException:
-        raise
 
 @router.get("/{barangay_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
@@ -27,5 +25,4 @@ async def retrieve_barangay(request: Request, barangay_id: int, db: AsyncSession
         return await get_barangay_by_id(barangay_id, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
-    except HTTPException:
-        raise
+

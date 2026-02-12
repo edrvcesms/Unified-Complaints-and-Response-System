@@ -30,6 +30,7 @@ async def create_barangay_account(barangay_data: BarangayAccountCreate, db: Asyn
         email=barangay_data.barangay_email,
         hashed_password=hashed_password,
         created_at=datetime.utcnow(),
+        role="barangay_admin",
         is_administrator=True
     )
     barangay = Barangay(

@@ -8,30 +8,47 @@ from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password
 from datetime import datetime
 from sqlalchemy.orm import selectinload
+from app.utils.logger import logger
 from typing import List
 
 async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWithUserData:
-    result = await db.execute(
-        select(Barangay)
-        .options(
-            selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+    try:
+        result = await db.execute(
+            select(Barangay)
+            .options(
+                selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+            )
+            .where(Barangay.id == barangay_id)
         )
-        .where(Barangay.id == barangay_id)
-    )
-    barangay = result.scalars().first()
-    if not barangay:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+        logger.info(f"Executed query to get barangay with ID: {barangay_id}")
+        barangay = result.scalars().first()
+        logger.info(f"Fetched barangay: {barangay}")
+        if not barangay:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+        
+        return BarangayWithUserData.model_validate(barangay, from_attributes=True)
     
-    return BarangayWithUserData.model_validate(barangay, from_attributes=True)
+    except Exception as e:
+        logger.error(f"Error in get_barangay_by_id: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+    except HTTPException:
+        raise
 
 
 async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
-    result = await db.execute(
-    select(Barangay)
-    .options(
-        selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
-    )
-    .order_by(Barangay.created_at.desc())
-)
-    barangays = result.scalars().all()
-    return [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
+    try:
+        result = await db.execute(
+            select(Barangay)
+            .options(
+                selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+            )
+        )
+        barangays = result.scalars().all()
+        logger.info(f"Fetched all barangays: {barangays}")
+        return [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+    except HTTPException:
+        raise

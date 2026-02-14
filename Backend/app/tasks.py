@@ -1,18 +1,22 @@
+import asyncio
+import os
 from fastapi_mail import FastMail, MessageSchema
 from app.core.email_config import conf
 from app.utils.logger import logger
 from app.celery_worker import celery_worker
-import asyncio
+import nest_asyncio
+
+nest_asyncio.apply()
 
 @celery_worker.task
 def send_email(subject: str, recipient: str, body: str):
-    try:
+    async def _send():
         message = MessageSchema(subject=subject, recipients=[recipient], body=body, subtype="html")
         fm = FastMail(conf)
-        asyncio.run(fm.send_message(message))  # asynchronous send
+        await fm.send_message(message)
         logger.info(f"Email sent to {recipient} with subject '{subject}'")
-    except Exception as e:
-        logger.error(f"Failed to send email to {recipient}: {str(e)}")
+
+    asyncio.get_event_loop().run_until_complete(_send())
 
 @celery_worker.task
 def send_otp_email(recipient: str, otp: str, purpose: str):
@@ -31,5 +35,3 @@ def send_otp_email(recipient: str, otp: str, purpose: str):
       """
     send_email.delay(subject=subject, recipient=recipient, body=body)
     logger.info(f"OTP email task created for {recipient}")
-
-    

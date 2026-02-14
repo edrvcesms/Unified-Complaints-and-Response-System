@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.otp_handler import generate_otp
-from app.schemas.user_schema import UserPersonalData, ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData
+from app.schemas.user_schema import UserPersonalData, ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData, UserLocationData
 from app.models.user import User
 from sqlalchemy import select, update
 from app.core.security import hash_password, decrypt_password
@@ -108,4 +108,30 @@ async def change_password(password_data: ChangePasswordData, db: AsyncSession):
     except Exception as e:
         await db.rollback()
         logger.error(f"Error changing password for user ID {password_data.user_id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def update_user_location(location_data: UserLocationData, user_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        user.latitude = location_data.latitude
+        user.longitude = location_data.longitude
+
+        await db.commit()
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "Location updated successfully"}
+        )
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error updating location for user ID {user_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

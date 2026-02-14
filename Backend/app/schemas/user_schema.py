@@ -65,3 +65,8 @@ class ChangePasswordData(BaseModel):
 class VerifyResetPasswordOTPData(BaseModel):
     email: EmailStr
     otp: str
+
+class UserLocationData(BaseModel):
+    latitude: str
+    longitude: str
+    

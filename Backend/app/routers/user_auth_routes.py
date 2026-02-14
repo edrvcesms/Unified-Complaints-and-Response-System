@@ -13,10 +13,7 @@ router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 @limiter.limit("20/minute")
-async def register(
-    request: Request, 
-    user_data: RegisterData,
-    db: AsyncSession = Depends(get_async_db)):
+async def register(request: Request, user_data: RegisterData, db: AsyncSession = Depends(get_async_db)):
     try:
         return await register_user(user_data, db)
     except RateLimitExceeded as e:
@@ -24,13 +21,7 @@ async def register(
     
 @router.post("/verify-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
-async def verify_otp(
-    request: Request, 
-    data: str = Form(...),
-    front_id: UploadFile = None,
-    back_id: UploadFile = None,
-    selfie_with_id: UploadFile = None,
-    db: AsyncSession = Depends(get_async_db)):
+async def verify_otp(request: Request, data: str = Form(...), front_id: UploadFile = None, back_id: UploadFile = None,selfie_with_id: UploadFile = None, db: AsyncSession = Depends(get_async_db)):
     try:
         user_data = OTPVerificationData.parse_raw(data)
         return await verify_otp_and_register(user_data.otp, user_data, front_id, back_id, selfie_with_id, db)

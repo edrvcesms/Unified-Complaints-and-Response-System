@@ -39,15 +39,16 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
             status_code=status.HTTP_200_OK,
             content={"message": "OTP sent to your email. Please verify to complete registration."}
         )
+    
+    except HTTPException:
+        raise
+
     except Exception as e:
         logger.error(f"Error during registration for {user_data.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during registration. Please try again later."
         )
-    
-    except HTTPException:
-        raise
     
 async def verify_otp_and_register(
         otp: str, 
@@ -126,14 +127,16 @@ async def verify_otp_and_register(
             content={"message": "Registration successful. You can now log in."}
         )
 
+    except HTTPException:
+        raise
+
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error during OTP verification and registration for {user_data.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during registration. Please try again later."
+            detail="An error occurred during OTP verification. Please try again later."
         )
-    except HTTPException:
-        raise
 
 
 async def login_user(login_data: LoginData, db: AsyncSession):
@@ -170,15 +173,16 @@ async def login_user(login_data: LoginData, db: AsyncSession):
 
         return response
     
+    except HTTPException:
+        raise
+
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error during login for {login_data.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred during login. Please try again later."
+            detail="An error occurred during login. Please try again later." 
         )
-    
-    except HTTPException:
-        raise
 
 async def logout_user(request: Request):
     try:

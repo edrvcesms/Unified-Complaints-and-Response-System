@@ -15,10 +15,14 @@ async def get_complaints_by_sector(sector_id: int, db: AsyncSession):
         complaints = result.scalars().all()
         logger.info(f"Fetched complaints for sector {sector_id}: {complaints}")
         return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
     except HTTPException:
         raise
+
+    except Exception as e:
+        logger.error(f"Error in get_complaints_by_sector: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
 
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
     
@@ -43,8 +47,11 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.info(f"Submitted new complaint: {new_complaint}")
         return ComplaintWithUserData.model_validate(new_complaint, from_attributes=True)
     
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
     except HTTPException:
         raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error in submit_complaint: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+ 

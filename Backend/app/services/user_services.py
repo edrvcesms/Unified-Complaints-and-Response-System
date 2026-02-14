@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from app.core.security import hash_password, decrypt_password
 from fastapi.responses import JSONResponse
 from app.tasks import send_otp_email
+from app.utils.logger import logger
 from app.utils.caching import set_cache, get_cache, delete_cache
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> UserData:
@@ -17,11 +18,13 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> UserData:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
         return UserData.model_validate(user, from_attributes=True)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
     except HTTPException:
         raise
 
+    except Exception as e:
+        logger.error(f"Error retrieving user by ID {user_id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
     try:
@@ -41,10 +44,11 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
                 status_code=status.HTTP_200_OK,
                 content={"message": "OTP sent to your email. Please verify to proceed."}
             )
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except HTTPException:
         raise
+    except Exception as e:
+        logger.error(f"Error requesting reset password for email {email_data.email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: AsyncSession):
@@ -65,11 +69,12 @@ async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: As
             content={"message": "OTP verified successfully. You can now reset your password."}
         )
     
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
     except HTTPException:
         raise
+    
+    except Exception as e:
+        logger.error(f"Error verifying OTP for reset password: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def change_password(password_data: ChangePasswordData, db: AsyncSession):
 
@@ -97,7 +102,10 @@ async def change_password(password_data: ChangePasswordData, db: AsyncSession):
             content={"message": "Password changed successfully"}
         )
     
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except HTTPException:
         raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error changing password for user ID {password_data.user_id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

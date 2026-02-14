@@ -51,11 +51,14 @@ async def barangay_authenticate(login_data: BarangayAuthLoginData, db: AsyncSess
         await set_cookies(response, refresh_token=refresh_token)
 
         return response
+    
+    except HTTPException:
+        raise
+
     except Exception as e:
         logger.error(f"Error during barangay admin login for {login_data.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during login. Please try again later."
         )
-    except HTTPException:
-        raise
+    

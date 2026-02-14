@@ -28,13 +28,13 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
         
         return BarangayWithUserData.model_validate(barangay, from_attributes=True)
     
+    except HTTPException:
+        raise
+
     except Exception as e:
         logger.error(f"Error in get_barangay_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-    except HTTPException:
-        raise
-
 
 async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
     try:
@@ -47,8 +47,11 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
         barangays = result.scalars().all()
         logger.info(f"Fetched all barangays: {barangays}")
         return [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
+   
     except HTTPException:
         raise
+
+    except Exception as e:
+        logger.error(f"Error in get_all_barangays: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    

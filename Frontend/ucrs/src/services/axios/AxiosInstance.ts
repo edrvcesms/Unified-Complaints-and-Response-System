@@ -1,36 +1,72 @@
-import axios, {type AxiosInstance} from "axios";
+import axios, { type AxiosInstance, AxiosError } from "axios";
 import { refreshToken } from "../authentication/Token";
+import { useCurrentUser } from "../../store/authStore";
 
+declare module "axios" {
+  export interface AxiosRequestConfig {
+    _retry?: boolean;
+  }
+}
 
-export const createApiInstance = (baseUrl: string, withCredentials?: boolean | undefined): AxiosInstance => {
-    const instance: AxiosInstance = axios.create({
+let isRefreshing = false;
+let failedQueue: { resolve: (value?: unknown) => void; reject: (reason?: unknown) => void }[] = [];
+
+const processQueue = (error?: any) => {
+  failedQueue.forEach(p => error ? p.reject(error) : p.resolve());
+  failedQueue = [];
+};
+
+export const createApiInstance = (baseUrl: string, withCredentials?: boolean): AxiosInstance => {
+  const instance: AxiosInstance = axios.create({
     baseURL: baseUrl,
-    withCredentials: withCredentials
+    withCredentials
   });
 
-  if (withCredentials) {
-    instance.interceptors.request.use(async (config) => {
-      config.withCredentials = true;
-      return config;
-    });
+  instance.interceptors.request.use(async (config) => {
+    const token = useCurrentUser.getState().accessToken;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    config.withCredentials = true;
+    return config;
+  });
 
-    instance.interceptors.response.use(response => response, async (error) => {
-      if (error.response.status === 401 && !error.config._retry) {
+  instance.interceptors.response.use(
+    response => response,
+    async (error: AxiosError) => {
+      const originalRequest = error.config;
+      if (!originalRequest) return Promise.reject(error);
+
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => instance(originalRequest));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
         try {
           const refreshed = await refreshToken();
-          if (refreshed) {
-            const originalRequest = error.config;
-            originalRequest._retry = true;
+          if (!refreshed) throw new Error("Refresh failed");
 
-            return instance(originalRequest);
-          }
-          return Promise.reject(error);
+          useCurrentUser.getState().setAccessToken(refreshed.accessToken);
+          processQueue(null);
+          originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+          return instance(originalRequest);
         } catch (refreshError) {
+          processQueue(refreshError);
+          useCurrentUser.getState().clearUser();
           return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
         }
       }
+
       return Promise.reject(error);
-    });
-  }
+    }
+  );
+
   return instance;
 };

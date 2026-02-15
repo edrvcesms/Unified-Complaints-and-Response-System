@@ -1,5 +1,5 @@
 import { authApi } from "../axios/ApiServices";
-import type { UserLoginData } from "../../types/Login";
+import type { UserLoginData } from "../../types/auth/Login";
 
 export const loginUser = async (loginData: UserLoginData) => {
   try {

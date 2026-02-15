@@ -1,5 +1,5 @@
 import { authApi } from "../axios/ApiServices";
-import type { RegisterUserData } from "../../types/Register";
+import type { RegisterUserData } from "../../types/auth/Register";
 
 export const registerUser = async (registerData: RegisterUserData) => {
   try {

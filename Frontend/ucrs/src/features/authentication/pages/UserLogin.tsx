@@ -1,5 +1,6 @@
 import { loginUser } from "../../../services/authentication/Login";
-import type { UserLoginData } from "../../../types/Login";
+import { useCurrentUser } from "../../../store/authStore";
+import type { UserLoginData } from "../../../types/auth/Login";
 import { useState } from "react";
 
 export const UserLogin: React.FC = () => {
@@ -16,6 +17,9 @@ export const UserLogin: React.FC = () => {
 
     try {
       const response = await loginUser(formData);
+      useCurrentUser.getState().setAccessToken(response.access_token);
+      const token = useCurrentUser.getState().accessToken;
+      console.log("Current access token:", token);
       console.log("Login successful:", response);
     } catch (error) {
       console.error("Login failed:", error);

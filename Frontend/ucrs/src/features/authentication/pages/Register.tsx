@@ -1,5 +1,5 @@
 import { registerUser } from "../../../services/authentication/Register";
-import type { RegisterUserData } from "../../../types/Register";
+import type { RegisterUserData } from "../../../types/auth/Register";
 import { useState } from "react";
 
 export const Register: React.FC = () => {

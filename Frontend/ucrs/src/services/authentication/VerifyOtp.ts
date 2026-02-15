@@ -1,5 +1,5 @@
 import { authApi } from "../axios/ApiServices";
-import type { OtpVerificationData } from "../../types/OtpVerifiy";
+import type { OtpVerificationData } from "../../types/auth/otpVerify";
 
 export const verifyOtpAndRegister = async (data: OtpVerificationData, frontId?: File, backId?: File, selfieWithId?: File) => {
   try {

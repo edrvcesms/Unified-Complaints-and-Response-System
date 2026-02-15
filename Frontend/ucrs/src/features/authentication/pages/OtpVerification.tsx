@@ -1,5 +1,5 @@
 import { verifyOtpAndRegister } from "../../../services/authentication/VerifyOtp";
-import type { OtpVerificationData } from "../../../types/OtpVerifiy";
+import type { OtpVerificationData } from "../../../types/auth/otpVerify";
 import { useState } from "react";
 
 export const OtpVerification: React.FC = () => {

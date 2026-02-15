@@ -6,11 +6,17 @@ from app.models.barangay_account import BarangayAccount
 from app.models.user import User
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.logger import logger
 from typing import List
 
 async def get_barangay_profile(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
+        cached_barangay = await get_cache(f"barangay_profile:{user_id}")
+        if cached_barangay:
+            logger.info(f"Barangay profile for user ID {user_id} retrieved from cache")
+            return BarangayWithUserData.model_validate_json(cached_barangay)
+        
         result = await db.execute(
             select(Barangay)
             .options(
@@ -22,7 +28,10 @@ async def get_barangay_profile(user_id: int, db: AsyncSession) -> BarangayWithUs
         if not barangay:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
         
-        return BarangayWithUserData.model_validate(barangay, from_attributes=True)
+        barangay_with_user_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+        await set_cache(f"barangay_profile:{user_id}", barangay_with_user_data.model_dump_json(), expiration=3600)
+        logger.info(f"Barangay profile for user ID {user_id} retrieved from database and cached")
+        return barangay_with_user_data
     
     except HTTPException:
         raise
@@ -46,7 +55,9 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
         if not barangay:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
         
-        return BarangayWithUserData.model_validate(barangay, from_attributes=True)
+        barangay_with_user_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+        await set_cache(f"barangay_profile:{barangay.id}", barangay_with_user_data.model_dump_json(), expiration=3600)
+        return barangay_with_user_data
     
     except HTTPException:
         raise
@@ -58,6 +69,11 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
 
 async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
     try:
+        cached_barangays = await get_cache("all_barangays")
+        if cached_barangays:
+            logger.info("All barangays retrieved from cache")
+            return [BarangayWithUserData.model_validate_json(barangay) for barangay in cached_barangays]
+        
         result = await db.execute(
             select(Barangay)
             .options(
@@ -66,7 +82,9 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
         )
         barangays = result.scalars().all()
         logger.info(f"Fetched all barangays: {barangays}")
-        return [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
+        all_barangays = [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
+        await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
+        return all_barangays
    
     except HTTPException:
         raise

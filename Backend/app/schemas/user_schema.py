@@ -62,6 +62,11 @@ class ChangePasswordData(BaseModel):
     new_password: str
     confirm_new_password: str
 
+class ResetPasswordData(BaseModel):
+    email: EmailStr
+    new_password: str
+    confirm_new_password: str
+
 class VerifyResetPasswordOTPData(BaseModel):
     email: EmailStr
     otp: str

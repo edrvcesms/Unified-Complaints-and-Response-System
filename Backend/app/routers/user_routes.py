@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
+from fastapi import APIRouter, Depends, Request, status
+from app.dependencies.rate_limiter import limiter
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from slowapi.errors import RateLimitExceeded
 from app.models.user import User
 from app.services.user_services import request_reset_password, verify_otp_reset_password, change_password, get_user_by_id, update_user_location
 from app.dependencies.auth_dependency import get_current_user

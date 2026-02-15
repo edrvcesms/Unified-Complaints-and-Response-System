@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, AxiosError } from "axios";
 import { refreshToken } from "../authentication/token";
-import { useCurrentUser } from "../../store/authStore";
+import { useBarangayStore } from "../../store/authStore";
 
 declare module "axios" {
   export interface AxiosRequestConfig {
@@ -23,7 +23,7 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
   });
 
   instance.interceptors.request.use(async (config) => {
-    const token = useCurrentUser.getState().accessToken;
+    const token = useBarangayStore.getState().barangayAccessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -51,13 +51,13 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           const refreshed = await refreshToken();
           if (!refreshed) throw new Error("Refresh failed");
 
-          useCurrentUser.getState().setAccessToken(refreshed.accessToken);
+          useBarangayStore.getState().setBarangayAccessToken(refreshed.accessToken);
           processQueue(null);
           originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          useCurrentUser.getState().clearUser();
+          useBarangayStore.getState().clearBarangayAuth();
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

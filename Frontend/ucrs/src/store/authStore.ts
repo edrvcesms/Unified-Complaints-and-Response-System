@@ -23,7 +23,7 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
     isLoading: false,
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
-    mapDataFromBackend: (data) => {
+    mapDataFromBackend: (data: BarangayAccountData) => {
         set({
             barangayAccountData: {
                 id: data.id,

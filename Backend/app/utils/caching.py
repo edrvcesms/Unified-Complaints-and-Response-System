@@ -1,14 +1,26 @@
-from app.core.redis import redis_client
+import json
+from app.core.redis import redis_client  # assume redis.asyncio.Redis for async
+from app.utils.logger import logger
 
-def set_cache(key: str, value: str, expiration: int = 3600):
-    """Set a value in the cache with an optional expiration time."""
-    redis_client.setex(key, expiration, value)
+async def set_cache(key: str, value, expiration: int):
+    """Set a value in Redis cache with optional expiration (seconds)."""
+    try:
+        await redis_client.setex(key, expiration, json.dumps(value))
+    except Exception as e:
+        logger.warning(f"Failed to set cache for {key}: {e}")
 
-def get_cache(key: str):
-    """Get a value from the cache."""
-    return redis_client.get(key)
+async def get_cache(key: str):
+    """Get a value from Redis cache. Returns Python object or None."""
+    try:
+        data = await redis_client.get(key)
+        return json.loads(data) if data else None
+    except Exception as e:
+        logger.warning(f"Failed to get cache for {key}: {e}")
+        return None
 
-def delete_cache(key: str):
-    """Delete a value from the cache."""
-    redis_client.delete(key)
-
+async def delete_cache(key: str):
+    """Delete a key from Redis."""
+    try:
+        await redis_client.delete(key)
+    except Exception as e:
+        logger.warning(f"Failed to delete cache for {key}: {e}")

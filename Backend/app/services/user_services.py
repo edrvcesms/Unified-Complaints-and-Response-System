@@ -36,7 +36,7 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
         
         if user.email == email_data.email:
             generated_otp = generate_otp()
-            set_cache(f"otp_reset_password:{email_data.email}", generated_otp, expiration=300)
+            await set_cache(f"otp_reset_password:{email_data.email}", generated_otp, expiration=300)
 
             send_otp_email.delay(email_data.email, generated_otp, purpose="Reset Password")
 
@@ -54,7 +54,7 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
 async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: AsyncSession):
 
     try: 
-        cached_reset_otp = get_cache(f"otp_reset_password:{otp_data.email}")
+        cached_reset_otp = await get_cache(f"otp_reset_password:{otp_data.email}")
 
         if not cached_reset_otp:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired or not found. Please request a new one.")
@@ -62,7 +62,7 @@ async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: As
         if otp_data.otp != cached_reset_otp.decode('utf-8'):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP. Please try again.")
         
-        delete_cache(f"otp_reset_password:{otp_data.email}")
+        await delete_cache(f"otp_reset_password:{otp_data.email}")
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,

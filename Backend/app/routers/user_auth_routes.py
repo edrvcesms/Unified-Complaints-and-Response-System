@@ -19,7 +19,9 @@ async def register(request: Request, user_data: RegisterData, db: AsyncSession =
 @router.post("/verify-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
 async def verify_otp(request: Request, data: str = Form(...), front_id: UploadFile = None, back_id: UploadFile = None,selfie_with_id: UploadFile = None, db: AsyncSession = Depends(get_async_db)):
-    return await verify_otp_and_register(data, front_id, back_id, selfie_with_id, db)
+    parsed_data = json.loads(data)
+    otp_data = OTPVerificationData(**parsed_data)
+    return await verify_otp_and_register(otp_data.otp, otp_data, front_id, back_id, selfie_with_id, db)
 
 @router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")

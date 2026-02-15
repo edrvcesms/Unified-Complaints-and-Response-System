@@ -28,7 +28,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
             )
 
         generated_otp = generate_otp()
-        set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
+        await set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
         print(f"OTP set in cache for {user_data.email}: {generated_otp}")
         logger.info(f"OTP generated for {user_data.email} and stored in cache.")
 
@@ -60,8 +60,8 @@ async def verify_otp_and_register(
         ):
 
     try:
-        cached_otp = get_cache(f"otp:{user_data.email}")
-        print(cached_otp)
+        cached_otp = await get_cache(f"otp:{user_data.email}")
+        
 
         if not cached_otp:
             logger.warning(f"OTP verification failed for {user_data.email}: OTP expired or not found.")
@@ -70,12 +70,13 @@ async def verify_otp_and_register(
                 detail="OTP expired or not found. Please request a new one."
             )
 
-        if otp != cached_otp.decode('utf-8'):
+        if otp != str(cached_otp):
             logger.warning(f"OTP verification failed for {user_data.email}: Invalid OTP provided.")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid OTP. Please try again."
             )
+
         if not front_id or not back_id or not selfie_with_id:
             logger.warning(f"OTP verification failed for {user_data.email}: Missing ID images.")
             raise HTTPException(
@@ -118,7 +119,7 @@ async def verify_otp_and_register(
         await db.commit()
         await db.refresh(new_user)
 
-        delete_cache(f"otp:{user_data.email}")
+        await delete_cache(f"otp:{user_data.email}")
 
         logger.info(f"User registered successfully with email: {user_data.email}")
 
@@ -203,14 +204,16 @@ async def logout_user(request: Request):
         response.delete_cookie(key="access_token")
         response.delete_cookie(key="refresh_token")
         return response
+    
+    except HTTPException:
+        raise
+    
     except Exception as e:
         logger.error(f"Error during logout: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during logout. Please try again later."
         )
-    except HTTPException:
-        raise
 
 async def refresh_access_token(request: Request):
     

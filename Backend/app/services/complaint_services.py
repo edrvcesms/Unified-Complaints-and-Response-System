@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData
 from datetime import datetime
 from app.utils.logger import logger
+from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
 
 async def get_all_complaints(db: AsyncSession):
@@ -22,6 +23,48 @@ async def get_all_complaints(db: AsyncSession):
         logger.error(f"Error in get_all_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+async def get_all_under_review_complaints(db: AsyncSession):
+    try:
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.UNDER_REVIEW.value))
+        complaints = result.scalars().all()
+        logger.info(f"Fetched all under review complaints: {complaints}")
+        return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in get_all_under_review_complaints: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_all_resolved_complaints(db: AsyncSession):
+    try:
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.RESOLVED.value))
+        complaints = result.scalars().all()
+        logger.info(f"Fetched all resolved complaints: {complaints}")
+        return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in get_all_resolved_complaints: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_all_submitted_complaints(db: AsyncSession):
+    try:
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.SUBMITTED.value))
+        complaints = result.scalars().all()
+        logger.info(f"Fetched all submitted complaints: {complaints}")
+        return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in get_all_submitted_complaints: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
     
     try:
@@ -36,7 +79,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             category_id=complaint_data.category_id,
             sector_id=complaint_data.sector_id,
             priority_level_id=complaint_data.priority_level_id,
-            status="On Progress",
+            status=ComplaintStatus.SUBMITTED.value,
             user_id=user_id,
             created_at=datetime.utcnow()
         )
@@ -62,7 +105,7 @@ async def review_complaints(complaint_id: int, db: AsyncSession):
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
-        complaint.status = "Under Review"
+        complaint.status = ComplaintStatus.UNDER_REVIEW.value
         await db.commit()
         logger.info(f"Complaint with ID {complaint_id} is now under review")
         return JSONResponse(content={"message": f"Complaint with ID {complaint_id} is now under review"})
@@ -83,7 +126,7 @@ async def resolve_complaint(complaint_id: int, db: AsyncSession):
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
-        complaint.status = "Resolved"
+        complaint.status = ComplaintStatus.RESOLVED.value
         await db.commit()
         logger.info(f"Complaint with ID {complaint_id} has been resolved")
         return JSONResponse(content={"message": f"Complaint with ID {complaint_id} has been resolved"})

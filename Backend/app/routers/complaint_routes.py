@@ -3,7 +3,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
-from app.services.complaint_services import submit_complaint, get_my_complaints, delete_complaint, review_complaints, resolve_complaint, get_all_complaints
+from app.services.complaint_services import submit_complaint, get_my_complaints, delete_complaint, review_complaints, resolve_complaint, get_all_complaints, get_all_resolved_complaints, get_all_submitted_complaints, get_all_under_review_complaints
 from app.dependencies.auth_dependency import get_current_user
 from app.models.user import User
 from fastapi.requests import Request
@@ -14,6 +14,21 @@ router = APIRouter()
 @limiter.limit("10/minute")
 async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_all_complaints(db)
+
+@router.get("/resolved", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def list_resolved_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_all_resolved_complaints(db)
+
+@router.get("/submitted", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def list_submitted_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_all_submitted_complaints(db)
+
+@router.get("/under-review", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def list_under_review_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_all_under_review_complaints(db)
 
 @router.get("/my-complaints", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

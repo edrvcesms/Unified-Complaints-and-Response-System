@@ -15,19 +15,4 @@ AsyncSessionLocal = sessionmaker(
     bind=async_engine, class_=AsyncSession, expire_on_commit=False
 )
 
-sync_engine = create_engine(
-    settings.DATABASE_URL_SYNC,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_recycle=1800,
-    echo=False
-)
-
-SessionLocal = sessionmaker(
-    bind=sync_engine,
-    autocommit=False,
-    autoflush=False
-)
-
 Base = declarative_base()

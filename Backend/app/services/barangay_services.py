@@ -5,11 +5,31 @@ from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount
 from app.models.user import User
 from sqlalchemy import select
-from app.core.security import hash_password, decrypt_password
-from datetime import datetime
 from sqlalchemy.orm import selectinload
 from app.utils.logger import logger
 from typing import List
+
+async def get_barangay_profile(user_id: int, db: AsyncSession) -> BarangayWithUserData:
+    try:
+        result = await db.execute(
+            select(Barangay)
+            .options(
+                selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+            )
+            .where(Barangay.barangay_account.has(BarangayAccount.user_id == user_id))
+        )
+        barangay = result.scalars().first()
+        if not barangay:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+        
+        return BarangayWithUserData.model_validate(barangay, from_attributes=True)
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in get_barangay_profile: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:

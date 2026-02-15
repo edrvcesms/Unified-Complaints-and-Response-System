@@ -1,11 +1,11 @@
-import { authApi } from "../axios/ApiServices";
+import { authApi } from "../axios/apiServices";
 
-export const refreshToken = async () => {
+export const refreshToken = async (): Promise<{ accessToken: string } | null> => {
   try {
-    const res = await authApi.post("/token/refresh", {}, {withCredentials: true});
-    return res.data;
-  } catch (error) {
-    console.error("Token refresh failed:", error);
-    throw error;
+    const response = await authApi.post("/refresh-token", {}, { withCredentials: true });
+    return response.data;
+  }catch (error) {
+    console.error("Failed to refresh token:", error);
+    return null;
   }
 };

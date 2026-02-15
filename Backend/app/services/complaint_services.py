@@ -8,24 +8,20 @@ from datetime import datetime
 from app.utils.logger import logger
 from fastapi.responses import JSONResponse
 
-
-async def get_complaints_by_sector(sector_id: int, db: AsyncSession):
+async def get_all_complaints(db: AsyncSession):
     try:
-        result = await db.execute(
-            select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.sector_id == sector_id)
-        )
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
         complaints = result.scalars().all()
-        logger.info(f"Fetched complaints for sector {sector_id}: {complaints}")
+        logger.info(f"Fetched all complaints: {complaints}")
         return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
     
     except HTTPException:
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_complaints_by_sector: {e}")
+        logger.error(f"Error in get_all_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
     
     try:

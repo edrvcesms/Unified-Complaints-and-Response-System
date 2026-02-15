@@ -13,39 +13,24 @@ router = APIRouter()
 @router.get("/profile", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def get_profile(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    try:
-        return await get_user_by_id(current_user.id, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
+    return await get_user_by_id(current_user.id, db)
 
 @router.post("/request-reset-password", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def request_reset_password_endpoint(request: Request, email_data: VerifyEmailData, db: AsyncSession = Depends(get_async_db)):
-    try:
-        return await request_reset_password(email_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
-    
+    return await request_reset_password(email_data.email, db)
+
 @router.post("/verify-reset-password-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def verify_password_reset_otp (request: Request, otp_data: VerifyResetPasswordOTPData, db: AsyncSession = Depends(get_async_db)):
-    try:
-        return await verify_otp_reset_password(otp_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
+    return await verify_otp_reset_password(otp_data, db)
     
 @router.post("/change-password", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def reset_password(request: Request, password_data: ChangePasswordData, db: AsyncSession = Depends(get_async_db)):
-    try:
-        return await change_password(password_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
-    
+    return await change_password(password_data, db)
+
 @router.put("/update-current-location", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def update_current_location(request: Request, location_data: UserLocationData, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    try:
-        return await update_user_location(location_data, current_user.id, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
+    return await update_user_location(current_user.id, location_data, db)

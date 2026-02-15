@@ -1,5 +1,5 @@
 import axios, { type AxiosInstance, AxiosError } from "axios";
-import { refreshToken } from "../authentication/Token";
+import { refreshToken } from "../authentication/token";
 import { useCurrentUser } from "../../store/authStore";
 
 declare module "axios" {

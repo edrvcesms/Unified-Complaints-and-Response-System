@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { UserData } from "../types/user/User";
-import { userApi } from "../services/axios/ApiServices";
+import type { UserData } from "../types/user/user";
 
 interface UserState {
     user: UserData | null;
@@ -20,23 +19,6 @@ export const useCurrentUser = create<UserState>((set) => ({
     isLoading: false,
     isAuthenticated: false,
     accessToken: null,
-
-    fetchUser: async () => {
-        if (!useCurrentUser.getState().accessToken) {
-            set({ user: null, isAuthenticated: false, isLoading: false });
-            return;
-        }
-        try {
-            set({ isLoading: true });
-            const res = await userApi.get("/profile", { withCredentials: true });
-            const userData = res.data;
-            const user = useCurrentUser.getState().mapUserData(userData);
-            set({ user, isAuthenticated: true, isLoading: false });
-        } catch (error) {
-            console.error("Failed to fetch user data:", error);
-            set({ user: null, isAuthenticated: false, accessToken: null, isLoading: false });
-        }
-    },
     setUser: (user) => set({ user, isAuthenticated: !!user }),
     setAccessToken: (token) => set({ accessToken: token }),
     clearUser: () => set({ user: null, isAuthenticated: false, accessToken: null }),

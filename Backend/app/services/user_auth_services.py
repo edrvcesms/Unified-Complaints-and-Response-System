@@ -166,7 +166,7 @@ async def login_user(login_data: LoginData, db: AsyncSession):
 
         response = JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"message": "Login successful", "access_token": access_token}
+            content={"message": "Login successful", "access_token": access_token, "refresh_token": refresh_token}
         )
 
         await set_cookies(response, refresh_token=refresh_token)

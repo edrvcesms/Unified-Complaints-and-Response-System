@@ -215,10 +215,20 @@ async def logout_user(request: Request):
             detail="An error occurred during logout. Please try again later."
         )
 
+
 async def refresh_access_token(request: Request):
     
     try:
+       
         refresh_token = request.cookies.get("refresh_token")
+        
+      
+        if not refresh_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                refresh_token = auth_header.split(" ", 1)[1]  # Extract token after "Bearer "
+        
+  
         if not refresh_token:
             logger.warning("Invalid or missing refresh token during token refresh attempt.")
             raise HTTPException(
@@ -253,12 +263,12 @@ async def refresh_access_token(request: Request):
                 "access_token": new_access_token
             }
         )
+    
+    except HTTPException:   
+        raise
     except Exception as e:
         logger.error(f"Error during access token refresh: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while refreshing access token. Please try again later."
         )
-    
-    except HTTPException:   
-        raise

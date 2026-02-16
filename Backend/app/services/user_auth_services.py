@@ -226,8 +226,7 @@ async def refresh_access_token(request: Request):
         if not refresh_token:
             auth_header = request.headers.get("Authorization")
             if auth_header and auth_header.startswith("Bearer "):
-                refresh_token = auth_header.split(" ", 1)[1]  # Extract token after "Bearer "
-        
+                refresh_token = auth_header.split(" ", 1)[1]  
   
         if not refresh_token:
             logger.warning("Invalid or missing refresh token during token refresh attempt.")

@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.otp_handler import generate_otp
 from app.schemas.user_schema import UserPersonalData, ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData, UserLocationData, ResetPasswordData
@@ -177,6 +178,7 @@ async def change_password(password_data: ChangePasswordData, db: AsyncSession):
     
 async def update_user_location(user_id: int, location_data: UserLocationData, db: AsyncSession):
     try:
+        logger.info(f"Updating location for user ID {user_id} to latitude {location_data.latitude} and longitude {location_data.longitude}")
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalars().first()
 
@@ -185,6 +187,11 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
         
         user.latitude = location_data.latitude
         user.longitude = location_data.longitude
+        
+       
+       
+        await delete_cache(f"user_profile:{user_id}")
+
 
         await db.commit()
 

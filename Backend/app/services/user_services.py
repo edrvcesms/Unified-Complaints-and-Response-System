@@ -7,7 +7,7 @@ from app.models.user import User
 from sqlalchemy import select, update
 from app.core.security import hash_password, decrypt_password
 from fastapi.responses import JSONResponse
-from app.tasks import send_otp_email
+from app.tasks import send_otp_email_task
 from app.utils.logger import logger
 from app.utils.caching import set_cache, get_cache, delete_cache
 
@@ -46,7 +46,7 @@ async def forgot_password(email_data: VerifyEmailData, db: AsyncSession):
             generated_otp = generate_otp()
             await set_cache(f"otp_reset_password:{email_data.email}", generated_otp, expiration=300)
 
-            send_otp_email.delay(email_data.email, generated_otp, purpose="Forgot Password")
+            send_otp_email_task.delay(email_data.email, generated_otp, purpose="Forgot Password")
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
@@ -104,7 +104,7 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
             generated_otp = generate_otp()
             await set_cache(f"otp_reset_password:{email_data.email}", generated_otp, expiration=300)
 
-            send_otp_email.delay(email_data.email, generated_otp, purpose="Reset Password")
+            send_otp_email_task.delay(email_data.email, generated_otp, purpose="Reset Password")
 
             return JSONResponse(
                 status_code=status.HTTP_200_OK,

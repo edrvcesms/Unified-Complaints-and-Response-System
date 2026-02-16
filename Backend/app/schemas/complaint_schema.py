@@ -28,5 +28,4 @@ class ComplaintWithUserData(ComplaintBaseModel):
     category: CategoryModel
     sector: SectorModel
     priority_level: PriorityLevelModel
-
     priority_level_id: int

@@ -6,9 +6,10 @@ from fastapi.responses import JSONResponse
 from app.database.database import async_engine, Base
 from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
+from app.utils.attachments import AttachmentSizeLimitMiddleware
 
 # Routers
-from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, barangay_auth_routes
+from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, barangay_auth_routes, attachment_routes
 
 
 
@@ -44,7 +45,13 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Rate limit exceeded. Please try again later."},
     )
 logger.info("FastAPI application initialized.")
+
+# Rate Limiting Middleware
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Attachment Size Limit Middleware
+app.add_middleware(AttachmentSizeLimitMiddleware)
+
 # Include Routers
 app.include_router(_super_admin.router, prefix="/api/v1/super-admin", tags=["Super Admin"])
 app.include_router(barangay_auth_routes.router, prefix="/api/v1/barangay-auth", tags=["Barangay Authentication"])
@@ -54,3 +61,4 @@ app.include_router(barangay_routes.router, prefix="/api/v1/barangays", tags=["Ba
 app.include_router(user_auth_routes.router, prefix="/api/v1/auth", tags=["User Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(complaint_routes.router, prefix="/api/v1/complaints", tags=["Complaints"])
+app.include_router(attachment_routes.router, prefix="/api/v1/attachments", tags=["Attachments"])

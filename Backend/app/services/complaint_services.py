@@ -132,7 +132,12 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         await db.commit()
         await db.refresh(new_complaint)
         logger.info(f"Submitted new complaint: {new_complaint}")
-        return ComplaintWithUserData.model_validate(new_complaint, from_attributes=True)
+        
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == new_complaint.id)
+                                  )
+        updated_complaint = result.scalars().first()
+        
+        return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
     
     except HTTPException:
         raise

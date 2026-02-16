@@ -12,7 +12,7 @@ class Attachment(Base):
     file_path = Column(String, nullable=False)
     file_type = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
-    storage_path = Column(String, nullable=False)
+    storage_path = Column(String, nullable=True)
     uploaded_at = Column(Date, nullable=False)
 
     complaint = relationship("Complaint", back_populates="attachment")

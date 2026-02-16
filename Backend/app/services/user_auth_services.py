@@ -8,12 +8,12 @@ from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token
 from datetime import datetime
 from app.utils.otp_handler import generate_otp
-from app.utils.cookies import set_cookies, clear_cookies
+from app.utils.cookies import set_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
-from app.tasks import send_otp_email
+from app.tasks import send_otp_email_task
 from fastapi.responses import JSONResponse
 from app.core.security import create_access_token, create_refresh_token
-from app.utils.cloudinary import upload_multiple_images_to_cloudinary
+from app.utils.cloudinary import upload_multiple_files_to_cloudinary
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
     try:
@@ -32,7 +32,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
         print(f"OTP set in cache for {user_data.email}: {generated_otp}")
         logger.info(f"OTP generated for {user_data.email} and stored in cache.")
 
-        send_otp_email.delay(user_data.email, generated_otp, purpose="Registration")
+        send_otp_email_task.delay(user_data.email, generated_otp, purpose="Registration")
         logger.info(f"OTP task enqueued for {user_data.email}.")
 
         return JSONResponse(
@@ -85,7 +85,7 @@ async def verify_otp_and_register(
             )
         
         images = [front_id, back_id, selfie_with_id]
-        image_urls = await upload_multiple_images_to_cloudinary(images, folder="ucrs/id_verification")
+        image_urls = await upload_multiple_files_to_cloudinary(images, folder="ucrs/id_verification")
         logger.info(f"ID images uploaded to Cloudinary for {user_data.email}: {image_urls}")
 
         

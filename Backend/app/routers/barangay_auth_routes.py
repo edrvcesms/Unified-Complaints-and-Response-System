@@ -22,6 +22,5 @@ async def barangay_logout_route(request: Request, current_user: User = Depends(g
     return await logout_user(request, current_user, db)
     
 @router.post("/token-refresh", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def refresh_barangay_token_route(request: Request):
     return await refresh_barangay_token(request)

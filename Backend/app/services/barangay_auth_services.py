@@ -77,7 +77,7 @@ async def barangay_authenticate(login_data: BarangayAuthLoginData, db: AsyncSess
         from_attributes=True
     )
     
-    await set_cookies(response, refresh_token)
+    await set_cookies(response, refresh_token, key="barangay_refresh_token")
     logger.info(f"Cookies set for user ID {user.id} with refresh token")
 
     response = {
@@ -90,7 +90,7 @@ async def barangay_authenticate(login_data: BarangayAuthLoginData, db: AsyncSess
 
 async def refresh_barangay_token(request: Request):
     try:
-        refresh_token = request.cookies.get("refresh_token")
+        refresh_token = request.cookies.get("barangay_refresh_token")
         if not refresh_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

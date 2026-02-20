@@ -1,5 +1,6 @@
 import { authApi } from "../axios/apiServices";
 import type { LoginRequestData } from "../../types/auth/login";
+import { handleApiError } from "../../utils/apiErrorHandler";
 import { useBarangayStore } from "../../store/authStore";
 
 export const loginBarangayAccount = async (data: LoginRequestData) => {
@@ -11,7 +12,8 @@ export const loginBarangayAccount = async (data: LoginRequestData) => {
     useBarangayStore.getState().mapDataFromBackend(barangayAccountData);
     return response.data;
   } catch (error) {
-    console.error("Login failed:", error);
+    const errorMessage = handleApiError(error);
+    console.error("Login failed:", errorMessage.message);
     throw error;
   }
 };
@@ -21,6 +23,8 @@ export const logoutBarangayAccount = async () => {
     await authApi.post("/logout", { withCredentials: true });
     useBarangayStore.getState().clearBarangayAuth();
   } catch (error) {
+    const errorMessage = handleApiError(error);
+    console.error("Logout failed:", errorMessage.message);
     console.error("Logout failed:", error);
     throw error;
   }

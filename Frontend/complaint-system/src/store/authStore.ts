@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import { barangayApi } from "../../../complaint-system/src/services/axios/apiServices";
+import { refreshToken } from "../services/authentication/token";
 
 interface BarangayAuthState {
     barangayAccessToken: string | null;
@@ -13,6 +14,7 @@ interface BarangayAuthState {
     mapDataFromBackend: (data: any) => void;
     clearBarangayAuth: () => Promise<void>;
     fetchBarangayAccountData: () => Promise<void>;
+    refreshAccessToken: () => Promise<void>;
 }
 
 export const useBarangayStore = create<BarangayAuthState>((set) => ({
@@ -83,5 +85,20 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
         } finally {
             set({ isLoading: false });
         }
-    }
+    },
+    refreshAccessToken: async () => {
+        set({ isLoading: true });
+        try {
+            const data = await refreshToken();
+            if (data && data.barangay_access_token) {
+            set({ barangayAccessToken: data.barangay_access_token, isAuthenticated: true });
+            } else {
+            set({ barangayAccessToken: null, isAuthenticated: false });
+            }
+        } catch (error) {
+            set({ barangayAccessToken: null, isAuthenticated: false });
+        } finally {
+            set({ isLoading: false });
+        }
+        }
 }));

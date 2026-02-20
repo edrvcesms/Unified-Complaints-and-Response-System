@@ -9,7 +9,7 @@ from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
 
 # Routers
-from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, barangay_auth_routes, attachment_routes
+from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, barangay_auth_routes
 
 
 
@@ -61,4 +61,3 @@ app.include_router(barangay_routes.router, prefix="/api/v1/barangays", tags=["Ba
 app.include_router(user_auth_routes.router, prefix="/api/v1/auth", tags=["User Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(complaint_routes.router, prefix="/api/v1/complaints", tags=["Complaints"])
-app.include_router(attachment_routes.router, prefix="/api/v1/attachments", tags=["Attachments"])

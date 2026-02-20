@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Form, UploadFile, File
+from typing import List
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
 from app.services.complaint_services import submit_complaint, get_my_complaints, delete_complaint, review_complaints, resolve_complaint, get_all_complaints, get_all_resolved_complaints, get_all_submitted_complaints, get_all_under_review_complaints
 from app.dependencies.auth_dependency import get_current_user
+from app.services.attachment_services import upload_attachments
 from app.models.user import User
 from fastapi.requests import Request
 
@@ -37,8 +39,14 @@ async def list_my_complaints(request: Request, db: AsyncSession = Depends(get_as
     
 @router.post("/submit-complaint", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
-async def create_complaint(request: Request, complaint_data: ComplaintCreateData, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await submit_complaint(complaint_data, current_user.id, db)
+async def create_complaint(request: Request, data: str = Form(...), attachments: List[UploadFile] = File(default=None), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    complaint_data = ComplaintCreateData.parse_raw(data)
+    complaint = await submit_complaint(complaint_data, current_user.id, db)
+    
+    if attachments:
+        await upload_attachments(attachments, current_user.id, complaint.id, db)
+    
+    return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}
 
 @router.delete("/{complaint_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

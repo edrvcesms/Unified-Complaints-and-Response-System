@@ -5,6 +5,7 @@ from app.utils.logger import logger
 from app.tasks import upload_attachments_task
 from datetime import datetime
 import os
+from typing import List
 import tempfile
 
 allowed_file_types = [
@@ -16,7 +17,7 @@ allowed_file_types = [
 ]
 
 
-async def upload_attachments(files: list[UploadFile], uploader_id: int, complaint_id: int, db: AsyncSession) -> str:
+async def upload_attachments(files: List[UploadFile], uploader_id: int, complaint_id: int, db: AsyncSession) -> str:
 
     for file in files:
         if file.content_type not in allowed_file_types:

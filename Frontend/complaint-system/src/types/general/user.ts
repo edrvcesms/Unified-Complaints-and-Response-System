@@ -1,20 +1,4 @@
-export interface BarangayAccountData {
-  id: number;
-  barangay_name: string;
-  barangay_address: string;
-  barangay_contact_number: string;
-  barangay_email: string;
-  barangay_account: BarangayAccount;
-}
-
-interface BarangayAccount {
-  id: number;
-  user_id: number;
-  barangay_id: number;
-  user: UserData
-}
-
-interface UserData {
+export interface UserData {
   id: number;
   email: string;
   first_name: string;
@@ -36,4 +20,6 @@ interface UserData {
   front_id: string;
   back_id: string;
   selfie_with_id: string;
+  is_administrator: boolean;
+  last_login: string;
 }

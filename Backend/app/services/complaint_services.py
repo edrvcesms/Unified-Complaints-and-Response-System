@@ -10,6 +10,25 @@ from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
 
+async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == complaint_id))
+        complaint = result.scalars().first()
+        
+        if not complaint:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+        
+        logger.info(f"Fetched complaint with ID {complaint_id}: {complaint}")
+        
+        return ComplaintWithUserData.model_validate(complaint, from_attributes=True)
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Error in get_complaint_by_id: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 async def get_all_complaints(db: AsyncSession):
     try:
         cached_complaints = await get_cache("all_complaints")

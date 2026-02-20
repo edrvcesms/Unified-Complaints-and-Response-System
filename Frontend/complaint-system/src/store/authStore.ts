@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
-import { barangayApi } from "../services/axios/apiServices";
+import { barangayApi } from "../../../complaint-system/src/services/axios/apiServices";
 
 interface BarangayAuthState {
     barangayAccessToken: string | null;
@@ -56,7 +56,9 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
                         back_id: data.barangay_account.user.back_id,
                         selfie_with_id: data.barangay_account.user.selfie_with_id,
                         phone_number: data.barangay_account.user.phone_number,
-                        gender: data.barangay_account.user.gender
+                        gender: data.barangay_account.user.gender,
+                        is_administrator: data.barangay_account.user.is_administrator,
+                        last_login: data.barangay_account.user.last_login
                     }
                 }
             },

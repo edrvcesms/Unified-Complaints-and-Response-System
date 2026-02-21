@@ -1,24 +1,13 @@
-// ─── pages/ComplaintsPage.tsx ─────────────────────────────────────────────────
 
 import { useState, useMemo } from "react";
-import type { Complaint } from "../../../types/complaints/complaint";
 import { Pagination } from "../components/Pagination";
 import { StatusBadge } from "../components/StatusBadge";
 import { useReviewComplaint, useResolveComplaint } from "../../../hooks/useComplaints";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface ComplaintsPageProps {
-  complaints: Complaint[];
-  isLoading: boolean;
-}
+import type { ComplaintsPageProps, Complaint } from "../../../types/complaints/complaint";
 
 type StatusFilter = "all" | "submitted" | "under_review" | "resolved";
 
 const ITEMS_PER_PAGE = 8;
-
-// ── Action Buttons ────────────────────────────────────────────────────────────
-// Shows contextual action buttons based on the complaint's current status
 
 interface ActionButtonsProps {
   complaint: Complaint;
@@ -39,7 +28,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
   return (
     <div className="flex items-center gap-1.5">
-      {/* Mark as Under Review — available when submitted */}
       {complaint.status === "submitted" && (
         <button
           onClick={() => onReview(complaint.id)}
@@ -51,8 +39,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           Review
         </button>
       )}
-
-      {/* Mark as Resolved — available when under review */}
       {complaint.status === "under_review" && (
         <button
           onClick={() => onResolve(complaint.id)}
@@ -68,7 +54,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   );
 };
 
-// ── Loading skeleton row ──────────────────────────────────────────────────────
 const SkeletonRow = () => (
   <tr className="animate-pulse">
     {Array.from({ length: 7 }).map((_, i) => (
@@ -79,7 +64,6 @@ const SkeletonRow = () => (
   </tr>
 );
 
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export const ComplaintsPage: React.FC<ComplaintsPageProps> = ({
   complaints,
@@ -89,12 +73,10 @@ export const ComplaintsPage: React.FC<ComplaintsPageProps> = ({
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
   const [search, setSearch] = useState<string>("");
 
-  // ── Mutations from React Query ────────────────────────────────────────────
   const { mutate: markAsReview,   isPending: isReviewing  } = useReviewComplaint();
   const { mutate: markAsResolved, isPending: isResolving  } = useResolveComplaint();
   const isActionPending = isReviewing || isResolving;
 
-  // ── Filter + search ───────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return complaints.filter((c) => {
       const matchesStatus = filterStatus === "all" || c.status === filterStatus;
@@ -120,7 +102,6 @@ export const ComplaintsPage: React.FC<ComplaintsPageProps> = ({
     setCurrentPage(1);
   };
 
-  // ── Pagination ────────────────────────────────────────────────────────────
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated  = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,

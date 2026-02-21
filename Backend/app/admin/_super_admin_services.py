@@ -8,7 +8,7 @@ from app.models.priority_level import PriorityLevel
 from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, PriorityLevelCreate, SectorCreate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentCreate, DepartmentCreate, PriorityLevelCreate
 from sqlalchemy import select
 from app.core.security import hash_password
 from datetime import datetime
@@ -87,38 +87,38 @@ async def create_priority_level(priority_data: PriorityLevelCreate, db: AsyncSes
     await db.refresh(new_priority)
     return new_priority
 
-async def create_sector(sector_data: SectorCreate, db: AsyncSession):
+async def create_department(department_data: DepartmentCreate, db: AsyncSession):
     
     result = await db.execute(
-        select(Sector).where(Sector.sector_name == sector_data.sector_name)
+        select(Department).where(Department.department_name == department_data.department_name)
     )
     if result.scalars().first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sector already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department already exists")
 
-    new_sector = Sector(
-        sector_name=sector_data.sector_name,
-        description=sector_data.description,
+    new_department = Department(
+        department_name=department_data.department_name,
+        description=department_data.description,
         created_at=datetime.utcnow()
     )
-    db.add(new_sector)
+    db.add(new_department)
     await db.commit()
-    await db.refresh(new_sector)
-    return new_sector
+    await db.refresh(new_department)
+    return new_department
 
-async def create_comittee_account(user_id: int, sector_id: int, db: AsyncSession):
+async def create_department_account(user_id: int, department_id: int, db: AsyncSession):
     try:
         result = await db.execute(
-            select(ComitteeAccount).where(ComitteeAccount.sector_id == sector_id)
+            select(DepartmentAccount).where(DepartmentAccount.department_id == department_id)
         )
         if result.scalars().first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sector already has a comittee member")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department already has a department account")
         
         result = await db.execute(
-            select(Sector).where(Sector.id == sector_id)
+            select(Department).where(Department.id == department_id)
         )
-        sector = result.scalars().first()
-        if not sector:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sector not found")
+        department = result.scalars().first()
+        if not department:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
         
         result = await db.execute(
             select(User).where(User.id == user_id)
@@ -127,14 +127,14 @@ async def create_comittee_account(user_id: int, sector_id: int, db: AsyncSession
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-        comittee_account = ComitteeAccount(
+        department_account = DepartmentAccount(
             user_id=user_id,
-            sector_id=sector_id,
+            department_id=department_id,
             created_at=datetime.utcnow()
         )
-        db.add(comittee_account)
+        db.add(department_account)
         await db.commit()
-        await db.refresh(comittee_account)
-        return comittee_account
+        await db.refresh(department_account)
+        return department_account
     except HTTPException as e:
         raise e

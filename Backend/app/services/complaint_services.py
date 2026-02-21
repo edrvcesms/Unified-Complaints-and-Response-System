@@ -1,5 +1,5 @@
 import os
-
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
@@ -50,11 +50,6 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
 
 async def get_all_complaints(db: AsyncSession):
     try:
-        cached_complaints = await get_cache("all_complaints")
-        if cached_complaints:
-            logger.info("All complaints retrieved from cache")
-            return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_complaints]
-        
         result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
         
         complaints = result.scalars().all()
@@ -62,8 +57,6 @@ async def get_all_complaints(db: AsyncSession):
         logger.info(f"Fetched all complaints: {complaints}")
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        
-        await set_cache("all_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=1)
         
         return complaints_list
     
@@ -74,82 +67,44 @@ async def get_all_complaints(db: AsyncSession):
         logger.error(f"Error in get_all_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def get_all_under_review_complaints(db: AsyncSession):
+async def get_weekly_complaint_stats(db: AsyncSession):
     try:
-        cached_under_review_complaints = await get_cache("all_under_review_complaints")
-        if cached_under_review_complaints:
-            logger.info("All under review complaints retrieved from cache")
-            return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_under_review_complaints]
-        
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.UNDER_REVIEW.value))
-        
+        one_week_ago = datetime.utcnow() - timedelta(days=7)
+        result = await db.execute(
+            select(Complaint)
+            .where(Complaint.created_at >= one_week_ago)
+        )
         complaints = result.scalars().all()
         
-        logger.info(f"Fetched all under review complaints: {complaints}")
+        stats = {
+            "total_submitted": len(complaints),
+            "total_resolved": sum(1 for c in complaints if c.status == ComplaintStatus.RESOLVED.value),
+            "daily_counts": {}
+        }
         
-        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        await set_cache("all_under_review_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=3600)
-        return complaints_list
+        stats["daily_counts"] = {}
+        for i in range(7):
+            day = (datetime.utcnow() - timedelta(days=6-i)).strftime("%Y-%m-%d")
+            stats["daily_counts"][day] = {"submitted": 0, "resolved": 0}
+            
+        for complaint in complaints:
+            day = complaint.created_at.strftime("%Y-%m-%d")
+            if day not in stats["daily_counts"]:
+                stats["daily_counts"][day] = {"submitted": 0, "resolved": 0}
+            stats["daily_counts"][day]["submitted"] += 1
+            if complaint.status == ComplaintStatus.RESOLVED.value:
+                stats["daily_counts"][day]["resolved"] += 1
+        
+        logger.info(f"Weekly complaint stats: {stats}")
+        
+        return stats
     
     except HTTPException:
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_all_under_review_complaints: {e}")
+        logger.error(f"Error in get_weekly_complaint_stats: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
-async def get_all_resolved_complaints(db: AsyncSession):
-    try:
-        cached_resolved_complaints = await get_cache("all_resolved_complaints")
-        if cached_resolved_complaints:
-            logger.info("All resolved complaints retrieved from cache")
-            return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_resolved_complaints]
-        
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.RESOLVED.value))
-        
-        complaints = result.scalars().all()
-        
-        logger.info(f"Fetched all resolved complaints: {complaints}")
-        
-        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        
-        await set_cache("all_resolved_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=3600)
-        
-        return complaints_list
-    
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Error in get_all_resolved_complaints: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
-async def get_all_submitted_complaints(db: AsyncSession):
-    try:
-        cached_submitted_complaints = await get_cache("all_submitted_complaints")
-        if cached_submitted_complaints:
-            logger.info("All submitted complaints retrieved from cache")
-            return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_submitted_complaints]
-        
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.SUBMITTED.value))
-        
-        complaints = result.scalars().all()
-        
-        logger.info(f"Fetched all submitted complaints: {complaints}")
-        
-        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        await set_cache("all_submitted_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=3600)
-        return complaints_list
-    
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Error in get_all_submitted_complaints: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
-
-
 
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
 
@@ -302,7 +257,13 @@ async def review_complaints(complaint_id: int, db: AsyncSession):
         
         complaint.status = ComplaintStatus.UNDER_REVIEW.value
         await db.commit()
+        delete_cache("all_complaints")
         logger.info(f"Complaint with ID {complaint_id} is now under review")
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        complaints = result.scalars().all()
+        logger.info(f"Fetched all complaints after updating status: {complaints}")
+        await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)
+        logger.info(f"set cache for all complaints after review_complaints")
         return JSONResponse(content={"message": f"Complaint with ID {complaint_id} is now under review"})
     
     except HTTPException:
@@ -322,8 +283,14 @@ async def resolve_complaint(complaint_id: int, db: AsyncSession):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
         complaint.status = ComplaintStatus.RESOLVED.value
+        complaint.resolved_at = datetime.utcnow()
         await db.commit()
+        delete_cache("all_complaints")
         logger.info(f"Complaint with ID {complaint_id} has been resolved")
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        complaints = result.scalars().all()
+        logger.info(f"Fetched all complaints after updating status: {complaints}")
+        await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)
         return JSONResponse(content={"message": f"Complaint with ID {complaint_id} has been resolved"})
     
     except HTTPException:

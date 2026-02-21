@@ -2,7 +2,7 @@ import { complaintsApi } from "../axios/apiServices";
 
 export const reviewComplaint = async (complaintId: number) => {
   try {
-    const response = await complaintsApi.post(`/review/${complaintId}`);
+    const response = await complaintsApi.patch(`/review/${complaintId}`);
     console.log(`Complaint with ID ${complaintId} marked as under review:`, response.data);
     return response.data;
   } catch (error) {
@@ -13,7 +13,7 @@ export const reviewComplaint = async (complaintId: number) => {
 
 export const resolveComplaint = async (complaintId: number) => {
   try {
-    const response = await complaintsApi.post(`/resolve/${complaintId}`);
+    const response = await complaintsApi.patch(`/resolve/${complaintId}`);
     console.log(`Complaint with ID ${complaintId} marked as resolved:`, response.data);
     return response.data;
   } catch (error) {

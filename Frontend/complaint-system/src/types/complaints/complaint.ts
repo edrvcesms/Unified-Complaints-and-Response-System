@@ -22,23 +22,25 @@ export interface Complaint {
   priority_level: PriorityLevel;
 }
 
-// Status values your backend uses
 export type ComplaintStatus = "submitted" | "under_review" | "resolved";
 
-// Active sidebar page
 export type ActivePage = "dashboard" | "complaints";
 
-// Weekly chart data point
 export interface WeeklyDataPoint {
   day: string;
   submitted: number;
   resolved: number;
 }
 
-// Derived dashboard stats
 export interface ComplaintStats {
   total: number;
   submitted: number;
   underReview: number;
   resolved: number;
+}
+
+
+export interface ComplaintsPageProps {
+  complaints: Complaint[];
+  isLoading: boolean;
 }

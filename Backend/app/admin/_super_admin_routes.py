@@ -6,9 +6,9 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_priority_level, create_sector, create_comittee_account
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_priority_level, create_department, create_department_account
 from fastapi import status
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, PriorityLevelCreate, SectorCreate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, PriorityLevelCreate, DepartmentCreate
 
 router = APIRouter()
 
@@ -43,21 +43,21 @@ async def create_priority(request: Request, priority_data: PriorityLevelCreate, 
     except HTTPException as e:
         raise e
     
-@router.post("/create-sector", status_code=status.HTTP_201_CREATED)
+@router.post("/create-department", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def create_sector_route(request: Request, sector_data: SectorCreate, db: AsyncSession = Depends(get_async_db)):
+async def create_department_route(request: Request, department_data: DepartmentCreate, db: AsyncSession = Depends(get_async_db)):
     try:
-        return await create_sector(sector_data, db)
+        return await create_department(department_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:
         raise e
     
-@router.post("/create-comittee-account", status_code=status.HTTP_201_CREATED)
+@router.post("/create-department-account", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def create_comittee_account_route(request: Request, user_id: int = None, sector_id: int = None, db: AsyncSession = Depends(get_async_db)):
+async def create_department_account_route(request: Request, user_id: int = None, department_id: int = None, db: AsyncSession = Depends(get_async_db)):
     try:
-        return await create_comittee_account(user_id, sector_id, db)
+        return await create_department_account(user_id, department_id, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

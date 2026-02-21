@@ -23,35 +23,13 @@ export const getComplaintById = async (complaintId: number): Promise<Complaint> 
   }
 };
 
-export const getSubmittedComplaints = async (): Promise<Complaint[]> => {
+export const getWeeklyComplaintStats = async () => {
   try {
-    const response = await complaintsApi.get("/submitted");
-    console.log("Fetched submitted complaints:", response.data);
+    const response = await complaintsApi.get("/stats/weekly");
+    console.log("Fetched weekly complaint stats:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error fetching submitted complaints:", error);
-    throw error;
-  }
-};
-
-export const getUnderReviewComplaints = async (): Promise<Complaint[]> => {
-  try {
-    const response = await complaintsApi.get("/under-review");
-    console.log("Fetched under review complaints:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching under review complaints:", error);
-    throw error;
-  }
-};
-
-export const getResolvedComplaints = async (): Promise<Complaint[]> => {
-  try {
-    const response = await complaintsApi.get("/resolved");
-    console.log("Fetched resolved complaints:", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching resolved complaints:", error);
+    console.error("Error fetching weekly complaint stats:", error);
     throw error;
   }
 };

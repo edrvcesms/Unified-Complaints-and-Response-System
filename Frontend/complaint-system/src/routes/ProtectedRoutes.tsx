@@ -1,7 +1,7 @@
-import { Navigate } from "react-router-dom";
-import { Outlet } from "react-router-dom";
+// routes/ProtectedRoutes.tsx
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
 import { useBarangayStore } from "../store/authStore";
-import LoadingIndicator from "../components/LoadingIndicator";
 
 interface ProtectedRouteProps {
   isAllowed: boolean;
@@ -9,42 +9,21 @@ interface ProtectedRouteProps {
   children?: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   isAllowed,
-  redirectPath = "/",
+  redirectPath = "/dashboard",
   children,
 }) => {
-  if (!isAllowed) {
-    return <Navigate to={redirectPath} replace />;
-  }
+  if (!isAllowed) return <Navigate to={redirectPath} replace />;
   return children ? <>{children}</> : <Outlet />;
 };
 
 export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const isAuthenticated = useBarangayStore((state) => state.barangayAccessToken);
-  const isAuthChecked = useBarangayStore((state) => state.isAuthenticated);
-  
-  if (isAuthChecked && !isAuthenticated) return <LoadingIndicator />;
-
-  return (
-    <ProtectedRoute isAllowed={!!isAuthenticated} redirectPath="/login">
-      {children}
-    </ProtectedRoute>
-  );
-}
-
+  const isAuthenticated = useBarangayStore(state => !!state.barangayAccessToken);
+  return <ProtectedRoute isAllowed={isAuthenticated} redirectPath="/login">{children}</ProtectedRoute>;
+};
 
 export const AuthRoutes: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const isAuthenticated = useBarangayStore((state) => state.barangayAccessToken);
-  const isAuthChecked = useBarangayStore((state) => state.isAuthenticated);
-
-  if (isAuthChecked && !isAuthenticated) {
-    return <LoadingIndicator />;
-  }
-
-  return (
-    <ProtectedRoute isAllowed={!isAuthenticated} redirectPath="/dashboard">
-      {children}
-    </ProtectedRoute>
-  );
+  const isAuthenticated = useBarangayStore(state => !!state.barangayAccessToken);
+  return <ProtectedRoute isAllowed={!isAuthenticated} redirectPath="/dashboard">{children}</ProtectedRoute>;
 };

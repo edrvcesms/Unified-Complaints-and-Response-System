@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
-import { barangayApi } from "../../../complaint-system/src/services/axios/apiServices";
 import { refreshToken } from "../services/authentication/token";
 
 interface BarangayAuthState {
@@ -13,7 +12,7 @@ interface BarangayAuthState {
     isAuthenticated: boolean;
     mapDataFromBackend: (data: any) => void;
     clearBarangayAuth: () => Promise<void>;
-    fetchBarangayAccountData: () => Promise<void>;
+    // fetchBarangayAccountData: () => Promise<void>;
     refreshAccessToken: () => Promise<void>;
 }
 
@@ -22,7 +21,7 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
     setBarangayAccessToken: (token) => set({ barangayAccessToken: token }),
     barangayAccountData: null,
     setBarangayAccountData: (data) => set({ barangayAccountData: data }),
-    isLoading: false,
+    isLoading: true,
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
     mapDataFromBackend: (data: BarangayAccountData) => {
@@ -74,42 +73,36 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
             isAuthenticated: false
         });
     },
-    fetchBarangayAccountData: async () => {
-        set({ isLoading: true });
-        try {
-            const response = await barangayApi.get("/profile");
-            set({ barangayAccountData: response.data, isAuthenticated: true });
-        } catch (error) {
-            console.error("Failed to fetch barangay account data:", error);
-            set({ barangayAccountData: null, isAuthenticated: false });
-        } finally {
-            set({ isLoading: false });
-        }
-    },
+    // fetchBarangayAccountData: async () => {
+    //     set({ isLoading: true });
+    //     try {
+    //         const response = await barangayApi.get("/profile");
+    //         set({ barangayAccountData: response.data, isAuthenticated: true });
+    //     } catch (error) {
+    //         console.error("Failed to fetch barangay account data:", error);
+    //         set({ barangayAccountData: null, isAuthenticated: false });
+    //     } finally {
+    //         set({ isLoading: false });
+    //     }
+    // },
     refreshAccessToken: async () => {
         set({ isLoading: true });
+
         try {
             const data = await refreshToken();
-            if (data?.barangay_access_token) {
-                set({ 
-                    barangayAccessToken: data.barangay_access_token, 
-                    isAuthenticated: true 
-                });
-            } else {
-                set({ 
-                    barangayAccessToken: null, 
-                    isAuthenticated: false 
-                });
-            }
-        } catch (error) {
-            console.error("Failed to refresh token:", error);
-            set({ 
-                barangayAccessToken: null, 
-                isAuthenticated: false 
-            });
-        } finally {
-            set({ isLoading: false });
 
+            if (data?.barangayAccessToken) {
+            set({
+                barangayAccessToken: data.barangayAccessToken,
+                isAuthenticated: true,
+                isLoading: false,
+            });
+            } else {
+            set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
+            }
+
+        } catch (error) {
+            set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
         }
-    }
+        },
 }));

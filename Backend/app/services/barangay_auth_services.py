@@ -110,7 +110,7 @@ async def refresh_barangay_token(request: Request):
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={"barangay_access_token": new_access_token}
+            content={"barangayAccessToken": new_access_token}
         )
     
     except HTTPException:

@@ -7,14 +7,18 @@ import { BarangayProtectedRoute } from "./routes/ProtectedRoutes"
 import { NotFound } from "./features/general/NotFound"
 import { useEffect } from "react"
 import { AuthRoutes } from "./routes/ProtectedRoutes"
+import LoadingIndicator from "./components/LoadingIndicator"
 
 function App() {
 
-  useEffect(() => {
-    useBarangayStore.getState().refreshAccessToken();
-  }, [])
+  const refreshAccessToken = useBarangayStore(state => state.refreshAccessToken);
+  const isLoading = useBarangayStore(state => state.isLoading);
 
-  return(
+  useEffect(() => {
+    refreshAccessToken();
+  }, [refreshAccessToken]);
+
+  return isLoading ? <LoadingIndicator /> : (
     <>
       <NetworkProvider>
         <Routes>

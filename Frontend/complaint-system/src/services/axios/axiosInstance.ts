@@ -16,6 +16,13 @@ const processQueue = (error?: any) => {
   failedQueue = [];
 };
 
+const SKIP_REFRESH_URLS = ["/login", "/token-refresh"];
+
+const shouldSkipRefresh = (url?: string): boolean => {
+  if (!url) return false;
+  return SKIP_REFRESH_URLS.some(endpoint => url.includes(endpoint));
+};
+
 export const createApiInstance = (baseUrl: string, withCredentials?: boolean): AxiosInstance => {
   const instance: AxiosInstance = axios.create({
     baseURL: baseUrl,
@@ -37,6 +44,10 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
       const originalRequest = error.config;
       if (!originalRequest) return Promise.reject(error);
 
+      if (shouldSkipRefresh(originalRequest.url)) {
+        return Promise.reject(error);
+      }
+
       if (error.response?.status === 401 && !originalRequest._retry) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
@@ -51,9 +62,9 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           const refreshed = await refreshToken();
           if (!refreshed) throw new Error("Refresh failed");
 
-          useBarangayStore.getState().setBarangayAccessToken(refreshed.accessToken);
+          useBarangayStore.getState().setBarangayAccessToken(refreshed.barangayAccessToken);
           processQueue(null);
-          originalRequest.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${refreshed.barangayAccessToken}`;
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);

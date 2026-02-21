@@ -1,7 +1,7 @@
 import { BrandingPanel } from "../components/BrandingPanel";
 import { LoginForm } from "../components/LoginForm";
 import { MobileHeader } from "../components/MobileHeader";
-import { useLoginForm } from "../hooks/useLoginForm";
+import { useLoginForm } from "../../../hooks/useLoginForm";
 
 
 // ─── Page: LoginPage ──────────────────────────────────────────────────────────

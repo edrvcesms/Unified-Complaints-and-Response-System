@@ -26,7 +26,7 @@ class IncidentModel(Base):
     description = Column(Text, nullable=False)
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
-    sector_id = Column(Integer, ForeignKey("sector.id"), nullable=True)
+    department_id = Column(Integer, ForeignKey("department.id"), nullable=True)
     priority_level_id = Column(Integer, ForeignKey("priority_level.id"), nullable=True)
 
     status = Column(String(20), nullable=False, default="ACTIVE", index=True)

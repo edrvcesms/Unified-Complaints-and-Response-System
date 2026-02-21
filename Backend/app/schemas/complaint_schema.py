@@ -10,11 +10,11 @@ from .priority_level_schema import PriorityLevelModel
 class ComplaintBaseModel(BaseModel):
     title: str
     description: str
-    location_details: str
+    location_details: Optional[str] = None
     barangay_id: int
     category_id: int
-    sector_id: int
-    priority_level_id: int
+    sector_id: Optional[int] = None
+    priority_level_id: Optional[int] = None
 
 class ComplaintCreateData(ComplaintBaseModel):
     pass

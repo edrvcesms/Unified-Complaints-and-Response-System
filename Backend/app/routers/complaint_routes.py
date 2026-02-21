@@ -7,6 +7,7 @@ from app.dependencies.rate_limiter import limiter
 from app.services.complaint_services import submit_complaint, get_my_complaints, delete_complaint, review_complaints, resolve_complaint, get_all_complaints, get_all_resolved_complaints, get_all_submitted_complaints, get_all_under_review_complaints, get_complaint_by_id
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
+from app.services.complaint_cluster_service import cluster_complaints
 from app.models.user import User
 from fastapi.requests import Request
 
@@ -51,6 +52,9 @@ async def create_complaint(request: Request, data: str = Form(...), attachments:
     
     if attachments:
         await upload_attachments(attachments, current_user.id, complaint.id, db)
+        
+    await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
+        
     
     return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}
 

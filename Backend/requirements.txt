@@ -17,3 +17,6 @@ celery
 redis
 python-jose[cryptography]
 nest-asyncio
+pinecone
+sentence-transformers
+kombu

@@ -61,3 +61,5 @@ app.include_router(barangay_routes.router, prefix="/api/v1/barangays", tags=["Ba
 app.include_router(user_auth_routes.router, prefix="/api/v1/auth", tags=["User Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(complaint_routes.router, prefix="/api/v1/complaints", tags=["Complaints"])
+
+

@@ -1,0 +1,453 @@
+# Complaint Clustering System — Santa Maria, Laguna
+
+A system that automatically detects when multiple residents are complaining about
+the same problem, groups them into a single "incident", and dynamically calculates
+how urgent that incident is based on how many complaints came in and how fast.
+
+---
+
+## What the DI Container Does
+
+**The problem it solves:**
+
+Imagine your use-case (`ClusterComplaintUseCase`) needs to talk to Pinecone, the
+database, and the embedding model. If you write it like this:
+
+```python
+# BAD — use-case is hardcoded to specific implementations
+class ClusterComplaintUseCase:
+    def __init__(self):
+        self.embeddings = SentenceTransformerEmbeddingService()  # hardcoded
+        self.vectors    = PineconeVectorRepository(api_key="...")  # hardcoded
+        self.db         = IncidentRepository(db_session)  # hardcoded
+```
+
+Now you can never swap Pinecone for something else without editing the use-case.
+You also can't test the use-case in isolation — every test needs a real Pinecone
+connection.
+
+**What the container does instead:**
+
+The container (`infrastructure/container.py`) is the only place in the entire
+codebase where concrete classes (Pinecone, SQLAlchemy, SentenceTransformer) are
+created and connected together. Use-cases don't know what they're connected to —
+they only know they received something that satisfies an interface.
+
+```python
+# GOOD — use-case only knows about abstractions
+class ClusterComplaintUseCase:
+    def __init__(
+        self,
+        embedding_service: IEmbeddingService,    # interface, not a real class
+        vector_repository: IVectorRepository,    # interface, not a real class
+        incident_repository: IIncidentRepository # interface, not a real class
+    ):
+        ...
+```
+
+Then `container.py` does the assembly:
+
+```python
+# container.py — the only place that knows what's real
+embedding_service   = SentenceTransformerEmbeddingService()
+vector_repository   = PineconeVectorRepository(api_key=os.environ["PINECONE_API_KEY"])
+incident_repository = IncidentRepository(db_session)
+
+use_case = ClusterComplaintUseCase(
+    embedding_service=embedding_service,
+    vector_repository=vector_repository,
+    incident_repository=incident_repository,
+)
+```
+
+**Why this matters in practice:**
+
+- Swap Pinecone for pgvector → write a new `IVectorRepository`, change one line in `container.py`. The use-case is untouched.
+- Write a unit test for clustering logic → pass in a fake/mock `IVectorRepository` that returns canned data. No real Pinecone needed.
+- Change from local embeddings to OpenAI → write a new `IEmbeddingService`. Nothing else changes.
+
+The container is the **single assembly point** of the whole system. Everything else stays decoupled.
+
+---
+
+## Project Structure
+
+```
+complaint_system/
+│
+├── domain/                          # Layer 1: The core rules — no external dependencies
+│   ├── entities/
+│   │   ├── incident.py
+│   │   └── complaint_cluster.py
+│   ├── interfaces/
+│   │   ├── i_embedding_service.py
+│   │   ├── i_vector_repository.py
+│   │   ├── i_incident_repository.py
+│   │   ├── i_severity_calculator.py
+│   │   └── i_velocity_detector.py
+│   └── value_objects/
+│       ├── severity_level.py
+│       ├── similarity_result.py
+│       └── velocity_window.py
+│
+├── application/                     # Layer 2: Business logic (use-cases)
+│   └── use_cases/
+│       ├── cluster_complaint.py
+│       ├── recalculate_severity.py
+│       └── detect_velocity_spike.py
+│
+├── infrastructure/                  # Layer 3: Real-world implementations
+│   ├── database/
+│   │   ├── models.py
+│   │   ├── incident_repository.py
+│   │   └── migrations/
+│   │       └── 001_incident_clustering.py
+│   ├── embeddings/
+│   │   └── sentence_transformer_service.py
+│   ├── vector_store/
+│   │   └── pinecone_vector_repository.py
+│   ├── celery/
+│   │   ├── celery_app.py
+│   │   └── tasks.py
+│   └── container.py                 <- THE DI CONTAINER
+│
+├── api/                             # Layer 4: HTTP interface
+│   └── routes/
+│       └── complaints.py
+│
+├── main.py
+├── requirements.txt
+└── .env.example
+```
+
+---
+
+## Every File Explained
+
+### Domain Layer
+
+This layer has zero imports from FastAPI, SQLAlchemy, Pinecone, or anything external.
+It describes the rules and shapes of the system in plain Python.
+
+---
+
+#### `domain/entities/incident.py` — IncidentEntity
+
+An **incident** is what gets created when one or more complaints are grouped together.
+For example, if 5 people in Barangay Poblacion all complain about a flooded road,
+that becomes one incident with `complaint_count = 5`.
+
+This is a plain Python dataclass. It has no database connection. It just holds the
+data and has two helper methods:
+- `increment_complaint_count()` — adds 1 to the count and updates the timestamp
+- `update_severity(new_score)` — clamps the score to [1–10] and recalculates the level
+
+---
+
+#### `domain/entities/complaint_cluster.py` — ComplaintClusterEntity
+
+Represents the **link** between a single complaint and an incident. It's what gets
+stored in the `incident_complaints` join table. Records which complaint was linked
+to which incident, when, and how similar it was (the cosine similarity score).
+
+---
+
+#### `domain/value_objects/severity_level.py` — SeverityLevel
+
+A simple enum: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`. Has a `from_score()` method
+that converts a numeric score (1–10) to the right level:
+- 1.0–3.9 → LOW
+- 4.0–5.9 → MEDIUM
+- 6.0–7.9 → HIGH
+- 8.0–10.0 → CRITICAL
+
+---
+
+#### `domain/value_objects/similarity_result.py` — SimilarityResult
+
+A frozen (immutable) dataclass that holds what Pinecone returns when you search for
+similar complaints: the complaint ID, its incident ID, the cosine similarity score,
+and the metadata (barangay, category, status, timestamp).
+
+Has a `is_similar` property that returns `True` if the score is >= 0.65.
+
+---
+
+#### `domain/value_objects/velocity_window.py` — VelocityWindow
+
+A frozen dataclass representing a snapshot of complaint rate. Stores how many
+complaints came in during a time window and computes `complaints_per_hour`. Used
+by the severity calculator to detect complaint spikes.
+
+---
+
+#### `domain/interfaces/i_embedding_service.py` — IEmbeddingService
+
+A contract (abstract base class) with one method: `generate(text) -> List[float]`.
+Any class that implements this can be used as the embedding backend. The use-cases
+only ever call `generate()` — they don't care if it's a local model or an API.
+
+---
+
+#### `domain/interfaces/i_vector_repository.py` — IVectorRepository
+
+A contract for the vector database. Defines three operations:
+- `upsert(...)` — store a complaint's embedding with metadata
+- `query_similar(...)` — find the most similar active complaint in the same barangay + category + time window
+- `update_metadata(...)` — update the `incident_id` and `status` after clustering
+
+---
+
+#### `domain/interfaces/i_incident_repository.py` — IIncidentRepository
+
+A contract for incident persistence. Defines:
+- `get_by_id(incident_id)` — fetch an incident
+- `create(incident)` — persist a new incident, return it with its generated ID
+- `update(incident)` — save changes (complaint count, severity, etc.)
+- `link_complaint(cluster)` — insert a row into `incident_complaints`
+- `count_complaints_in_window(incident_id, window_hours)` — count recent complaints for velocity
+
+---
+
+#### `domain/interfaces/i_severity_calculator.py` — ISeverityCalculator
+
+A contract with one method: `calculate(incident, velocity) -> float`. Returns a
+score between 1.0 and 10.0. Any scoring formula can implement this.
+
+---
+
+#### `domain/interfaces/i_velocity_detector.py` — IVelocityDetector
+
+A contract with one method: `get_velocity(incident) -> VelocityWindow`. Returns
+how fast complaints are coming in for a given incident. Kept separate from
+`ISeverityCalculator` because measuring velocity and calculating severity are two
+different jobs.
+
+---
+
+### Application Layer
+
+This layer contains the actual business logic. It imports only from the domain layer.
+It never imports Pinecone, SQLAlchemy, or sentence-transformers directly.
+
+---
+
+#### `application/use_cases/cluster_complaint.py` — ClusterComplaintUseCase
+
+The **main brain** of the system. Runs inside the Celery worker after every complaint submission:
+
+1. Calls `IEmbeddingService.generate()` to turn the complaint description into a 384-number vector
+2. Stores that vector in Pinecone via `IVectorRepository.upsert()` with metadata
+3. Asks Pinecone: "Is there a similar active complaint in the same barangay + category within the time window?"
+4. If yes and score >= threshold → merge into the existing incident (increment count, link complaint)
+5. If no → create a brand new incident seeded with this complaint
+6. Updates Pinecone metadata to record which incident this complaint belongs to
+
+---
+
+#### `application/use_cases/detect_velocity_spike.py` — DetectVelocitySpikeUseCase
+
+Asks the database: "How many complaints were linked to this incident within its
+category time window?" Returns a `VelocityWindow` with the count and `complaints_per_hour`.
+Fed into the severity formula. Also implements `IVelocityDetector` so it can be swapped or mocked in tests.
+
+---
+
+#### `application/use_cases/recalculate_severity.py` — RecalculateSeverityUseCase + WeightedSeverityCalculator
+
+Two classes in one file because they work together:
+
+`WeightedSeverityCalculator` implements `ISeverityCalculator` and runs the formula:
+
+```
+severity = base_category_weight          (1–5, preset per category)
+         + log2(complaint_count) * 1.5   (1 complaint=0, 10 complaints≈5, 50 complaints≈8.4)
+         + complaints_per_hour * 2.0     (spike multiplier)
+```
+
+Clamped to [1.0, 10.0].
+
+`RecalculateSeverityUseCase` orchestrates the flow: get incident → measure velocity → calculate score → save. It delegates the math to `ISeverityCalculator` so the formula is swappable.
+
+
+
+#### `infrastructure/embeddings/sentence_transformer_service.py` — SentenceTransformerEmbeddingService
+
+Implements `IEmbeddingService` using `all-MiniLM-L6-v2` from HuggingFace. The model
+is loaded once via `@lru_cache` and reused. Because encoding is CPU-bound and would
+block the async event loop, it runs in a thread pool via `asyncio.run_in_executor()`.
+Returns 384 floats per complaint description.
+
+---
+
+#### `infrastructure/vector_store/pinecone_vector_repository.py` — PineconeVectorRepository
+
+Implements `IVectorRepository` using Pinecone. The index is named `complaints-index`,
+uses cosine similarity, and stores 384-dim vectors. Each vector's ID is the complaint
+ID. Stored alongside each vector: `barangay_id`, `category_id`, `incident_id`,
+`status`, `created_at` (Unix timestamp).
+
+When querying for similar complaints, all four of those are passed as filters so
+Pinecone only searches within the right slice before doing the similarity search.
+
+---
+
+#### `infrastructure/database/models.py` — SQLAlchemy ORM Models
+
+Three new tables:
+
+**`IncidentModel`** — the main incident record. Tracks `complaint_count`,
+`severity_score`, `severity_level`, `status`, and `time_window_hours`. Has a
+composite index on `(barangay_id, category_id, status)` for fast lookups.
+
+**`IncidentComplaintModel`** — the join table linking complaints to incidents.
+Records `similarity_score` and `linked_at`. Has a unique constraint preventing
+the same complaint being linked to the same incident twice.
+
+**`CategoryConfigModel`** — per-category configuration: base severity weight,
+time window in hours, and similarity threshold. This is where you tune the system
+per category without touching code.
+
+---
+
+#### `infrastructure/database/incident_repository.py` — IncidentRepository
+
+Implements `IIncidentRepository` using SQLAlchemy async. Contains `_to_entity()`
+and `_to_model()` private methods that convert between SQLAlchemy ORM objects and
+domain entities. This prevents SQLAlchemy decorators or session state from leaking
+into the domain layer. Also has `get_category_config()` used by the FastAPI route.
+
+---
+
+#### `infrastructure/database/migrations/001_incident_clustering.py` — Alembic Migration
+
+Creates the three new tables and seeds `category_configs` with the preset time
+windows and severity weights for all 13 categories. Run with `alembic upgrade head`.
+
+---
+
+#### `infrastructure/celery/celery_app.py` — Celery Configuration
+
+Sets up Celery with Redis as broker and backend. Defines two queues:
+- **`clustering`** — for `cluster_complaint_task`, run with 4 workers
+- **`severity`** — for `recalculate_severity_task`, 2 workers is enough
+
+`acks_late=True` means a task is only removed from the queue after it finishes
+successfully. If a worker crashes mid-task, it gets requeued automatically.
+
+---
+
+#### `infrastructure/celery/tasks.py` — Celery Tasks
+
+Two tasks, both thin wrappers that delegate all logic to use-cases:
+
+**`cluster_complaint_task`** — receives complaint data as a JSON dict, builds
+the input DTO, calls `ClusterComplaintUseCase.execute()`, commits the transaction,
+then dispatches `recalculate_severity_task` as a follow-up. Retries up to 3 times.
+
+**`recalculate_severity_task`** — receives an `incident_id`, calls
+`RecalculateSeverityUseCase.execute()`, commits, returns updated severity. Also
+retries up to 3 times. Both tasks create their own async event loop since Celery
+workers are synchronous by default.
+
+---
+
+#### `infrastructure/container.py` — The DI Container
+
+The single assembly point. See the full explanation at the top of this file.
+Creates three singletons (embedding service, Pinecone repo, severity calculator)
+shared across tasks, and exposes two async context managers:
+- `build_cluster_use_case()` — yields a wired `ClusterComplaintUseCase` + DB session
+- `build_severity_use_case()` — yields a wired `RecalculateSeverityUseCase` + DB session
+
+---
+
+### Presentation Layer
+
+---
+
+#### `api/routes/complaints.py` — Updated Complaint Route
+
+Your existing endpoint with three additions after saving the complaint:
+1. Fetches category config (time window, base weight, threshold) from the DB
+2. Builds a JSON-serializable dict from the complaint data
+3. Dispatches `cluster_complaint_task` to Celery and returns 201 immediately
+
+The user never waits for clustering or severity calculation.
+
+---
+
+#### `main.py` — FastAPI App Entry Point
+
+Registers the FastAPI lifespan hook. On startup, calls `init_vector_store()` which
+checks if the Pinecone index exists and creates it if not, ensuring it's ready
+before any complaint comes in.
+
+---
+
+## Full Request Lifecycle
+
+```
+User submits complaint
+        |
+        v
+[FastAPI Route]
+  1. Parse + validate complaint data
+  2. Save complaint to PostgreSQL
+  3. Upload attachments if any
+  4. Fetch category config from DB
+  5. Dispatch cluster_complaint_task to Celery
+  6. Return 201 immediately  <-- user is done waiting
+        |
+        v  (runs async in Celery clustering worker)
+[cluster_complaint_task]
+  1. Generate 384-dim embedding from complaint description
+  2. Store vector in Pinecone with metadata
+  3. Query Pinecone for similar ACTIVE complaints in same barangay + category + time window
+  4a. Match found (score >= threshold)?
+      -> Merge: increment incident.complaint_count, link complaint to incident
+  4b. No match?
+      -> Create new incident seeded with this complaint
+  5. Update Pinecone metadata with resolved incident_id
+  6. Dispatch recalculate_severity_task
+        |
+        v  (runs async in Celery severity worker)
+[recalculate_severity_task]
+  1. Count complaints in this incident's time window (velocity)
+  2. Compute: base_weight + log2(count)*1.5 + complaints_per_hour*2.0
+  3. Clamp to [1.0-10.0], map to LOW/MEDIUM/HIGH/CRITICAL
+  4. Save updated severity to incident in PostgreSQL
+```
+
+---
+
+## Running the System
+
+```bash
+# 1. Copy env and fill in your values
+cp .env.example .env
+
+# 2. Run the database migration
+alembic upgrade head
+
+# 3. Start FastAPI
+uvicorn main:app --reload
+
+# 4. Start clustering worker (Terminal 2)
+celery -A infrastructure.celery.celery_app worker -Q clustering --concurrency=4 -l info
+
+# 5. Start severity worker (Terminal 3)
+celery -A infrastructure.celery.celery_app worker -Q severity --concurrency=2 -l info
+```
+
+---
+
+## SOLID Principles
+
+| Principle | Plain English | Where |
+|---|---|---|
+| **SRP** | Every class has exactly one job | `SentenceTransformerEmbeddingService` only generates embeddings. `IncidentRepository` only handles DB persistence. `ClusterComplaintUseCase` only decides clustering logic. |
+| **OCP** | Add new behavior without editing existing code | Want OpenAI embeddings? Write a new `IEmbeddingService`. Want a different severity formula? Write a new `ISeverityCalculator`. No existing files change. |
+| **LSP** | Any implementation of an interface is safely swappable | You can replace `PineconeVectorRepository` with a `PgVectorRepository` and nothing in the use-cases breaks. |
+| **ISP** | Interfaces are small and focused, not bloated | `IVelocityDetector` and `ISeverityCalculator` are separate. `IVectorRepository` and `IIncidentRepository` are separate. No class implements methods it doesn't need. |
+| **DIP** | High-level logic depends on abstractions, not concrete tools | `ClusterComplaintUseCase` depends on `IEmbeddingService`, `IVectorRepository`, `IIncidentRepository` — never on Pinecone, SQLAlchemy, or sentence-transformers directly. |

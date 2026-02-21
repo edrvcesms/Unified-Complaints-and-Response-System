@@ -37,9 +37,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       <p className="text-sm text-gray-500">Sign in with your official barangay credentials.</p>
     </div>
 
-    {/* Server / auth error banner */}
-    {errors.general && <AlertBanner message={errors.general} />}
-
     <form onSubmit={onSubmit} noValidate className="space-y-5">
 
       {/* ── Email / Username ── */}
@@ -99,6 +96,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* ── Submit ── */}
       <SubmitButton isLoading={isLoading} />
     </form>
+    
+    {/* Server / auth error banner */}
+    {errors.general && <AlertBanner message={errors.general} />}
 
     {/* Compliance note */}
     <p className="text-center text-xs text-gray-400 leading-relaxed pt-2 border-t border-gray-100">

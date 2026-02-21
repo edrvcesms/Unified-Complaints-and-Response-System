@@ -70,7 +70,7 @@ export const useSubmitForm = <T = any>({
     onError: (error: any) => {
       // Handle client-side validation errors
       if (error?.type === "validation") {
-        onError?.({ general: "Validation failed", errors: error.errors });
+        onError?.({ general: "Please provide all required fields correctly.", errors: error.errors });
         return;
       }
 

@@ -8,11 +8,14 @@ import { NotFound } from "./features/general/NotFound"
 import { useEffect } from "react"
 import { AuthRoutes } from "./routes/ProtectedRoutes"
 import LoadingIndicator from "./components/LoadingIndicator"
+import Navbar from "./components/Navbar"
 
 function App() {
 
   const refreshAccessToken = useBarangayStore(state => state.refreshAccessToken);
   const isLoading = useBarangayStore(state => state.isLoading);
+  const isAuthenticated = useBarangayStore(state => !!state.barangayAccessToken);
+  const clearBarangayAuth = useBarangayStore(state => state.clearBarangayAuth);
 
   useEffect(() => {
     refreshAccessToken();
@@ -20,6 +23,7 @@ function App() {
 
   return isLoading ? <LoadingIndicator /> : (
     <>
+      {isAuthenticated && <Navbar onLogout={clearBarangayAuth} />}
       <NetworkProvider>
         <Routes>
           <Route element={<BarangayProtectedRoute />}>

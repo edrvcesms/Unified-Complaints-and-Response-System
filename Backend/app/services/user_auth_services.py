@@ -201,7 +201,6 @@ async def logout_user(request: Request):
                 "message": "Logout successful"
             }
         )
-        response.delete_cookie(key="access_token")
         response.delete_cookie(key="refresh_token")
         return response
     

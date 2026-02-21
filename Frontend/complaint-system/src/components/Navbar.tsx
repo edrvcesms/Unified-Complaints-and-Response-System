@@ -1,0 +1,213 @@
+import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import StaMariaLogo from "../assets/StaMariaLogo.jpg";
+import { useBarangayStore } from "../store/authStore";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface NavbarProps {
+  /** Callback fired when the user clicks Logout */
+  onLogout: () => void;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
+  const navigate = useNavigate();
+
+  // ── Data from store ─────────────────────────────────────────────────────────
+  const barangayName = useBarangayStore(
+    (state) => state.barangayAccountData?.barangay_name ?? "Barangay"
+  );
+  const role = useBarangayStore(
+    (state) => state.barangayAccountData?.barangay_account.user.role ?? "Official"
+  );
+
+  // ── Avatar initials — first letter of each word, max 2 ─────────────────────
+  const initials = barangayName
+    .split(" ")
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  // ── Dropdown state ──────────────────────────────────────────────────────────
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+
+  // Ref used to detect clicks outside the dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ── Close on outside click ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownOpen]);
+
+  // ── Close on Escape key ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDropdownOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleProfileClick = () => {
+    setDropdownOpen(false);
+    navigate("/profile");
+  };
+
+  const handleLogout = () => {
+    setDropdownOpen(false);
+    onLogout();
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  return (
+    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/30">
+      {/* Gold accent bar — government document aesthetic */}
+      <div className="h-1 w-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500" />
+
+      <nav
+        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {/* ── Left — Logo + System Name ── */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Municipal seal */}
+          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0 shadow-md">
+            <img
+              src={StaMariaLogo}
+              alt="Sta. Maria, Laguna Seal"
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* System name */}
+          <div className="min-w-0">
+            <p className="text-white font-bold text-sm sm:text-base leading-tight truncate tracking-tight">
+              Sta. Maria, Laguna
+            </p>
+            <p className="text-blue-300 text-[10px] sm:text-xs leading-tight truncate tracking-widest uppercase font-medium">
+              Complaint Management System
+            </p>
+          </div>
+        </div>
+
+        {/* ── Right — Profile Dropdown ── */}
+        <div className="relative flex-shrink-0" ref={dropdownRef}>
+
+          {/* Profile toggle button */}
+          <button
+            type="button"
+            onClick={() => setDropdownOpen((prev) => !prev)}
+            aria-haspopup="true"
+            aria-expanded={dropdownOpen}
+            aria-label="Open profile menu"
+            className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1
+              border border-white/20 bg-white/10 hover:bg-white/20
+              transition duration-200 focus:outline-none focus:ring-2
+              focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#003087]"
+          >
+            {/* Avatar circle with initials */}
+            <div
+              aria-hidden="true"
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500
+                flex items-center justify-center text-blue-900 font-bold text-xs shadow-sm flex-shrink-0"
+            >
+              {initials}
+            </div>
+
+            {/* Barangay name — hidden on very small screens */}
+            <span className="hidden sm:block text-white text-sm font-medium max-w-[140px] truncate">
+              {barangayName}
+            </span>
+
+            {/* Chevron — rotates when dropdown is open */}
+            <svg
+              aria-hidden="true"
+              className={`w-3.5 h-3.5 text-blue-200 transition-transform duration-200 flex-shrink-0
+                ${dropdownOpen ? "rotate-180" : "rotate-0"}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* ── Dropdown Menu ── */}
+          {dropdownOpen && (
+            <div
+              role="menu"
+              aria-label="Profile menu"
+              className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl
+                border border-gray-100 overflow-hidden z-50"
+              style={{ animation: "fadeSlideDown 0.15s ease-out" }}
+            >
+              <style>{`
+                @keyframes fadeSlideDown {
+                  from { opacity: 0; transform: translateY(-6px); }
+                  to   { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
+
+              {/* User info header */}
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="text-sm font-semibold text-gray-800 truncate">{barangayName}</p>
+                <p className="text-xs text-gray-500 truncate capitalize">{role}</p>
+              </div>
+
+              {/* Profile option */}
+              <button
+                role="menuitem"
+                type="button"
+                onClick={handleProfileClick}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700
+                  hover:bg-blue-50 hover:text-blue-800 transition duration-150 text-left"
+              >
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                My Profile
+              </button>
+
+              <div className="h-px bg-gray-100 mx-3" />
+
+              {/* Logout button */}
+              <button
+                role="menuitem"
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600
+                  hover:bg-red-50 transition duration-150 text-left"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
+    </header>
+  );
+};
+
+export default Navbar;

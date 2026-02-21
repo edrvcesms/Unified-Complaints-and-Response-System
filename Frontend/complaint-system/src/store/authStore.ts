@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import { refreshToken } from "../services/authentication/token";
+import { logoutBarangayAccount } from "../services/authentication/barangayAuth";
 
 interface BarangayAuthState {
     barangayAccessToken: string | null;
@@ -67,11 +68,19 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
         });
     },
     clearBarangayAuth: async () => {
-        set({
-            barangayAccessToken: null,
-            barangayAccountData: null,
-            isAuthenticated: false
-        });
+        set({ isLoading: true });
+        try {
+            await logoutBarangayAccount();
+            set({
+                barangayAccessToken: null,
+                barangayAccountData: null,
+                isAuthenticated: false
+            });
+        } catch (error) {
+            console.error("Error during logout:", error);
+        } finally {
+            set({ isLoading: false });
+        }
     },
     // fetchBarangayAccountData: async () => {
     //     set({ isLoading: true });
@@ -92,17 +101,18 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
             const data = await refreshToken();
 
             if (data?.barangayAccessToken) {
-            set({
-                barangayAccessToken: data.barangayAccessToken,
-                isAuthenticated: true,
-                isLoading: false,
-            });
+                set({
+                    barangayAccessToken: data.barangayAccessToken,
+                    barangayAccountData: data.barangayAccountData,
+                    isAuthenticated: true,
+                    isLoading: false,
+                });
             } else {
-            set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
+                set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
             }
 
         } catch (error) {
             set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
         }
-        },
+    },
 }));

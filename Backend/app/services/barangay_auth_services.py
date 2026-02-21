@@ -12,7 +12,7 @@ from fastapi.requests import Request
 from datetime import datetime
 from app.core.security import create_access_token, create_refresh_token, verify_token
 from app.utils.logger import logger
-from app.utils.cookies import set_cookies
+from app.utils.cookies import set_cookies, clear_cookies
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -34,7 +34,7 @@ async def barangay_authenticate(login_data: BarangayAuthLoginData, db: AsyncSess
 
     if not decrypt_password(login_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
 
@@ -88,7 +88,35 @@ async def barangay_authenticate(login_data: BarangayAuthLoginData, db: AsyncSess
 
     return response
 
-async def refresh_barangay_token(request: Request):
+async def logout_barangay(request: Request):
+    try:
+        token = request.cookies.get("barangay_refresh_token")
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No authentication token provided"
+            )
+        
+        response = JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "Logout successful"}
+        )
+        response.delete_cookie(key="barangay_refresh_token")
+        
+        return response
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during logout. Please try again later."
+        )
+            
+
+async def refresh_barangay_token(request: Request, db: AsyncSession):
     try:
         refresh_token = request.cookies.get("barangay_refresh_token")
         if not refresh_token:
@@ -98,7 +126,7 @@ async def refresh_barangay_token(request: Request):
             )
         
         is_valid = verify_token(refresh_token)
-        user_id = is_valid.get("user_id") if is_valid else None 
+        user_id = is_valid.get("user_id") if is_valid else None
         
         if not user_id:
             raise HTTPException(
@@ -108,10 +136,38 @@ async def refresh_barangay_token(request: Request):
         
         new_access_token = create_access_token(data={"user_id": user_id})
         
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"barangayAccessToken": new_access_token}
+        result = await db.execute(
+            select(Barangay)
+            .options(
+                selectinload(Barangay.barangay_account)
+                .selectinload(BarangayAccount.user)
+            )
+            .where(
+                Barangay.barangay_account.has(
+                    BarangayAccount.user_id == user_id
+                )
+            )
         )
+
+        barangay = result.scalars().first()
+
+        if not barangay:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Barangay not found"
+            )
+
+        barangay_data = BarangayWithUserData.model_validate(
+            barangay,
+            from_attributes=True
+        )
+
+        response = {
+            "barangayAccessToken": new_access_token,
+            "barangayAccountData": barangay_data.model_dump()
+        }
+        return response
+        
     
     except HTTPException:
         raise

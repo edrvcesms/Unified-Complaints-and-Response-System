@@ -21,7 +21,6 @@ export const loginBarangayAccount = async (data: LoginRequestData) => {
 export const logoutBarangayAccount = async () => {
   try {
     await authApi.post("/logout", { withCredentials: true });
-    useBarangayStore.getState().clearBarangayAuth();
   } catch (error) {
     const errorMessage = handleApiError(error);
     console.error("Logout failed:", errorMessage.message);

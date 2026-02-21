@@ -22,9 +22,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
 export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useBarangayStore((state) => state.barangayAccessToken);
-  const isAuthChecked = useBarangayStore((state) => state.isAuthenticated);
-  
-  if (isAuthChecked && !isAuthenticated) return <LoadingIndicator />;
+  const isLoading = useBarangayStore((state) => state.isLoading);
+
+  if (isLoading) return <LoadingIndicator />;
 
   return (
     <ProtectedRoute isAllowed={!!isAuthenticated} redirectPath="/login">
@@ -34,11 +34,9 @@ export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = 
 }
 export const AuthRoutes: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useBarangayStore((state) => state.barangayAccessToken);
-  const isAuthChecked = useBarangayStore((state) => state.isAuthenticated);
+  const isLoading = useBarangayStore((state) => state.isLoading);
 
-  if (isAuthChecked && !isAuthenticated) {
-    return <LoadingIndicator />;
-  }
+  if (isLoading) return <LoadingIndicator />;
 
   return (
     <ProtectedRoute isAllowed={!isAuthenticated} redirectPath="/dashboard">

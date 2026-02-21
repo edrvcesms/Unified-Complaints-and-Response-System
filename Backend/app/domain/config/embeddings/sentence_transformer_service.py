@@ -1,10 +1,8 @@
 """
 Infrastructure Layer — Sentence Transformer Embedding Service.
 
-Implements IEmbeddingService using the local all-MiniLM-L6-v2 model.
+Implements IEmbeddingService using multilingual-e5-large model.
 Model is loaded once as a singleton to avoid repeated disk I/O.
-LSP: Can be replaced by OpenAIEmbeddingService or CohereEmbeddingService
-     without any changes to use-cases.
 """
 
 import asyncio
@@ -18,50 +16,57 @@ from app.domain.interfaces.i_embedding_service import IEmbeddingService
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-EMBEDDING_DIM = 384
+MODEL_NAME = "intfloat/multilingual-e5-large"
+EMBEDDING_DIM = 1024
 
 
 @lru_cache(maxsize=1)
 def _load_model() -> SentenceTransformer:
-    """
-    Load and cache the model once per process.
-    lru_cache ensures the model is not reloaded on every request.
-    """
-    logger.info(f"Loading sentence-transformer model: {MODEL_NAME}")
+    logger.info(f"Loading embedding model: {MODEL_NAME}")
     return SentenceTransformer(MODEL_NAME)
 
 
 class SentenceTransformerEmbeddingService(IEmbeddingService):
-    """
-    Generates 384-dimensional embeddings using all-MiniLM-L6-v2.
-
-    SRP: Only responsibility is embedding generation.
-    DIP: Use-cases import IEmbeddingService, not this class directly.
-    """
 
     def __init__(self):
-        # Model is loaded lazily on first call, then cached
         self._model: SentenceTransformer = None
 
-    async def generate(self, text: str) -> List[float]:
+    async def generate(self, text: str, prefix: str = "query: ") -> List[float]:
         """
-        Generate an embedding vector for the given text.
-        Runs the CPU-bound encoding in a thread pool to avoid blocking the event loop.
+        Generate embedding vector.
+
+        Parameters
+        ----------
+        text : str
+            Input text.
+        prefix : str
+            E5 models require task prefix:
+            - "query: " for search queries
+            - "passage: " for stored documents
         """
+
         if not text or not text.strip():
             raise ValueError("Cannot generate embedding for empty text")
 
         model = self._get_model()
 
-        # Run blocking CPU-bound work in a thread pool
+        processed_text = f"{prefix}{text.strip()}"
+
         loop = asyncio.get_event_loop()
+
         embedding = await loop.run_in_executor(
             None,
-            lambda: model.encode(text.strip(), normalize_embeddings=True).tolist()
+            lambda: model.encode(
+                processed_text,
+                normalize_embeddings=True
+            ).tolist()
         )
 
-        logger.debug(f"Generated embedding of dim={len(embedding)} for text length={len(text)}")
+        if len(embedding) != EMBEDDING_DIM:
+            logger.warning(
+                f"Embedding dimension mismatch: expected {EMBEDDING_DIM}, got {len(embedding)}"
+            )
+
         return embedding
 
     def _get_model(self) -> SentenceTransformer:

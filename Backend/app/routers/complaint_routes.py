@@ -53,7 +53,7 @@ async def create_complaint(request: Request, data: str = Form(...), attachments:
     if attachments:
         await upload_attachments(attachments, current_user.id, complaint.id, db)
         
-    await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
+#await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
         
     
     return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}

@@ -10,33 +10,32 @@ from app.utils.logger import logger
 from fastapi import UploadFile
 from app.celery_worker import celery_worker
 import nest_asyncio
-import asyncio
 from starlette.datastructures import Headers
-import asyncio
-import os
-import logging
-from datetime import datetime
-
-from app.celery_worker import celery_worker
-from app.database.database import AsyncSessionLocal
 
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
-
-
 from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
 from app.domain.repository.incident_repository import IncidentRepository
-from app.dependencies.db_dependency import get_async_db
-
+from dotenv import load_dotenv
 nest_asyncio.apply()
+load_dotenv()
 
+# ── Singletons — created once per worker process ──────────────────────────────
+#_embedding_service = SentenceTransformerEmbeddingService()
+"""
+_vector_repository = PineconeVectorRepository(
+    api_key=os.environ["PINECONE_API_KEY"],
+    environment=os.environ.get("PINECONE_ENVIRONMENT", "us-east-1"),
+)
+
+_severity_calculator = WeightedSeverityCalculator()
+
+"""
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_email_task(self, subject: str, recipient: str, body: str):
-    
     try:
-        
         async def _send():
             message = MessageSchema(subject=subject, recipients=[recipient], body=body, subtype="html")
             fm = FastMail(conf)
@@ -47,8 +46,8 @@ def send_email_task(self, subject: str, recipient: str, body: str):
 
     except Exception as e:
         logger.error(f"Failed to send email to {recipient}: {str(e)}")
-        
         raise self.retry(exc=e)
+
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
@@ -66,7 +65,7 @@ def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
     </div>
     """
     send_email_task.delay(subject=subject, recipient=recipient, body=body)
-    
+
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: int):
@@ -111,12 +110,9 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
                 os.rmdir(temp_dir)
         except Exception as e:
             logger.warning(f"Failed to delete temp folder {temp_dir}: {e}")
-            
-            
+
+
 async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_id: int):
-    """
-    Save uploaded file metadata to the database
-    """
     attachments = []
     async with AsyncSessionLocal() as db:
         for f, url in zip(files_data, urls):
@@ -133,56 +129,22 @@ async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_
             attachments.append(attachment)
         db.add_all(attachments)
         await db.commit()
-        
-        
 
 
-
-logger = logging.getLogger(__name__)
-
-# ── Singletons — created once per worker process ──────────────────────────────
-# These are stateless so they're safe to share across tasks in the same worker.
-_embedding_service = SentenceTransformerEmbeddingService()
-
-_vector_repository = PineconeVectorRepository(
-    api_key=os.environ["PINECONE_API_KEY"],
-    environment=os.environ.get("PINECONE_ENVIRONMENT", "us-east-1"),
-)
-
-_severity_calculator = WeightedSeverityCalculator()
-
-
-def _run_async(coro):
-    """
-    Run an async coroutine in a new event loop inside a sync Celery task.
-    Each task gets its own loop to avoid event loop conflicts between workers.
-    """
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
+# ── Clustering tasks ───────────────────────────────────────────────────────────
+"""
 @celery_worker.task(
     bind=True,
-    name="infrastructure.celery.tasks.cluster_complaint_task",
+    name="app.tasks.cluster_complaint_task",
     max_retries=3,
     default_retry_delay=10,
     autoretry_for=(Exception,),
 )
 def cluster_complaint_task(self, complaint_data: dict) -> dict:
-    """
-    Celery task: cluster a complaint into an incident.
-
-    Dispatched by the FastAPI route immediately after complaint submission.
-    On success, dispatches recalculate_severity_task as a sub-task.
-    """
     logger.info(f"[cluster_complaint_task] complaint_id={complaint_data.get('complaint_id')}")
 
     async def _run():
-        async with get_async_db() as db:
-            # Build dependencies directly — no container needed
+        async with AsyncSessionLocal() as db:
             incident_repo = IncidentRepository(db)
             use_case = ClusterComplaintUseCase(
                 embedding_service=_embedding_service,
@@ -209,9 +171,8 @@ def cluster_complaint_task(self, complaint_data: dict) -> dict:
             await db.commit()
             return result
 
-    result = _run_async(_run())
+    result = asyncio.run(_run())
 
-    # Dispatch severity recalculation as a follow-up task
     recalculate_severity_task.apply_async(
         args=[result.incident_id],
         queue="severity",
@@ -227,22 +188,16 @@ def cluster_complaint_task(self, complaint_data: dict) -> dict:
 
 @celery_worker.task(
     bind=True,
-    name="infrastructure.celery.tasks.recalculate_severity_task",
+    name="app.tasks.recalculate_severity_task",
     max_retries=3,
     default_retry_delay=5,
     autoretry_for=(Exception,),
 )
 def recalculate_severity_task(self, incident_id: int) -> dict:
-    """
-    Celery task: recalculate severity for a given incident.
-    Always dispatched after cluster_complaint_task completes.
-    Can also be dispatched independently (e.g. on complaint resolution).
-    """
     logger.info(f"[recalculate_severity_task] incident_id={incident_id}")
 
     async def _run():
-        async with get_async_db() as db:
-            # Build dependencies directly — no container needed
+        async with AsyncSessionLocal() as db:
             incident_repo = IncidentRepository(db)
             velocity_detector = DetectVelocitySpikeUseCase(incident_repo)
             use_case = RecalculateSeverityUseCase(
@@ -255,10 +210,12 @@ def recalculate_severity_task(self, incident_id: int) -> dict:
             await db.commit()
             return incident
 
-    incident = _run_async(_run())
+    incident = asyncio.run(_run())
 
     return {
         "incident_id": incident.id,
         "severity_score": incident.severity_score,
         "severity_level": incident.severity_level.value,
     }
+    
+    """

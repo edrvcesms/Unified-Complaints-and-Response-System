@@ -3,6 +3,8 @@ from datetime import date
 from app.database.database import Base
 from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime
+from datetime import datetime
 
 class Complaint(Base):
     __tablename__ = "complaint"
@@ -18,10 +20,10 @@ class Complaint(Base):
     description = Column(String, nullable=True)
     location_details = Column(String, nullable=True)
     status = Column(String, nullable=True)
-    forwarded_at = Column(Date, nullable=True)
-    resolved_at = Column(Date, nullable=True)
-    created_at = Column(Date, nullable=False, default=date.today)
-    updated_at = Column(Date, nullable=True)
+    forwarded_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")

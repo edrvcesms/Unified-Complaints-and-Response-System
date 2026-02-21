@@ -76,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/30">
+    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/30 sticky top-0 z-50">
       {/* Gold accent bar — government document aesthetic */}
       <div className="h-1 w-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500" />
 

@@ -44,7 +44,7 @@ async def get_all_complaints(db: AsyncSession):
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
         
-        await set_cache("all_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=3600)
+        await set_cache("all_complaints", [complaint.model_dump_json() for complaint in complaints_list], expiration=1)
         
         return complaints_list
     

@@ -1,5 +1,6 @@
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class Response(Base):
@@ -11,8 +12,8 @@ class Response(Base):
     message = Column(String, nullable=False)
     action_taken = Column(String, nullable=True)
     attachment_path = Column(String, nullable=True)
-    created_at = Column(Date, nullable=False)
-    updated_at = Column(Date, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
 
     complaint = relationship("Complaint", back_populates="response")
     responder = relationship("User", back_populates="response")

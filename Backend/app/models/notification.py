@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class Notification(Base):
@@ -13,7 +13,7 @@ class Notification(Base):
     notification_type = Column(String, nullable=False)
     channel = Column(String, nullable=False)
     is_read = Column(Boolean, default=False)
-    sent_at = Column(Date, nullable=False)
+    sent_at = Column(DateTime, nullable=False)
 
     user = relationship("User", back_populates="notifications")
     complaint = relationship("Complaint", back_populates="notifications")

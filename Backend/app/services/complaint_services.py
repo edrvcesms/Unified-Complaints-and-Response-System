@@ -31,7 +31,7 @@ _severity_calculator = WeightedSeverityCalculator()
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == complaint_id))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
         
         if not complaint:
@@ -55,7 +55,7 @@ async def get_all_complaints(db: AsyncSession):
             logger.info("All complaints retrieved from cache")
             return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_complaints]
         
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
         
         complaints = result.scalars().all()
         
@@ -81,7 +81,7 @@ async def get_all_under_review_complaints(db: AsyncSession):
             logger.info("All under review complaints retrieved from cache")
             return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_under_review_complaints]
         
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.UNDER_REVIEW.value))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.UNDER_REVIEW.value))
         
         complaints = result.scalars().all()
         
@@ -105,7 +105,7 @@ async def get_all_resolved_complaints(db: AsyncSession):
             logger.info("All resolved complaints retrieved from cache")
             return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_resolved_complaints]
         
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.RESOLVED.value))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.RESOLVED.value))
         
         complaints = result.scalars().all()
         
@@ -131,7 +131,7 @@ async def get_all_submitted_complaints(db: AsyncSession):
             logger.info("All submitted complaints retrieved from cache")
             return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_submitted_complaints]
         
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.SUBMITTED.value))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.status == ComplaintStatus.SUBMITTED.value))
         
         complaints = result.scalars().all()
         
@@ -163,7 +163,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             location_details=complaint_data.location_details,
             barangay_id=complaint_data.barangay_id,
             category_id=complaint_data.category_id,
-            sector_id=complaint_data.sector_id,
+            department_id=complaint_data.department_id,
             priority_level_id=complaint_data.priority_level_id,
             status=ComplaintStatus.SUBMITTED.value,
             user_id=user_id,
@@ -234,7 +234,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             description=complaint_data.description,
             barangay_id=complaint_data.barangay_id,
             category_id=complaint_data.category_id,
-            sector_id=complaint_data.sector_id,
+            department_id=complaint_data.department_id,
             priority_level_id=complaint_data.priority_level_id,
             category_time_window_hours=category_config["time_window_hours"],
             category_base_severity_weight=category_config["base_severity_weight"],

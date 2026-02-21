@@ -13,7 +13,7 @@ class ComplaintBaseModel(BaseModel):
     location_details: Optional[str] = None
     barangay_id: int
     category_id: int
-    sector_id: Optional[int] = None
+    department_id: Optional[int] = None
     priority_level_id: Optional[int] = None
 
 class ComplaintCreateData(ComplaintBaseModel):

@@ -1,5 +1,6 @@
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime
 from sqlalchemy.orm import relationship
 
 class Barangay(Base):
@@ -10,8 +11,8 @@ class Barangay(Base):
     barangay_address = Column(String, nullable=False)
     barangay_contact_number = Column(String, nullable=True)
     barangay_email = Column(String, unique=True, index=True, nullable=False)
-    created_at = Column(Date, nullable=False)
-    updated_at = Column(Date, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
     
     barangay_account = relationship("BarangayAccount", back_populates="barangay", uselist=False)
     complaint = relationship("Complaint", back_populates="barangay")

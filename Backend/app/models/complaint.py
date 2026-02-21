@@ -1,9 +1,8 @@
 from datetime import date
 
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String,ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy import DateTime
 from datetime import datetime
 
 class Complaint(Base):

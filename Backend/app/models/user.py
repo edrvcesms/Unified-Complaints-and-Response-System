@@ -1,5 +1,6 @@
+from datetime import datetime
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class User(Base):
@@ -29,9 +30,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_administrator = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
-    last_login = Column(Date, nullable=True)
-    created_at = Column(Date, nullable=False)
-    updated_at = Column(Date, nullable=True)
+    last_login = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True)
 
     report = relationship("Report", back_populates="user")
     barangay_account = relationship("BarangayAccount", back_populates="user")

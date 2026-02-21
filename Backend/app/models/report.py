@@ -1,5 +1,7 @@
+from datetime import datetime
+
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
+from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
 
 class Report(Base):
@@ -11,7 +13,7 @@ class Report(Base):
     barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
     file_path = Column(String, nullable=False)
-    generated_at = Column(Date, nullable=False)
+    generated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     user = relationship("User", back_populates="report")
     barangay_account = relationship("BarangayAccount", back_populates="report")

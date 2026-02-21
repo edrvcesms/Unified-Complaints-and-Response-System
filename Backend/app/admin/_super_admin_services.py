@@ -1,11 +1,11 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.sector import Sector
+from app.models.department import Department
 from app.models.user import User
 from app.models.category import Category
 from app.models.barangay import Barangay
 from app.models.priority_level import PriorityLevel
-from app.models.comittee_account import ComitteeAccount
+from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, PriorityLevelCreate, SectorCreate

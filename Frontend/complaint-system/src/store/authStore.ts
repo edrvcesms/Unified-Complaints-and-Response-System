@@ -90,15 +90,26 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
         set({ isLoading: true });
         try {
             const data = await refreshToken();
-            if (data && data.barangay_access_token) {
-            set({ barangayAccessToken: data.barangay_access_token, isAuthenticated: true });
+            if (data?.barangay_access_token) {
+                set({ 
+                    barangayAccessToken: data.barangay_access_token, 
+                    isAuthenticated: true 
+                });
             } else {
-            set({ barangayAccessToken: null, isAuthenticated: false });
+                set({ 
+                    barangayAccessToken: null, 
+                    isAuthenticated: false 
+                });
             }
         } catch (error) {
-            set({ barangayAccessToken: null, isAuthenticated: false });
+            console.error("Failed to refresh token:", error);
+            set({ 
+                barangayAccessToken: null, 
+                isAuthenticated: false 
+            });
         } finally {
             set({ isLoading: false });
+
         }
-        }
+    }
 }));

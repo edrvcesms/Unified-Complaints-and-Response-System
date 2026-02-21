@@ -25,7 +25,7 @@ class ComplaintWithUserData(ComplaintBaseModel):
     created_at: datetime
     user: UserData
     barangay: BarangayModel
-    category: CategoryModel
-    sector: SectorModel
-    priority_level: PriorityLevelModel
-    priority_level_id: int
+    category: Optional[CategoryModel] = None
+    sector: Optional[SectorModel] = None
+    priority_level: Optional[PriorityLevelModel] = None
+    priority_level_id: Optional[int] = None  # ← was int, now Optional

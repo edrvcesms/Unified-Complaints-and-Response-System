@@ -152,7 +152,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         await db.refresh(new_complaint)
         logger.info(f"Submitted new complaint: {new_complaint}")
         
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == new_complaint.id)
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay),  selectinload(Complaint.category)).where(Complaint.id == new_complaint.id)
                                   )
         updated_complaint = result.scalars().first()
         

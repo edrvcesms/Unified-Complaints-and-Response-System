@@ -11,7 +11,7 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.repository.incident_repository import IncidentRepository
 
-from app.cluster_tasks import cluster_complaint_task
+from app.tasks import cluster_complaint_task
 async def cluster_complaints(complaint_data: ComplaintCreateData, user_id: int, complaint_id: int, db: AsyncSession):
     
     incident_repo = IncidentRepository(db)

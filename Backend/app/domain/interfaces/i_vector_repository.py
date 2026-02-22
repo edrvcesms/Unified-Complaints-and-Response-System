@@ -64,3 +64,15 @@ class IVectorRepository(ABC):
         Called after a complaint is linked to a new or existing incident.
         """
         ...
+    
+    @abstractmethod  
+    async def fetch_incident_vector(self, incident_id: int) -> list[float] | None:
+      ...
+    
+    @abstractmethod
+    def compute_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
+      ... 
+      
+    @abstractmethod
+    async def update_status_by_incident(self, incident_id: int, status: str) -> None:
+      ...

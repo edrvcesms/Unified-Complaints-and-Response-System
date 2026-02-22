@@ -56,7 +56,6 @@ class IncidentRepository(IIncidentRepository):
         model.complaint_count = incident.complaint_count
         model.severity_score = incident.severity_score
         model.severity_level = incident.severity_level.value
-        model.priority_level_id = incident.priority_level_id
         model.last_reported_at = incident.last_reported_at
         model.status = incident.status
 
@@ -122,8 +121,7 @@ class IncidentRepository(IIncidentRepository):
             description=model.description,
             barangay_id=model.barangay_id,
             category_id=model.category_id,
-            sector_id=model.sector_id,
-            priority_level_id=model.priority_level_id,
+         
             status=model.status,
             complaint_count=model.complaint_count,
             severity_score=model.severity_score,
@@ -139,8 +137,7 @@ class IncidentRepository(IIncidentRepository):
             description=entity.description,
             barangay_id=entity.barangay_id,
             category_id=entity.category_id,
-            sector_id=entity.sector_id,
-            priority_level_id=entity.priority_level_id,
+           
             status=entity.status,
             complaint_count=entity.complaint_count,
             severity_score=entity.severity_score,
@@ -149,3 +146,22 @@ class IncidentRepository(IIncidentRepository):
             first_reported_at=entity.first_reported_at,
             last_reported_at=entity.last_reported_at,
         )
+        
+        
+    async def get_active_incidents_in_window(
+    self,
+    barangay_id: int,
+    category_id: int,
+    time_window_hours: float,
+) -> list[IncidentEntity]:
+      cutoff = datetime.utcnow() - timedelta(hours=time_window_hours)
+      result = await self._db.execute(
+        select(IncidentModel).where(
+            IncidentModel.barangay_id == barangay_id,
+            IncidentModel.category_id == category_id,
+            IncidentModel.status == "ACTIVE",
+            IncidentModel.last_reported_at >= cutoff,
+        )
+    )
+      models = result.scalars().all()
+      return [self._to_entity(m) for m in models]

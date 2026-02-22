@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from app.models.complaint import Complaint
 from sqlalchemy import select
-from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData
+from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData
 from datetime import datetime
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
@@ -17,16 +17,19 @@ from app.domain.application.use_cases.recalculate_severity import RecalculateSev
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
 from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
+from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from app.domain.repository.incident_repository import IncidentRepository
-from dotenv import load_dotenv
+from app.core.config import settings
 
-load_dotenv()
-# Singletons — same as in tasks.py
+
 _embedding_service = SentenceTransformerEmbeddingService()
 _vector_repository = PineconeVectorRepository(
-    api_key=os.getenv("PINECONE_API_KEY"),
-    environment=os.getenv("PINECONE_ENVIRONMENT", "us-east-1"),
+    api_key=settings.PINECONE_API_KEY,
+    environment=settings.PINECONE_ENVIRONMENT,
 )
+
+_gemini_verifier = GeminiIncidentVerifier(api_key=os.getenv("GEMINI_API_KEY"))
+
 _severity_calculator = WeightedSeverityCalculator()
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
@@ -139,47 +142,14 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             f"threshold={category_config['similarity_threshold']}"
         )
 
-        # Generate embedding from complaint description ─────────────
-        logger.info(f"Step 3 starting — generating embedding for complaint id={new_complaint.id}")
-        embedding = await _embedding_service.generate(complaint_data.description)
-        logger.info(f"Step 3 complete — embedding generated, dim={len(embedding)}")
 
-        # Store embedding in Pinecone with metadata ─────────────────
-        logger.info(f"Step 4 starting — upserting vector into Pinecone")
-        created_at_dt = datetime.utcnow()
-        await _vector_repository.upsert(
-            complaint_id=new_complaint.id,
-            embedding=embedding,
-            barangay_id=complaint_data.barangay_id,
-            category_id=complaint_data.category_id,
-            incident_id=None,
-            status="ACTIVE",
-            created_at_unix=datetime.utcnow(),
-        )
-        logger.info(f"Step 4 complete — vector stored in Pinecone for complaint id={new_complaint.id}")
 
-        #Query Pinecone for similar complaints 
-        logger.info(f"Step 5 starting — querying Pinecone for similar complaints")
-        time_window_cutoff_unix = (
-            new_complaint.created_at.timestamp() - (category_config["time_window_hours"] * 3600)
-        )
-        similar = await _vector_repository.query_similar(
-            embedding=embedding,
-            barangay_id=complaint_data.barangay_id,
-            category_id=complaint_data.category_id,
-            time_window_cutoff_unix=time_window_cutoff_unix,
-            top_k=1,
-        )
-        # 
-        similar = [s for s in similar if s.complaint_id != new_complaint.id]
-        logger.info(f"Step 5 complete — found {len(similar)} similar complaint(s)")
-
-        # 
-        logger.info(f"Step 6 starting — clustering complaint id={new_complaint.id}")
+        logger.info(f"Step 5 starting — clustering complaint id={new_complaint.id}")
         use_case = ClusterComplaintUseCase(
             embedding_service=_embedding_service,
             vector_repository=_vector_repository,
             incident_repository=incident_repo,
+            incident_verifier=_gemini_verifier,
         )
 
         input_dto = ClusterComplaintInput(
@@ -189,27 +159,25 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             description=complaint_data.description,
             barangay_id=complaint_data.barangay_id,
             category_id=complaint_data.category_id,
-            department_id=complaint_data.department_id,
-            priority_level_id=complaint_data.priority_level_id,
             category_time_window_hours=category_config["time_window_hours"],
             category_base_severity_weight=category_config["base_severity_weight"],
             similarity_threshold=category_config["similarity_threshold"],
-            created_at=created_at_dt,
+            created_at=datetime.utcnow(),
         )
 
         cluster_result = await use_case.execute(input_dto)
         await db.commit()
 
         if cluster_result.is_new_incident:
-            logger.info(f"Step 6 complete — new incident created: id={cluster_result.incident_id}")
+            logger.info(f"Step 5 complete — new incident created: id={cluster_result.incident_id}")
         else:
             logger.info(
-                f"Step 6 complete — merged into existing incident: id={cluster_result.incident_id}, "
+                f"Step 5 complete — merged into existing incident: id={cluster_result.incident_id}, "
                 f"similarity={cluster_result.similarity_score:.4f}"
             )
 
         # Recalculate severity for the incident ─────────────────────
-        logger.info(f"Step 7 starting — recalculating severity for incident id={cluster_result.incident_id}")
+        logger.info(f"Step 6 starting — recalculating severity for incident id={cluster_result.incident_id}")
         velocity_detector = DetectVelocitySpikeUseCase(incident_repo)
         severity_use_case = RecalculateSeverityUseCase(
             incident_repository=incident_repo,
@@ -237,6 +205,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         updated_complaint = result.scalars().first()
 
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
+        await delete_cache(f"user_complaints:{user_id}")
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
     except HTTPException:
@@ -302,32 +271,51 @@ async def resolve_complaint(complaint_id: int, db: AsyncSession):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
-    
+
 async def get_my_complaints(user_id: int, db: AsyncSession):
     try:
-        cached_my_complaints = await get_cache(f"user_complaints:{user_id}")
-        if cached_my_complaints:
+        cached = await get_cache(f"user_complaints:{user_id}")
+        if cached:
             logger.info(f"My complaints for user {user_id} retrieved from cache")
-            return [ComplaintWithUserData.model_validate_json(complaint) for complaint in cached_my_complaints]
-        
+            return [MyComplaintData.model_validate_json(c) for c in cached]
+
         result = await db.execute(
-            select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.sector), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.user_id == user_id)
+            select(Complaint)
+            .options(
+                selectinload(Complaint.barangay),
+                selectinload(Complaint.category),
+            )
+            .where(Complaint.user_id == user_id)
+            .order_by(Complaint.created_at.desc())
         )
-        
         complaints = result.scalars().all()
-        
-        logger.info(f"Fetched complaints for user {user_id}: {complaints}")
-        
-        user_complaints = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        await set_cache(f"user_complaints:{user_id}", [complaint.model_dump_json() for complaint in user_complaints], expiration=3600)
+
+        if not complaints:
+            return []
+
+        user_complaints = [
+            MyComplaintData.model_validate(c, from_attributes=True)
+            for c in complaints
+        ]
+
+        await set_cache(
+            f"user_complaints:{user_id}",
+            [c.model_dump_json() for c in user_complaints],
+            expiration=3600,
+        )
+
+        logger.info(f"Fetched {len(user_complaints)} complaints for user {user_id}")
         return user_complaints
-    
+
     except HTTPException:
         raise
 
     except Exception as e:
         logger.error(f"Error in get_my_complaints: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
     
 async def delete_complaint(complaint_id: int, user_id: int, db: AsyncSession):
     try:

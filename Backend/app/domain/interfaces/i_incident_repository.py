@@ -40,3 +40,12 @@ class IIncidentRepository(ABC):
         within the last `window_hours`. Used for velocity calculation.
         """
         ...
+        
+    @abstractmethod
+    async def get_active_incidents_in_window(
+    self,
+    barangay_id: int,
+    category_id: int,
+    time_window_hours: float,
+) -> list[IncidentEntity]:
+      ...  

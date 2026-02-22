@@ -158,3 +158,37 @@ Two identical complaints submitted at the exact same millisecond — both could 
 Pinecone is eventually consistent — a vector just upserted may not be immediately searchable. A complaint submitted right after another could miss the match because Pinecone hasn't indexed the first vector yet.
 If the Celery task fails all 3 retries — the complaint exists in PostgreSQL but has no incident, no severity, and no Pinecone vector. There's no alert or fallback to handle orphaned complaints.
 Pinecone metadata update fails after clustering — the complaint is linked to an incident in PostgreSQL but the Pinecone vector still shows incident_id = -1. Future queries could miss this complaint as part of the cluster.
+
+
+## CONFIG
+
+Category ID   Category Name            Base Severity Weight   Time Window (hrs)   Similarity Threshold   Behavior Type
+---------------------------------------------------------------------------------------------------------------
+18            Noise Disturbance        3.0                    2                   0.88                   Very strict, short-lived
+19            Illegal Dumping          4.0                    48                  0.82                   Moderate clustering
+20            Road Damage              3.5                    72                  0.80                   Generic, long-lasting
+21            Street Light Outage      2.5                    48                  0.83                   Location-specific
+22            Flooding                 5.0                    6                   0.78                   High-impact, broad clustering
+23            Illegal Construction     4.5                    72                  0.85                   Very specific, persistent
+24            Stray Animals            2.0                    24                  0.88                   Very strict distinction
+25            Public Intoxication      3.0                    4                   0.85                   Short-lived, specific
+26            Illegal Vending          2.5                    24                  0.83                   Location-based
+27            Water Supply Issue       4.0                    24                  0.80                   Area-wide issue
+28            Garbage Collection       3.5                    24                  0.80                   Street-level issue
+29            Vandalism                2.0                    48                  0.85                   Property-specific
+30            Other                    2.0                    24                  0.85                   Strict due to vagueness
+
+
+
+
+## SYSTEM PROMPT
+
+Rule-Based Prompt Engineering combined with Few-Shot Prompting.
+
+Specifically the techniques used:
+
+Few-Shot Prompting — providing examples (Q/A pairs) so the LLM learns the pattern
+Rule-Based Constraints — explicit numbered rules that bound the LLM's decision making
+Conservative Bias Prompting — "When unsure, answer NO" forces a safe default
+Output Formatting Constraint — "ONLY one word: YES or NO" prevents hallucinated explanations
+Persona Framing — "strict complaint deduplication validator" sets the LLM's behavior tone

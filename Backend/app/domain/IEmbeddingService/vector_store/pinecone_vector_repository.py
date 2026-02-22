@@ -11,9 +11,11 @@ import logging
 from typing import List, Optional
 
 from pinecone import Pinecone, ServerlessSpec
+from sympy import denom
 
 from app.domain.interfaces.i_vector_repository import IVectorRepository
 from app.domain.value_objects.similarity_result import SimilarityResult
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ class PineconeVectorRepository(IVectorRepository):
     """
 
     INDEX_NAME = "complaints-index"
-    DIMENSION = 384
+    DIMENSION = 1084
     METRIC = "cosine"
 
     def __init__(self, api_key: str, environment: str = "us-east-1"):
@@ -171,3 +173,62 @@ class PineconeVectorRepository(IVectorRepository):
             },
         )
         logger.debug(f"Updated metadata for complaint_id={complaint_id}: incident_id={incident_id}, status={status}")
+        
+    async def fetch_incident_vector(self, incident_id: int) -> list[float] | None:
+      """Fetch the seed complaint vector for a given incident from Pinecone."""
+      try:
+        result = self._get_index().query(
+            vector=[0.0] * 1024,  # dummy vector, we filter by metadata
+            filter={
+                "incident_id": {"$eq": incident_id},
+                "status": {"$eq": "ACTIVE"},
+            },
+            top_k=1,
+            include_values=True,
+        )
+        matches = result.get("matches", [])
+        if not matches:
+            return None
+        return matches[0]["values"]
+      except Exception as e:
+        logger.error(f"Error fetching incident vector for incident_id={incident_id}: {e}")
+        return None
+
+    def compute_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:
+     """Cosine similarity between two vectors, computed locally."""
+     a = np.array(vec_a)
+     b = np.array(vec_b)
+     denom = np.linalg.norm(a) * np.linalg.norm(b)
+     if denom == 0:
+        return 0.0
+     return float(np.dot(a, b) / denom)
+ 
+ 
+    
+    
+    async def update_status_by_incident(self, incident_id: int, status: str) -> None:
+      """
+    Update status metadata for all complaint vectors linked to an incident.
+    Called when an incident expires.
+      """
+      index = self._get_index()
+
+      results = self._get_index().query(
+        vector=[0.0] * self.DIMENSION,  # dummy vector, filtering only
+        filter={"incident_id": {"$eq": incident_id}},
+        top_k=1000,
+        include_metadata=True,
+    )
+
+      matches = results.get("matches", [])
+      if not matches:
+        logger.debug(f"No vectors found for incident_id={incident_id}")
+        return
+
+      for match in matches:
+        index.update(
+            id=match["id"],
+            set_metadata={"status": status},
+        )
+
+      logger.info(f"Updated {len(matches)} vectors to status={status} for incident_id={incident_id}")

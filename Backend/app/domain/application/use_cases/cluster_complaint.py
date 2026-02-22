@@ -9,15 +9,14 @@ OCP: New clustering strategies (e.g. location-aware) would implement a new
 """
 
 import logging
-import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from app.domain.entities.complaint_cluster import ComplaintClusterEntity
 from app.domain.entities.incident import IncidentEntity
 from app.domain.interfaces.i_embedding_service import IEmbeddingService
 from app.domain.interfaces.i_incident_repository import IIncidentRepository
+from app.domain.interfaces.i_incident_verifier import IIncidentVerifier
 from app.domain.interfaces.i_vector_repository import IVectorRepository
 from app.domain.value_objects.severity_level import SeverityLevel
 
@@ -33,8 +32,6 @@ class ClusterComplaintInput:
     description: str
     barangay_id: int
     category_id: int
-    sector_id: Optional[int]
-    priority_level_id: Optional[int]
     category_time_window_hours: float
     category_base_severity_weight: float
     similarity_threshold: float
@@ -43,7 +40,7 @@ class ClusterComplaintInput:
 
 @dataclass
 class ClusterComplaintResult:
-    """Output DTO returned to the Celery task."""
+    """Output DTO returned to the service."""
     incident_id: int
     is_new_incident: bool
     similarity_score: float
@@ -52,23 +49,24 @@ class ClusterComplaintResult:
 
 class ClusterComplaintUseCase:
     """
-    Core clustering logic. Executed inside a Celery task.
+    Core clustering logic.
 
     Flow:
     1. Generate embedding for the complaint description.
-    2. Store embedding in Pinecone with metadata.
-    3. Query Pinecone for similar active complaints in same barangay + category
-       within the category-specific time window.
-    4a. If similar match found and score >= threshold:
-          → Link complaint to existing incident.
-          → Increment complaint_count.
-    4b. If no match:
-          → Create new incident from complaint.
-    5. Update Pinecone metadata with the resolved incident_id.
+    2. Query Postgres for active incidents in same barangay+category within time window.
+    3. For each candidate incident, fetch its seed vector from Pinecone and compute
+       cosine similarity locally.
+    4. Confidence band decision:
+         score >= threshold + 0.10  → LLM verifies with HIGH confidence (leans YES)
+         score >= threshold         → LLM verifies with LOW confidence (leans NO)
+         score < threshold          → auto reject, new incident
+    5. Upsert complaint vector into Pinecone with resolved incident_id.
     6. Return result (incident_id, is_new, similarity_score).
 
-    Severity recalculation is dispatched as a separate Celery sub-task
-    (not done here — SRP).
+    Postgres is the source of truth for candidate discovery.
+    Pinecone is used only for vector storage and retrieval.
+    LLM is called for all candidates above threshold with confidence-aware prompting.
+    Severity recalculation is handled separately (SRP).
     """
 
     def __init__(
@@ -76,68 +74,102 @@ class ClusterComplaintUseCase:
         embedding_service: IEmbeddingService,
         vector_repository: IVectorRepository,
         incident_repository: IIncidentRepository,
+        incident_verifier: IIncidentVerifier,
     ):
         self._embedding_svc = embedding_service
         self._vector_repo = vector_repository
         self._incident_repo = incident_repository
+        self._verifier = incident_verifier
 
     async def execute(self, data: ClusterComplaintInput) -> ClusterComplaintResult:
         logger.info(f"Clustering complaint_id={data.complaint_id}")
 
-     
         embedding = await self._embedding_svc.generate(data.description)
-
-        # Store in Pinecone (status=ACTIVE, no incident yet)
         created_at_unix = data.created_at.timestamp()
+
+        # Step 1 — Query Postgres for active incidents in same barangay+category+window
+        active_incidents = await self._incident_repo.get_active_incidents_in_window(
+            barangay_id=data.barangay_id,
+            category_id=data.category_id,
+            time_window_hours=data.category_time_window_hours,
+        )
+        logger.info(f"Found {len(active_incidents)} active incidents in window")
+
+        # Step 2 — Score each incident using local cosine similarity
+        best_incident = None
+        best_score = 0.0
+
+        for incident in active_incidents:
+            incident_vector = await self._vector_repo.fetch_incident_vector(incident.id)
+            if not incident_vector:
+                continue
+
+            score = self._vector_repo.compute_similarity(embedding, incident_vector)
+            logger.info(f"Incident {incident.id} similarity score: {score:.4f}")
+
+            if score > best_score:
+                best_score = score
+                best_incident = incident
+
+        # Step 3 — Confidence band decision
+        high_confidence_threshold = data.similarity_threshold + 0.10
+        ambiguous_threshold = data.similarity_threshold
+        is_match = False
+
+        if best_incident is not None:
+            if best_score >= high_confidence_threshold:
+                # High confidence — LLM verifies but leans YES
+                # Only rejects if subject or location is clearly different
+                logger.info(
+                    f"High confidence score={best_score:.4f} >= {high_confidence_threshold:.2f}, "
+                    f"calling LLM verifier (HIGH)"
+                )
+                is_match = await self._verifier.is_same_incident(
+                    complaint_a=best_incident.description,
+                    complaint_b=data.description,
+                  
+                )
+
+            elif best_score >= ambiguous_threshold:
+                # Ambiguous zone — LLM verifies and leans NO
+                # Only merges if subject and location clearly match
+                logger.info(
+                    f"Ambiguous score={best_score:.4f} >= {ambiguous_threshold:.2f}, "
+                    f"calling LLM verifier (LOW)"
+                )
+                is_match = await self._verifier.is_same_incident(
+                    complaint_a=best_incident.description,
+                    complaint_b=data.description,
+                    
+                )
+
+            else:
+                # Clear non-match — below threshold
+                logger.info(
+                    f"Auto-reject: score={best_score:.4f} < {ambiguous_threshold:.2f}"
+                )
+
+            logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
+
+        if is_match:
+            incident, similarity_score = await self._merge_into_existing(
+                data=data,
+                incident_id=best_incident.id,
+                similarity_score=best_score,
+            )
+        else:
+            incident = await self._create_new_incident(data)
+            similarity_score = 1.0
+
+        # Step 4 — Upsert complaint vector with resolved incident_id
         await self._vector_repo.upsert(
             complaint_id=data.complaint_id,
             embedding=embedding,
             barangay_id=data.barangay_id,
             category_id=data.category_id,
-            incident_id=None,
-            status="ACTIVE",
-            created_at_unix=created_at_unix,
-        )
-
-        # Query for similar complaints
-        time_window_cutoff_unix = (
-            data.created_at.timestamp() - (data.category_time_window_hours * 3600)
-        )
-        similar = await self._vector_repo.query_similar(
-            embedding=embedding,
-            barangay_id=data.barangay_id,
-            category_id=data.category_id,
-            time_window_cutoff_unix=time_window_cutoff_unix,
-            top_k=1,
-        )
-
-        # Filter out the complaint's own vector (just upserted)
-        similar = [s for s in similar if s.complaint_id != data.complaint_id]
-
-        best_match = similar[0] if similar else None
-        is_match = (
-            best_match is not None
-            and best_match.score >= data.similarity_threshold
-            and best_match.incident_id is not None
-        )
-
-        if is_match:
-            # Merge into existing incident
-            incident, similarity_score = await self._merge_into_existing(
-                data=data,
-                incident_id=best_match.incident_id,
-                similarity_score=best_match.score,
-            )
-        else:
-            #Creates a new incident
-            incident = await self._create_new_incident(data)
-            similarity_score = 1.0  # It IS the incident seed
-
-        # Update Pinecone metadata with resolved incident_id
-        await self._vector_repo.update_metadata(
-            complaint_id=data.complaint_id,
             incident_id=incident.id,
             status="ACTIVE",
+            created_at_unix=created_at_unix,
         )
 
         return ClusterComplaintResult(
@@ -146,8 +178,6 @@ class ClusterComplaintUseCase:
             similarity_score=similarity_score,
             severity_level=incident.severity_level.value,
         )
-
- 
 
     async def _merge_into_existing(
         self,
@@ -188,8 +218,6 @@ class ClusterComplaintUseCase:
             description=data.description,
             barangay_id=data.barangay_id,
             category_id=data.category_id,
-            sector_id=data.sector_id,
-            priority_level_id=data.priority_level_id,
             status="ACTIVE",
             complaint_count=1,
             severity_score=data.category_base_severity_weight,  # seed with base weight

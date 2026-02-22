@@ -21,3 +21,5 @@ nest-asyncio
 pinecone
 sentence-transformers
 kombu
+google-genai
+apscheduler

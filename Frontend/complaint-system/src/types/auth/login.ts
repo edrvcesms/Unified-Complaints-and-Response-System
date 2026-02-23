@@ -1,4 +1,5 @@
 export interface LoginRequestData {
+  role: string;
   email: string;
   password: string;
 }

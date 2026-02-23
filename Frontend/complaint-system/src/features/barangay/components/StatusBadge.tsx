@@ -1,10 +1,7 @@
-// ─── components/ui/StatusBadge.tsx ───────────────────────────────────────────
 
 interface StatusBadgeProps {
-  status: string; // "submitted" | "under_review" | "resolved"
+  status: string;
 }
-
-// Maps backend status strings to Tailwind classes + display labels
 const STATUS_MAP: Record<string, { label: string; classes: string; dot: string }> = {
   submitted:    { label: "Submitted",    classes: "bg-gray-100 text-gray-800 border-green-200", dot: "bg-gray-500" },
   under_review: { label: "Under Review", classes: "bg-blue-100   text-blue-800   border-blue-200",   dot: "bg-blue-500"   },

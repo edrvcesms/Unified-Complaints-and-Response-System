@@ -10,7 +10,7 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.logger import logger
 from typing import List
 
-async def get_barangay_profile(user_id: int, db: AsyncSession) -> BarangayWithUserData:
+async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
         cached_barangay = await get_cache(f"barangay_profile:{user_id}")
         if cached_barangay:
@@ -37,7 +37,7 @@ async def get_barangay_profile(user_id: int, db: AsyncSession) -> BarangayWithUs
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_barangay_profile: {e}")
+        logger.error(f"Error in get_barangay_data: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWithUserData:

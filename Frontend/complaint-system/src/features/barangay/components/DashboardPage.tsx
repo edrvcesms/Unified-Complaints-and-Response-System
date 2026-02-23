@@ -4,19 +4,9 @@ import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Complaint, ComplaintStats, WeeklyDataPoint } from "../../../types/complaints/complaint";
 import { useWeeklyComplaintStats } from "../../../hooks/useComplaints";
-
-// ── Day mapping ──────────────────────────────────────────────────────────────
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-// ── Stat Card Component ──────────────────────────────────────────────────────
-interface StatCardProps {
-  label: string;
-  value: number;
-  color: string;
-  bg: string;
-  border: string;
-  icon: React.ReactNode;
-}
+import { SkeletonCard } from "./Components";
+import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../components/Components";
+import type { StatCardProps } from "../../../types/general/statCard";
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, icon }) => (
   <div className={`bg-white rounded-xl border ${border} p-5 flex items-center gap-4 shadow-sm`}>
@@ -30,31 +20,13 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, ic
   </div>
 );
 
-// ── Icons ───────────────────────────────────────────────────────────────────
-const TotalIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>;
-const PendingIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ReviewIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
-const ResolvedIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-
-// ── Loading Skeleton ────────────────────────────────────────────────────────
-const SkeletonCard = () => (
-  <div className="bg-white rounded-xl border border-gray-100 p-5 flex items-center gap-4 animate-pulse">
-    <div className="w-12 h-12 rounded-xl bg-gray-100 flex-shrink-0" />
-    <div className="space-y-2">
-      <div className="h-6 w-12 bg-gray-100 rounded" />
-      <div className="h-3 w-24 bg-gray-100 rounded" />
-    </div>
-  </div>
-);
-
-// ── Dashboard Props ─────────────────────────────────────────────────────────
 interface DashboardPageProps {
   complaints: Complaint[];
   isLoading: boolean;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoading }) => {
-  // Stat cards
+
   const stats: ComplaintStats = useMemo(() => ({
     total: complaints.length,
     submitted: complaints.filter(c => c.status === "submitted").length,
@@ -62,12 +34,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     resolved: complaints.filter(c => c.status === "resolved").length,
   }), [complaints]);
 
-  // Recent complaints
   const recent = [...complaints]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
-  // Weekly complaint data
   const { data: weeklyStats, isLoading: statsLoading } = useWeeklyComplaintStats();
 
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
@@ -78,7 +48,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
 
     return Array.from({ length: 7 }).map((_, i) => {
       const date = new Date();
-      date.setDate(today.getDate() - (6 - i)); // last 6 days + today
+      date.setDate(today.getDate() - (6 - i));
       const iso = date.toISOString().split("T")[0];
       const counts = weeklyStats.daily_counts[iso] || { submitted: 0, resolved: 0 };
 

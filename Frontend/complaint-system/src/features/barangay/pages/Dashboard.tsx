@@ -1,40 +1,18 @@
-// ─── Dashboard.tsx ────────────────────────────────────────────────────────────
-// Root layout: Navbar + Sidebar + dynamic page content.
-// Fetches all complaints once here and passes down to child pages.
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useBarangayStore } from "../../../store/authStore";
 import { useComplaints } from "../../../hooks/useComplaints";
 import type { ActivePage } from "../../../types/complaints/complaint";
 import { Sidebar } from "../components/Sidebar";
 import { DashboardPage } from "../components/DashboardPage";
 import { ComplaintsPage } from "./Complaints";
-// ── Hamburger icon ────────────────────────────────────────────────────────────
-const HamburgerIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
-
-// ── Component ─────────────────────────────────────────────────────────────────
+import { HamburgerIcon } from "../components/Components";
 
 export const Dashboard: React.FC = () => {
-  const navigate  = useNavigate();
-  const clearAuth = useBarangayStore((state) => state.clearBarangayAuth);
 
   const [activePage,   setActivePage]   = useState<ActivePage>("dashboard");
   const [sidebarOpen,  setSidebarOpen]  = useState<boolean>(false);
 
-  // ── Fetch all complaints from your real API ─────────────────────────────────
-  // React Query caches this — no prop drilling of setComplaints needed.
-  // Status updates in ComplaintsPage invalidate this query automatically.
   const { data: complaints = [], isLoading, isError } = useComplaints();
-
-  const handleLogout = async () => {
-    await clearAuth();
-    navigate("/login");
-  };
 
   const pageLabel = activePage === "complaints" ? "Manage Complaints" : "Dashboard";
 

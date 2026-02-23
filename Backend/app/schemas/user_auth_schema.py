@@ -13,6 +13,7 @@ class OTPVerificationData(UserAuthModel, UserBase):
     otp: str
 
 class LoginData(UserAuthModel):
+    role: str
     password: str
 
 

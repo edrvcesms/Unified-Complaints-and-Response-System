@@ -6,6 +6,8 @@ import { logoutBarangayAccount } from "../services/authentication/barangayAuth";
 interface BarangayAuthState {
     barangayAccessToken: string | null;
     setBarangayAccessToken: (token: string | null) => void;
+    isCheckingAuth: boolean;
+    setIsCheckingAuth: (checking: boolean) => void;
     barangayAccountData: BarangayAccountData | null;
     setBarangayAccountData: (data: BarangayAccountData | null) => void;
     isLoading: boolean;
@@ -22,7 +24,9 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
     setBarangayAccessToken: (token) => set({ barangayAccessToken: token }),
     barangayAccountData: null,
     setBarangayAccountData: (data) => set({ barangayAccountData: data }),
-    isLoading: true,
+    isCheckingAuth: true,
+    setIsCheckingAuth: (checking) => set({ isCheckingAuth: checking }),
+    isLoading: false,
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
     mapDataFromBackend: (data: BarangayAccountData) => {
@@ -95,24 +99,32 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
     //     }
     // },
     refreshAccessToken: async () => {
-        set({ isLoading: true });
+        set({ isCheckingAuth: true });
 
         try {
             const data = await refreshToken();
 
-            if (data?.barangayAccessToken) {
+            if (data?.access_token) {
                 set({
-                    barangayAccessToken: data.barangayAccessToken,
+                    barangayAccessToken: data.access_token,
                     barangayAccountData: data.barangayAccountData,
-                    isAuthenticated: true,
-                    isLoading: false,
+                    isAuthenticated: true
                 });
             } else {
-                set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
+                set({
+                    barangayAccessToken: null,
+                    barangayAccountData: null,
+                    isAuthenticated: false
+                });
             }
-
         } catch (error) {
-            set({ barangayAccessToken: null, isAuthenticated: false, isLoading: false });
+            set({
+                barangayAccessToken: null,
+                barangayAccountData: null,
+                isAuthenticated: false
+            });
+        } finally {
+            set({ isCheckingAuth: false });
         }
-    },
+    }
 }));

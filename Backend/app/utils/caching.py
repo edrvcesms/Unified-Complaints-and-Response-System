@@ -9,11 +9,17 @@ async def set_cache(key: str, value, expiration: int):
     except Exception as e:
         logger.warning(f"Failed to set cache for {key}: {e}")
 
+import json
+
 async def get_cache(key: str):
     """Get a value from Redis cache. Returns Python object or None."""
     try:
         data = await redis_client.get(key)
-        return json.loads(data) if data else None
+        if not data:
+            return None
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        return json.loads(data)
     except Exception as e:
         logger.warning(f"Failed to get cache for {key}: {e}")
         return None

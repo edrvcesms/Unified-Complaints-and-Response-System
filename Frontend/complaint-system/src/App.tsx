@@ -13,15 +13,20 @@ import Navbar from "./components/Navbar"
 function App() {
 
   const refreshAccessToken = useBarangayStore(state => state.refreshAccessToken);
-  const isLoading = useBarangayStore(state => state.isLoading);
+  const isCheckingAuth = useBarangayStore(state => state.isCheckingAuth);
   const isAuthenticated = useBarangayStore(state => !!state.barangayAccessToken);
   const clearBarangayAuth = useBarangayStore(state => state.clearBarangayAuth);
 
   useEffect(() => {
     refreshAccessToken();
+    
+    console.log("app mounted");
   }, [refreshAccessToken]);
 
-  return isLoading ? <LoadingIndicator /> : (
+  if (isCheckingAuth) {
+    return <LoadingIndicator/>;
+  }
+  return (
     <>
       {isAuthenticated && <Navbar onLogout={clearBarangayAuth} />}
       <NetworkProvider>

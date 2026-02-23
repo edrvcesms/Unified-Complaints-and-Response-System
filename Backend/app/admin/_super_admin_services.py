@@ -12,6 +12,7 @@ from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentCr
 from sqlalchemy import select
 from app.core.security import hash_password
 from datetime import datetime
+from app.constants.roles import UserRole
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -30,7 +31,7 @@ async def create_barangay_account(barangay_data: BarangayAccountCreate, db: Asyn
         email=barangay_data.barangay_email,
         hashed_password=hashed_password,
         created_at=datetime.utcnow(),
-        role="barangay_admin",
+        role=UserRole.BARANGAY_OFFICIAL.value,
         is_administrator=True
     )
     barangay = Barangay(

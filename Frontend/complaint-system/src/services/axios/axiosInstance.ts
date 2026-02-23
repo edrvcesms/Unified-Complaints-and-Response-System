@@ -16,7 +16,7 @@ const processQueue = (error?: any) => {
   failedQueue = [];
 };
 
-const SKIP_REFRESH_URLS = ["/login", "/token-refresh"];
+const SKIP_REFRESH_URLS = ["/login", "/refresh-token"];
 
 const shouldSkipRefresh = (url?: string): boolean => {
   if (!url) return false;
@@ -62,9 +62,9 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           const refreshed = await refreshToken();
           if (!refreshed) throw new Error("Refresh failed");
 
-          useBarangayStore.getState().setBarangayAccessToken(refreshed.barangayAccessToken);
+          useBarangayStore.getState().setBarangayAccessToken(refreshed.access_token);
           processQueue(null);
-          originalRequest.headers.Authorization = `Bearer ${refreshed.barangayAccessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${refreshed.access_token}`;
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);

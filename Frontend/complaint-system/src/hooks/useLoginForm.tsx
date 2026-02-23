@@ -1,8 +1,7 @@
-import { use, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSubmitForm } from "./useSubmitForm";
 import type { LoginFormErrors, LoginRequestData } from "../types/auth/login";
-import type { ValidatorFn } from "./useSubmitForm";
 import { authInstance } from "../services/axios/apiServices";
 import { useBarangayStore } from "../store/authStore";
 import { validateEmail, validatePassword } from "../utils/validators";
@@ -10,7 +9,7 @@ import { validateEmail, validatePassword } from "../utils/validators";
 export const useLoginForm = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "" });
+  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "", role: "barangay_official" });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
@@ -23,7 +22,7 @@ export const useLoginForm = () => {
 
     onSuccess: (data) => {
       console.log("Login successful:", data);
-      useBarangayStore.getState().setBarangayAccessToken(data.barangayAccessToken);
+      useBarangayStore.getState().setBarangayAccessToken(data.access_token);
       useBarangayStore.getState().mapDataFromBackend(data.barangayAccountData);
       useBarangayStore.getState().setBarangayAccountData(data.barangayAccountData);
       console.log("Updated store with account data:", useBarangayStore.getState().barangayAccountData);
@@ -39,9 +38,6 @@ export const useLoginForm = () => {
     },
   });
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
-
-  /** Update a field and clear its inline error as the user types */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -52,7 +48,7 @@ export const useLoginForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors({}); // Clear previous errors on new submit
+    setErrors({});
     mutate(formData);
 
   };

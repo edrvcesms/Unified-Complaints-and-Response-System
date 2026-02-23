@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.services.barangay_services import get_all_barangays, get_barangay_by_id, get_barangay_profile
+from app.services.barangay_services import get_all_barangays, get_barangay_by_id, get_barangay_account
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.auth_dependency import get_current_user
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/profile", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def barangay_profile(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_barangay_profile(current_user.id, db)
+    return await get_barangay_account(current_user.id, db)
 
 @router.get("/all", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

@@ -8,7 +8,7 @@ from .department_schema import DepartmentModel
 from .priority_level_schema import PriorityLevelModel
 from pydantic import BaseModel
 from datetime import datetime 
-
+from .attachment_schema import AttachmentBaseModel
 
 
 class ComplaintBaseModel(BaseModel):
@@ -29,8 +29,8 @@ class ComplaintWithUserData(ComplaintBaseModel):
     barangay: BarangayModel
     category: Optional[CategoryModel] = None
     department: Optional[DepartmentModel] = None
-    priority_level: Optional[PriorityLevelModel] = None
-    priority_level_id: Optional[int] = None  # ← was int, now Optional
+    attachment: List[AttachmentBaseModel]
+    
 
 
 

@@ -19,6 +19,8 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
+                    .selectinload(Complaint.attachment),
+                selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.user)
             )
             .where(IncidentModel.barangay_id == barangay_id)
@@ -27,11 +29,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
         logger.info(f"Executed query to get incidents for barangay ID: {barangay_id}")
         
         incidents = result.scalars().all()
-        
-        logger.info(f"Fetched {len(incidents)} incidents for barangay ID: {barangay_id}")
-        for incident in incidents:
-            logger.info(f"Incident ID: {incident.id}, Title: {incident.title}, Category: {incident.category.category_name if incident.category else 'N/A'}, Barangay: {incident.barangay.barangay_name if incident.barangay else 'N/A'}")
-            logger.info(f"complaint_names: {[complaint_cluster.complaint.title for complaint_cluster in incident.complaint_clusters]}")
+        logger.info(f"Found {len(incidents)} incidents for barangay ID: {barangay_id}")
         
         return [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
       
@@ -50,7 +48,9 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
+                    .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
+                    .selectinload(Complaint.attachment)
             )
             .where(IncidentModel.id == incident_id)
         )
@@ -63,8 +63,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
             logger.warning(f"Incident with ID {incident_id} not found")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
         
-        logger.info(f"Fetched incident for ID: {incident_id}, Title: {incident.title}, Category: {incident.category.category_name if incident.category else 'N/A'}, Barangay: {incident.barangay.barangay_name if incident.barangay else 'N/A'}")
-        logger.info(f"complaint_names: {[complaint_cluster.complaint.title for complaint_cluster in incident.complaint_clusters]}")
+        logger.info(f"Fetched incident with ID {incident_id}")
         
         return IncidentData.model_validate(incident, from_attributes=True)  
         

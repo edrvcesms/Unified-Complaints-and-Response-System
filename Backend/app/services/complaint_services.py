@@ -13,37 +13,20 @@ from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
-from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
-from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
-from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
-from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
-from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
-from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
+from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
-from app.core.config import settings
 from app.tasks import cluster_complaint_task
 
 
-_embedding_service = SentenceTransformerEmbeddingService()
-_vector_repository = PineconeVectorRepository(
-    api_key=settings.PINECONE_API_KEY,
-    environment=settings.PINECONE_ENVIRONMENT,
-)
-
-_gemini_verifier = GeminiIncidentVerifier(api_key=os.getenv("GEMINI_API_KEY"))
-
-_severity_calculator = WeightedSeverityCalculator()
-
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)).where(Complaint.id == complaint_id))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level), selectinload(Complaint.attachment)).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
         
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
-        logger.info(f"Fetched complaint with ID {complaint_id}: {complaint}")
-        
+        logger.info(f"Fetched complaint with ID {complaint_id}")
         return ComplaintWithUserData.model_validate(complaint, from_attributes=True)
     
     except HTTPException:
@@ -55,11 +38,11 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
 
 async def get_all_complaints(db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         
         complaints = result.scalars().all()
         
-        logger.info(f"Fetched all complaints: {complaints}")
+        logger.info(f"Fetched all complaints: {len(complaints)} complaints found")
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
         
@@ -78,11 +61,11 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
-            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level))
+            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment))
         )
         complaints = result.scalars().all()
         
-        logger.info(f"Fetched complaints for incident ID {incident_id}: {complaints}")
+        logger.info(f"Fetched complaints for incident ID {incident_id}: {len(complaints)} complaints found")
     
         return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
     
@@ -121,8 +104,6 @@ async def get_weekly_complaint_stats(db: AsyncSession):
             if complaint.status == ComplaintStatus.RESOLVED.value:
                 stats["daily_counts"][day]["resolved"] += 1
         
-        logger.info(f"Weekly complaint stats: {stats}")
-        
         return stats
     
     except HTTPException:
@@ -153,7 +134,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         await db.refresh(new_complaint)
         logger.info(f"Step 1 complete — complaint saved: id={new_complaint.id}")
 
-        # Fetch category config (time window, base weight, threshold)
         incident_repo = IncidentRepository(db)
         category_config = await incident_repo.get_category_config(complaint_data.category_id)
         
@@ -175,13 +155,14 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         
         cluster_complaint_task.delay(complaint_data=cluster_data.model_dump())
 
-        #  Return complaint with full related data
         result = await db.execute(
             select(Complaint)
             .options(
                 selectinload(Complaint.user),
                 selectinload(Complaint.barangay),
                 selectinload(Complaint.category),
+                selectinload(Complaint.department),
+                selectinload(Complaint.attachment),
             )
             .where(Complaint.id == new_complaint.id)
         )
@@ -211,7 +192,7 @@ async def review_complaints(complaint_id: int, db: AsyncSession):
         await db.commit()
         delete_cache("all_complaints")
         logger.info(f"Complaint with ID {complaint_id} is now under review")
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         complaints = result.scalars().all()
         logger.info(f"Fetched all complaints after updating status: {complaints}")
         await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)
@@ -239,7 +220,7 @@ async def resolve_complaint(complaint_id: int, db: AsyncSession):
         await db.commit()
         delete_cache("all_complaints")
         logger.info(f"Complaint with ID {complaint_id} has been resolved")
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level)))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         complaints = result.scalars().all()
         logger.info(f"Fetched all complaints after updating status: {complaints}")
         await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)

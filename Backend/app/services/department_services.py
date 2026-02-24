@@ -15,7 +15,7 @@ async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWi
     
       department = result.scalars().first()
       
-      logger.info(f"Fetched department: {department}")
+      logger.info(f"Fetched department with ID: {department.id if department else 'None'}")
       
       if not department:
           raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
@@ -28,6 +28,6 @@ async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWi
         raise
       
     except Exception as e:
-        logger.error(f"Error in get_department_data: {e}")
+        logger.error(f"Error in get_department_account: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
   

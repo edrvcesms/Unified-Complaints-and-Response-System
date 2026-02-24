@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from app.models.complaint import Complaint
 from sqlalchemy import select
-from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData
+from app.schemas.complaint_schema import ComplaintCreateData
 from datetime import datetime
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus

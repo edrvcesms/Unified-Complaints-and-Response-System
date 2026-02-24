@@ -132,8 +132,11 @@ async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_
                 uploaded_by=uploader_id
             )
             attachments.append(attachment)
+            logger.info(f"Prepared attachment for DB: {attachment.file_name}, size: {attachment.file_size} bytes, URL: {attachment.file_path}")
         db.add_all(attachments)
+        logger.info(f"Added {len(attachments)} attachments to the database session for complaint_id={complaint_id}")
         await db.commit()
+        logger.info(f"Committed attachments to the database for complaint_id={complaint_id}")
 
 
 
@@ -181,6 +184,7 @@ def recalculate_severity_task(self, incident_id: int) -> dict:
 def cluster_complaint_task(self, complaint_data: dict):
     
     cluster_data = ClusterComplaintSchema.model_validate(complaint_data)
+    logger.info(f"[cluster_complaint_task] Started clustering for complaint_id={cluster_data.complaint_id}")
 
     async def _run():
         async with AsyncSessionLocal() as db:
@@ -191,6 +195,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                 incident_repository=incident_repo,
                 incident_verifier=_gemini_verifier
             )
+            logger.info(f"[cluster_complaint_task] Executing clustering use case for complaint_id={cluster_data.complaint_id}")
 
             input_dto = ClusterComplaintInput(
                 complaint_id=cluster_data.complaint_id,
@@ -204,8 +209,10 @@ def cluster_complaint_task(self, complaint_data: dict):
                 similarity_threshold=cluster_data.similarity_threshold,
                 created_at=cluster_data.created_at
             )
+            logger.info(f"[cluster_complaint_task] Input DTO prepared for complaint_id={cluster_data.complaint_id}")
 
             result = await use_case.execute(input_dto)
+            logger.info(f"[cluster_complaint_task] Clustering use case completed for complaint_id={cluster_data.complaint_id} with result: {result}")
             await db.commit()
             return result
 

@@ -9,13 +9,13 @@ import type { StatCardProps } from "../../../types/general/statCard";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, icon }) => (
-  <div className={`bg-white rounded-xl border ${border} p-5 flex items-center gap-4 shadow-sm`}>
-    <div className={`w-12 h-12 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
+  <div className={`bg-white rounded-lg border ${border} p-5 flex items-center gap-4`}>
+    <div className={`w-12 h-12 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
       <span className={color}>{icon}</span>
     </div>
     <div>
-      <p className="text-2xl font-bold text-gray-800">{value}</p>
-      <p className="text-xs text-gray-500 font-medium mt-0.5">{label}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-sm text-gray-600 font-medium mt-0.5">{label}</p>
     </div>
   </div>
 );
@@ -39,7 +39,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
-  const { stats: weeklyStats, isLoading: statsLoading } = useWeeklyComplaintStats();
+  const { stats: weeklyStats } = useWeeklyComplaintStats();
 
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
     if (!weeklyStats) return [];
@@ -65,8 +65,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     <div className="space-y-6">
       {/* Heading */}
       <div>
-        <h1 className="text-xl font-bold text-gray-800">{t('dashboard.title')}</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.subtitle')}</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+        <p className="text-sm text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stat Cards */}
@@ -84,10 +84,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       </div>
 
       {/* Weekly Chart */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.weeklyActivity')}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{t('dashboard.weeklySubtitle')}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.weeklySubtitle')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
@@ -103,10 +103,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       </div>
 
       {/* Recent Complaints */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentComplaints')}</h2>
-          <span className="text-xs text-gray-400">{complaints.length} {t('dashboard.columns.total').toLowerCase()}</span>
+          <span className="text-xs text-gray-500">{complaints.length} {t('dashboard.columns.total').toLowerCase()}</span>
         </div>
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -116,21 +116,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.id')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.title')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">{t('dashboard.columns.category')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.status')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('dashboard.columns.id')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('dashboard.columns.title')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">{t('dashboard.columns.category')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('dashboard.columns.status')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {recent.map(c => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition">
-                    <td className="px-5 py-3 font-mono text-xs text-gray-400">#{c.id}</td>
-                    <td className="px-5 py-3 text-gray-800 font-medium text-xs truncate max-w-[160px]">{c.title}</td>
-                    <td className="px-5 py-3 text-gray-500 text-xs hidden md:table-cell">{formatCategoryName(c.category?.category_name)}</td>
+                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 font-mono text-xs text-gray-500">#{c.id}</td>
+                    <td className="px-5 py-3 text-gray-900 font-medium text-sm truncate max-w-40">{c.title}</td>
+                    <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">{formatCategoryName(c.category?.category_name)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}

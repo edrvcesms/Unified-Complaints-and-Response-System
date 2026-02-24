@@ -28,15 +28,30 @@ async def upload_to_cloudinary(file: UploadFile, folder: str) -> str:
             raise ValueError("File content is empty.")
 
         resource_type = _detect_resource_type(file.filename)
+        
+        if '.' in file.filename:
+            filename_base = file.filename.rsplit('.', 1)[0]
+            file_ext = file.filename.rsplit('.', 1)[1].lower()
+        else:
+            filename_base = file.filename
+            file_ext = None
+
+        upload_params = {
+            "folder": folder,
+            "resource_type": resource_type,
+        }
+        
+        if resource_type == "raw" and file_ext:
+            upload_params["public_id"] = filename_base
+            upload_params["format"] = file_ext
 
         result = await asyncio.to_thread(
             sync_upload,
             content,
-            folder=folder,
-            resource_type=resource_type
+            **upload_params
         )
 
-        return result["secure_url"]
+        return result.get("secure_url")
 
     except Exception as e:
         logger.error(f"Failed to upload file {file.filename}: {e}")

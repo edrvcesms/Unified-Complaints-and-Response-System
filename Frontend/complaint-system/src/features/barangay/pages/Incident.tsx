@@ -3,7 +3,7 @@ import { useIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { IncidentsTable } from "../components/IncidentsTable";
 import { SearchInput } from "../components/SearchInputs";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown } from "../components/Filters";
+import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown } from "../components/Filters";
 
 export const IncidentPage: React.FC = () => {
   const { t } = useTranslation();
@@ -13,6 +13,7 @@ export const IncidentPage: React.FC = () => {
     search,
     filterStatus,
     filterSeverityScore,
+    sortBy,
     currentPage,
     paginated,
     filtered,
@@ -20,34 +21,41 @@ export const IncidentPage: React.FC = () => {
     handleSearch,
     handleFilterChange,
     handleSeverityScoreFilterChange,
+    handleSortChange,
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);
 
   if (isError) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
         Failed to load incidents. Please refresh.
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Heading */}
       <div>
-        <h1 className="text-xl font-bold text-gray-800">{t('incidents.manage')}</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-gray-900">{t('incidents.manage')}</h1>
+        <p className="text-sm text-gray-600 mt-1">
           {t('incidents.viewInstruction')}
         </p>
       </div>
 
       {/* Filters + Search */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex flex-col gap-3">
           <SearchInput value={search} onChange={handleSearch} />
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
-            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
+              <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Sort By</label>
+              <SortDropdown current={sortBy} onChange={handleSortChange} />
+            </div>
             {/* Hidden severity score filter - logic still applies */}
             <div className="hidden">
               <SeverityScoreFilterDropdown 
@@ -70,7 +78,7 @@ export const IncidentPage: React.FC = () => {
 
       {/* Result count */}
       {!isLoading && (
-        <p className="text-xs text-gray-400 text-right">
+        <p className="text-xs text-gray-500 text-right">
           Showing {paginated.length} of {filtered.length} incidents
         </p>
       )}

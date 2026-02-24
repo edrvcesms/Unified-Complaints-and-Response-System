@@ -35,46 +35,43 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
   };
 
   return (
-    <tr className="hover:bg-blue-50/30 transition">
+    <tr className="hover:bg-gray-50 transition-colors">
       {/* ID */}
-      <td className="px-4 py-3 text-xs text-gray-400 font-mono">
+      <td className="px-4 py-3 text-xs text-gray-500 font-mono">
         #{incident.id}
       </td>
 
       {/* Title */}
-      <td className="px-4 py-3 text-xs font-medium text-gray-800 truncate">
+      <td className="px-4 py-3 text-sm font-medium text-gray-900">
         {incident.title}
       </td>
 
       {/* Category — hidden on mobile */}
-      <td className="px-4 py-3 text-xs text-gray-600 hidden md:table-cell">
+      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
         {formatCategoryName(incident.category?.category_name)}
       </td>
 
       {/* Severity Level */}
       <td className="px-4 py-3">
         <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getSeverityColor(incident.severity_level)}`}
+          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(incident.severity_level)}`}
         >
           {incident.severity_level.replace("_", " ")}
         </span>
       </td>
 
       {/* Complaint Count — hidden on small screens */}
-      <td className="px-4 py-3 text-xs text-gray-600 hidden sm:table-cell text-center">
-        <span className="inline-flex items-center justify-center w-8 h-8 text-black-800 font-bold">
-          {incident.complaint_count}
-        </span>
+      <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">
+        {incident.complaint_count}
       </td>
 
       {/* View */}
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg
-            text-blue-600 hover:bg-blue-100 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2 focus:ring-offset-white"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <Eye size={18} />
+          <Eye size={16} />
         </button>
       </td>
     </tr>
@@ -108,15 +105,15 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
   ];
 
   return (
-  <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100 text-left">
+          <tr className="bg-gray-50 border-b border-gray-200 text-left">
             {TABLE_HEADERS.map(({ label, className }) => (
               <th
                 key={label}
-                className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase ${className}`}
+                className={`px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide ${className}`}
               >
                 {label}
               </th>
@@ -124,10 +121,10 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
           </tr>
         </thead>
 
-        <tbody className="divide-y divide-gray-50">
+        <tbody className="divide-y divide-gray-100">
           {isLoading ? (
             <tr>
-              <td colSpan={6} className="px-4 py-12 text-center">
+              <td colSpan={6} className="px-4 py-16 text-center">
                 <LoadingIndicator />
               </td>
             </tr>
@@ -135,7 +132,7 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
             <tr>
               <td
                 colSpan={6}
-                className="px-4 py-12 text-center text-sm text-gray-400"
+                className="px-4 py-16 text-center text-sm text-gray-500"
               >
                 No incidents found.
               </td>

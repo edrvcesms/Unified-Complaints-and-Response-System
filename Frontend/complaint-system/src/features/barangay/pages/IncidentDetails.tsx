@@ -23,8 +23,11 @@ const getSeverityColor = (severity: string) => {
   }
 };
 
-const ComplaintCard: React.FC<{ complaint: Complaint }> = ({ complaint }) => (
-  <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+const ComplaintCard: React.FC<{ complaint: Complaint; onClick: (id: number) => void }> = ({ complaint, onClick }) => (
+  <div 
+    onClick={() => onClick(complaint.id)}
+    className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+  >
     <div className="flex justify-between items-start mb-3">
       <div>
         <h4 className="font-semibold text-gray-900 text-sm">
@@ -73,6 +76,10 @@ export const IncidentDetails: React.FC = () => {
     refetchComplaints();
   };
 
+  const handleComplaintClick = (complaintId: number) => {
+    navigate(`/dashboard/incidents/complaints/${complaintId}`);
+  };
+
   if (isLoading) {
     return (
         <LoadingIndicator />
@@ -81,7 +88,7 @@ export const IncidentDetails: React.FC = () => {
 
   if (error || !incident) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
         <AlertCircle className="inline mr-2" size={18} />
         Failed to load incident details. Please try again.
       </div>
@@ -93,21 +100,21 @@ export const IncidentDetails: React.FC = () => {
       {/* Back Button */}
       <button
         onClick={() => navigate("/dashboard/incidents")}
-        className="flex items-center bg-blue-700 gap-2 text-sm text-white hover:text-black-400 hover:bg-blue-600 transition cursor-pointer rounded-lg px-3 py-2 w-max focus:outline-none focus:ring-2 focus:ring-blue-300"
+        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
         {t('incidents.details.backToIncidents')}
       </button>
 
       {/* Incident Header */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{incident.title}</h1>
             <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
           </div>
           <span
-            className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getSeverityColor(incident.severity_level)}`}
+            className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border ${getSeverityColor(incident.severity_level)}`}
           >
             {incident.severity_level.replace("_", " ")}
           </span>
@@ -153,7 +160,7 @@ export const IncidentDetails: React.FC = () => {
       </div>
 
       {/* Description */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
         <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
           {incident.description}
@@ -161,7 +168,7 @@ export const IncidentDetails: React.FC = () => {
       </div>
 
       {/* Additional Details */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           {t('incidents.details.additionalDetails')}
         </h2>
@@ -206,7 +213,7 @@ export const IncidentDetails: React.FC = () => {
       </div>
 
       {/* View Complaints Section */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
             {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
@@ -214,7 +221,7 @@ export const IncidentDetails: React.FC = () => {
           {!showComplaints && (
             <button
               onClick={handleViewComplaints}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {t('incidents.details.viewAllComplaints')}
             </button>
@@ -234,7 +241,11 @@ export const IncidentDetails: React.FC = () => {
             ) : complaints && complaints.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {complaints.map((complaint) => (
-                  <ComplaintCard key={complaint.id} complaint={complaint} />
+                  <ComplaintCard 
+                    key={complaint.id} 
+                    complaint={complaint} 
+                    onClick={handleComplaintClick}
+                  />
                 ))}
               </div>
             ) : (

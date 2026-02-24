@@ -2,7 +2,7 @@ import type { UserData } from "../general/user";
 import type { BarangayData } from "../barangay/barangayAccount";
 import type { Category } from "../general/category";
 import type { Department } from "../department/department";
-import type { PriorityLevel } from "../general/priorityLevel";
+import type { Attachment } from "../general/attachment";
 
 export interface Complaint {
   id: number;
@@ -19,7 +19,7 @@ export interface Complaint {
   barangay: BarangayData;
   category: Category;
   department: Department;
-  priority_level: PriorityLevel;
+  attachment: Attachment[];
 }
 
 export type ComplaintStatus = "submitted" | "under_review" | "resolved";

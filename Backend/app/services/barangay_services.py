@@ -51,7 +51,7 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
         )
         logger.info(f"Executed query to get barangay with ID: {barangay_id}")
         barangay = result.scalars().first()
-        logger.info(f"Fetched barangay: {barangay}")
+        logger.info(f"Fetched barangay with ID: {barangay_id}")
         if not barangay:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
         
@@ -81,7 +81,7 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
             )
         )
         barangays = result.scalars().all()
-        logger.info(f"Fetched all barangays: {barangays}")
+        logger.info(f"Fetched all barangays: {len(barangays)} barangays found")
         all_barangays = [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
         await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
         return all_barangays

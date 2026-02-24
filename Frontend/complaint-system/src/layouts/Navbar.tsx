@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useBarangayStore } from "../store/authStore";
-import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
 
 
 interface NavbarProps {

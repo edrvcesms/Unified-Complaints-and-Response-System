@@ -1,5 +1,5 @@
-import type{ StatusFilter, SeverityScoreFilter } from "../../../../types/complaints/complaint";
-import { STATUS_FILTERS, SEVERITY_SCORE_FILTERS } from "../../../../types/complaints/complaint";
+import type{ StatusFilter, SeverityScoreFilter } from "../../../types/complaints/complaint";
+import { STATUS_FILTERS, SEVERITY_SCORE_FILTERS } from "../../../types/complaints/complaint";
 
 interface StatusFilterPillsProps {
   current: StatusFilter;

@@ -1,5 +1,5 @@
 import { useComplaints } from "../../../hooks/useComplaints";
-import { DashboardPage } from "../components/dashboard/DashboardPage";
+import { DashboardPage } from "../components/DashboardPage";
 import { useTranslation } from "react-i18next";
 
 

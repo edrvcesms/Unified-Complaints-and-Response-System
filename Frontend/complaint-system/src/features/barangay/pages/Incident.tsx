@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
-import { IncidentsTable } from "../components/incidents/IncidentsTable";
-import { SearchInput } from "../components/general/SearchInputs";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown } from "../components/general/Filters";
+import { IncidentsTable } from "../components/IncidentsTable";
+import { SearchInput } from "../components/SearchInputs";
+import { StatusFilterDropdown, SeverityScoreFilterDropdown } from "../components/Filters";
 
 export const IncidentPage: React.FC = () => {
   const { t } = useTranslation();

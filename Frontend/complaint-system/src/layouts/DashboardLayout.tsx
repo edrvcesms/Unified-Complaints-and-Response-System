@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Sidebar } from "../features/barangay/components/dashboard/Sidebar";
-import { HamburgerIcon } from "../features/barangay/components/general/Icons";
-
-// Navbar heights (h-16 = 64px + 6px gold bar = 70px) / (h-20 = 80px + 6px = 86px) / (h-24 = 96px + 6px = 102px)
-// Tailwind arbitrary values used to match responsive navbar
+import { Sidebar } from "../features/barangay/components/Sidebar";
+import { HamburgerIcon } from "../features/barangay/components/Icons";
 
 export const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);

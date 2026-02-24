@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import type { Incident } from "../../../../types/complaints/incident";
+import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "./Pagination";
-import LoadingIndicator from "../../../../components/LoadingIndicator";
-import { formatCategoryName } from "../../../../utils/categoryFormatter";
+import LoadingIndicator from "../../general/LoadingIndicator";
+import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 interface IncidentTableRowProps {
   incident: Incident;

@@ -1,6 +1,6 @@
 // ─── components/Sidebar.tsx ───────────────────────────────────────────────────
 import { NavLink } from "react-router-dom";
-import { DashboardIcon, ComplaintsIcon } from "../general/Icons";
+import { DashboardIcon, ComplaintsIcon } from "../components/Icons";
 
 interface SidebarProps {
   isOpen: boolean;

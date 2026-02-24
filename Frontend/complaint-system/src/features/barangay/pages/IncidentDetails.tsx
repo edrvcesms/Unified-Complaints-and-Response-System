@@ -3,10 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, Calendar, MapPin, Users } from "lucide-react";
-import { StatusBadge } from "../components/incidents/StatusBadge";
+import { StatusBadge } from '../components/StatusBadge';
 import type { Complaint } from "../../../types/complaints/complaint";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
-import LoadingIndicator from "../../../components/LoadingIndicator";
+import LoadingIndicator from "../../general/LoadingIndicator";
 
 const getSeverityColor = (severity: string) => {
   switch (severity) {

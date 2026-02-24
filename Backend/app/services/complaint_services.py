@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
+from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from sqlalchemy import select
@@ -20,6 +21,7 @@ from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import
 from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from app.domain.repository.incident_repository import IncidentRepository
 from app.core.config import settings
+from app.tasks import cluster_complaint_task
 
 
 _embedding_service = SentenceTransformerEmbeddingService()
@@ -154,20 +156,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         # Fetch category config (time window, base weight, threshold)
         incident_repo = IncidentRepository(db)
         category_config = await incident_repo.get_category_config(complaint_data.category_id)
-        logger.info(
-            f"Step 2 complete — category config fetched: "
-            f"window={category_config['time_window_hours']}h, "
-            f"weight={category_config['base_severity_weight']}, "
-            f"threshold={category_config['similarity_threshold']}"
-        )
-
-        logger.info(f"Step 5 starting — clustering complaint id={new_complaint.id}")
-        use_case = ClusterComplaintUseCase(
-            embedding_service=_embedding_service,
-            vector_repository=_vector_repository,
-            incident_repository=incident_repo,
-            incident_verifier=_gemini_verifier,
-        )
+        
 
         input_dto = ClusterComplaintInput(
             complaint_id=new_complaint.id,
@@ -181,33 +170,10 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             similarity_threshold=category_config["similarity_threshold"],
             created_at=datetime.utcnow(),
         )
-
-        cluster_result = await use_case.execute(input_dto)
-        await db.commit()
-
-        if cluster_result.is_new_incident:
-            logger.info(f"Step 5 complete — new incident created: id={cluster_result.incident_id}")
-        else:
-            logger.info(
-                f"Step 5 complete — merged into existing incident: id={cluster_result.incident_id}, "
-                f"similarity={cluster_result.similarity_score:.4f}"
-            )
-
-        # Recalculate severity for the incident ─────────────────────
-        logger.info(f"Step 6 starting — recalculating severity for incident id={cluster_result.incident_id}")
-        velocity_detector = DetectVelocitySpikeUseCase(incident_repo)
-        severity_use_case = RecalculateSeverityUseCase(
-            incident_repository=incident_repo,
-            severity_calculator=_severity_calculator,
-            velocity_detector=velocity_detector,
-        )
-        updated_incident = await severity_use_case.execute(cluster_result.incident_id)
-        await db.commit()
-        logger.info(
-            f"Step 7 complete — severity updated: "
-            f"score={updated_incident.severity_score}, "
-            f"level={updated_incident.severity_level.value}"
-        )
+        
+        cluster_data = ClusterComplaintSchema.model_validate(input_dto.__dict__)
+        
+        cluster_complaint_task.delay(complaint_data=cluster_data.model_dump())
 
         #  Return complaint with full related data
         result = await db.execute(

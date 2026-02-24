@@ -54,13 +54,17 @@
     "country": "Republic of the Philippines",
     "municipality": "Sta. Maria, Laguna",
     "systemName": "Unified Complaints and Response System",
-    "systemDescription": "A unified digital platform for barangay officials to efficiently file, track, and resolve community complaints."
+    "systemDescription": "A unified digital platform for barangay officials to efficiently monitor, track, and resolve community complaints."
   },
   "auth": {
     "barangayLogin": "Barangay Login",
+    "lguLogin": "LGU Login",
+    "departmentLogin": "Department Login",
+    "departmentLoginInstruction": "Sign in with your official department credentials.",
+    "lguLoginInstruction": "Sign in with your official LGU credentials.",
     "signinInstruction": "Sign in with your official barangay credentials.",
     "usernameOrEmail": "Username or Email",
-    "usernamePlaceholder": "e.g. brgy.official@sta-maria.gov.ph",
+    "usernamePlaceholder": "e.g. user.official@sta-maria.gov.ph",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "forgotPassword": "Forgot Password?",

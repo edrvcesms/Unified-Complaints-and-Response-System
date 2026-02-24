@@ -3,6 +3,7 @@ from datetime import datetime
 import os
 from app.models.attachment import Attachment
 from fastapi_mail import FastMail, MessageSchema
+from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary
 from app.core.email_config import conf
@@ -11,20 +12,23 @@ from fastapi import UploadFile
 from app.celery_worker import celery_worker
 import nest_asyncio
 from starlette.datastructures import Headers
-
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
 from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
 from app.domain.repository.incident_repository import IncidentRepository
+from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from dotenv import load_dotenv
 nest_asyncio.apply()
 load_dotenv()
+from app.core.config import settings
 
-# ── Singletons — created once per worker process ──────────────────────────────
-#_embedding_service = SentenceTransformerEmbeddingService()
-"""
+
+_gemini_verifier = GeminiIncidentVerifier(api_key=settings.GEMINI_API_KEY)
+
+_embedding_service = SentenceTransformerEmbeddingService()
+
 _vector_repository = PineconeVectorRepository(
     api_key=os.environ["PINECONE_API_KEY"],
     environment=os.environ.get("PINECONE_ENVIRONMENT", "us-east-1"),
@@ -32,7 +36,6 @@ _vector_repository = PineconeVectorRepository(
 
 _severity_calculator = WeightedSeverityCalculator()
 
-"""
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_email_task(self, subject: str, recipient: str, body: str):
     try:
@@ -87,7 +90,6 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
 
     except Exception as e:
         logger.error(f"Failed to upload attachments: {e}")
-        raise self.retry(exc=e)
 
     finally:
         for f in file_objs:
@@ -110,9 +112,12 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
                 os.rmdir(temp_dir)
         except Exception as e:
             logger.warning(f"Failed to delete temp folder {temp_dir}: {e}")
-
-
+            
+            
 async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_id: int):
+    """
+    Save uploaded file metadata to the database
+    """
     attachments = []
     async with AsyncSessionLocal() as db:
         for f, url in zip(files_data, urls):
@@ -130,60 +135,6 @@ async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_
         db.add_all(attachments)
         await db.commit()
 
-
-# ── Clustering tasks ───────────────────────────────────────────────────────────
-"""
-@celery_worker.task(
-    bind=True,
-    name="app.tasks.cluster_complaint_task",
-    max_retries=3,
-    default_retry_delay=10,
-    autoretry_for=(Exception,),
-)
-def cluster_complaint_task(self, complaint_data: dict) -> dict:
-    logger.info(f"[cluster_complaint_task] complaint_id={complaint_data.get('complaint_id')}")
-
-    async def _run():
-        async with AsyncSessionLocal() as db:
-            incident_repo = IncidentRepository(db)
-            use_case = ClusterComplaintUseCase(
-                embedding_service=_embedding_service,
-                vector_repository=_vector_repository,
-                incident_repository=incident_repo,
-            )
-
-            input_dto = ClusterComplaintInput(
-                complaint_id=complaint_data["complaint_id"],
-                user_id=complaint_data["user_id"],
-                title=complaint_data["title"],
-                description=complaint_data["description"],
-                barangay_id=complaint_data["barangay_id"],
-                category_id=complaint_data["category_id"],
-                sector_id=complaint_data.get("sector_id"),
-                priority_level_id=complaint_data.get("priority_level_id"),
-                category_time_window_hours=complaint_data["category_time_window_hours"],
-                category_base_severity_weight=complaint_data["category_base_severity_weight"],
-                similarity_threshold=complaint_data["similarity_threshold"],
-                created_at=datetime.fromisoformat(complaint_data["created_at"]),
-            )
-
-            result = await use_case.execute(input_dto)
-            await db.commit()
-            return result
-
-    result = asyncio.run(_run())
-
-    recalculate_severity_task.apply_async(
-        args=[result.incident_id],
-        queue="severity",
-    )
-
-    return {
-        "incident_id": result.incident_id,
-        "is_new_incident": result.is_new_incident,
-        "similarity_score": result.similarity_score,
-        "severity_level": result.severity_level,
-    }
 
 
 @celery_worker.task(
@@ -218,4 +169,56 @@ def recalculate_severity_task(self, incident_id: int) -> dict:
         "severity_level": incident.severity_level.value,
     }
     
-    """
+    
+
+@celery_worker.task(
+    bind=True,
+    name="app.tasks.cluster_complaint_task",
+    max_retries=3,
+    default_retry_delay=10,
+    autoretry_for=(Exception,),
+)
+def cluster_complaint_task(self, complaint_data: dict):
+    
+    cluster_data = ClusterComplaintSchema.model_validate(complaint_data)
+
+    async def _run():
+        async with AsyncSessionLocal() as db:
+            incident_repo = IncidentRepository(db)
+            use_case = ClusterComplaintUseCase(
+                embedding_service=_embedding_service,
+                vector_repository=_vector_repository,
+                incident_repository=incident_repo,
+                incident_verifier=_gemini_verifier
+            )
+
+            input_dto = ClusterComplaintInput(
+                complaint_id=cluster_data.complaint_id,
+                user_id=cluster_data.user_id,
+                title=cluster_data.title,
+                description=cluster_data.description,
+                barangay_id=cluster_data.barangay_id,
+                category_id=cluster_data.category_id,
+                category_time_window_hours=cluster_data.category_time_window_hours,
+                category_base_severity_weight=cluster_data.category_base_severity_weight,
+                similarity_threshold=cluster_data.similarity_threshold,
+                created_at=cluster_data.created_at
+            )
+
+            result = await use_case.execute(input_dto)
+            await db.commit()
+            return result
+
+    result = asyncio.run(_run())
+
+    recalculate_severity_task.apply_async(
+        args=[result.incident_id],
+        queue="severity",
+    )
+
+    return {
+        "incident_id": result.incident_id,
+        "is_new_incident": result.is_new_incident,
+        "similarity_score": result.similarity_score,
+        "severity_level": result.severity_level,
+    }

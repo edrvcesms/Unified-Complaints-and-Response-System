@@ -50,16 +50,20 @@
     "failedToLoadMessage": "Nagkaroon ng error habang naglo-load ang page. Pakisubukan muli mamaya."
   },
   "appInfo": {
-    "country": "Pilipinas",
+    "country": "Republika ng Pilipinas",
     "municipality": "Sta. Maria, Laguna",
-    "systemName": "Pinagsamang Sistema ng Reklamo",
-    "systemDescription": "Isang digital na plataporma para sa barangay officials na madaling magsumite, subaybayan, at lutasin ang mga reklamo."
+    "systemName": "Unified Complaint and Resolution System",
+    "systemDescription": "Isang digital na plataporma para sa mga officials na madaling mag monitor, subaybayan, at lutasin ang mga reklamo."
   },
   "auth": {
     "barangayLogin": "Login ng Barangay",
+    "lguLogin": "Login ng LGU",
+    "departmentLogin": "Login ng Departamento",
+    "departmentLoginInstruction": "Mag-login gamit ang opisyal na department account.",
+    "lguLoginInstruction": "Mag-login gamit ang opisyal na LGU account.",
     "signinInstruction": "Mag-login gamit ang opisyal na barangay account.",
     "usernameOrEmail": "Username o Email",
-    "usernamePlaceholder": "hal. brgy.official@sta-maria.gov.ph",
+    "usernamePlaceholder": "hal. user.official@sta-maria.gov.ph",
     "password": "Password",
     "passwordPlaceholder": "Ilagay ang password",
     "forgotPassword": "Nakalimutan ang Password?",

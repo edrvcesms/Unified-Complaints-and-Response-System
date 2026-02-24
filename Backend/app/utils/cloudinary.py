@@ -4,26 +4,52 @@ from fastapi import UploadFile
 from app.utils.logger import logger
 from typing import List
 
+
+def _detect_resource_type(filename: str) -> str:
+    ext = filename.split(".")[-1].lower()
+
+    if ext in ["jpg", "jpeg", "png", "gif", "bmp", "webp"]:
+        return "image"
+
+    if ext in ["mp4", "mov", "avi", "mkv", "webm"]:
+        return "video"
+
+    if ext in ["pdf", "doc", "docx", "txt", "xlsx", "pptx"]:
+        return "raw"
+
+    return "auto"  # fallback
+
+
 async def upload_to_cloudinary(file: UploadFile, folder: str) -> str:
     try:
         content = await file.read()
+
         if not content:
             raise ValueError("File content is empty.")
 
-        result = await asyncio.to_thread(sync_upload, content, folder=folder)
-        return result.get("secure_url")
+        resource_type = _detect_resource_type(file.filename)
+
+        result = await asyncio.to_thread(
+            sync_upload,
+            content,
+            folder=folder,
+            resource_type=resource_type
+        )
+
+        return result["secure_url"]
 
     except Exception as e:
-        logger.error(f"Failed to upload file {file.filename} to Cloudinary: {e}")
-        raise ValueError(f"Failed to upload file {file.filename} to Cloudinary: {e}")
-    
-    
-async def upload_multiple_files_to_cloudinary(files: List[UploadFile], folder: str) -> List[str]:
-    
-    tasks = [upload_to_cloudinary(f, folder) for f in files]
-    urls = await asyncio.gather(*tasks)
-    return urls
+        logger.error(f"Failed to upload file {file.filename}: {e}")
+        raise ValueError(f"Failed to upload file {file.filename}: {e}")
 
+
+async def upload_multiple_files_to_cloudinary(
+    files: List[UploadFile],
+    folder: str
+) -> List[str]:
+
+    tasks = [upload_to_cloudinary(f, folder) for f in files]
+    return await asyncio.gather(*tasks)
 
 async def delete_from_cloudinary(public_id: str) -> bool:
     try:

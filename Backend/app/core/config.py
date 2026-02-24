@@ -20,5 +20,7 @@ class Settings:
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET")
     PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY")
     PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
+    
 
 settings = Settings()

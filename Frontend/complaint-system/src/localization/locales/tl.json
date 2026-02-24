@@ -1,0 +1,73 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Pangkalahatang tingin sa mga reklamo sa Sta. Maria, Laguna",
+    "totalComplaints": "Kabuuang Reklamo",
+    "submitted": "Isinumite",
+    "underReview": "Tinitingnan",
+    "resolved": "Nalutas",
+    "weeklyActivity": "Lingguhang Aktibidad",
+    "weeklySubtitle": "Reklamong isinumite vs. nalutas ngayong linggo",
+    "recentComplaints": "Mga Kamakailang Reklamo",
+    "columns": {
+      "id": "ID",
+      "title": "Reklamo",
+      "category": "Kategorya",
+      "status": "Katayuan",
+      "total": "Kabuuan"
+    }
+  },
+  "incidents": {
+    "manage": "Pamahalaan ang Insidente",
+    "viewInstruction": "I-click ang view icon para makita ang detalye ng insidente at mga kaugnay na reklamo.",
+    "severityLevel": "Antas ng Kalubhaan ng Reklamo:",
+    "columns": {
+      "incidentId": "ID ng Insidente",
+      "title": "Reklamo",
+      "category": "Kategorya",
+      "severity": "Kalubhaan",
+      "complaintCounts": "Bilang ng Reklamo",
+      "view": "Tingnan"
+    },
+    "details": {
+      "description": "Paglalarawan",
+      "additionalDetails": "Karagdagang Detalye",
+      "firstReported": "Unang Naiulat",
+      "lastReported": "Huling Naiulat",
+      "relatedComplaints": "Kaugnay na Reklamo",
+      "viewAllComplaints": "Tingnan Lahat ng Reklamo",
+      "backToIncidents": "Bumalik sa Insidente",
+      "totalComplaints": "Bilang ng Reklamo"
+    }
+  },
+  "errors": {
+    "pageNotFound": "Hindi Natagpuan ang Page",
+    "pageNotFoundMessage": "Paumanhin, wala o nailipat ang page na hinahanap mo.",
+    "backToDashboard": "Bumalik sa Dashboard",
+    "unauthorized": "Hindi Awtorisadong Access",
+    "unauthorizedMessage": "Wala kang permiso para ma-access ang pahinang ito. Mangyaring mag-login gamit ang tamang kredensyal.",
+    "failedToLoad": "Nabigong Mag-load",
+    "failedToLoadMessage": "Nagkaroon ng error habang naglo-load ang page. Pakisubukan muli mamaya."
+  },
+  "appInfo": {
+    "country": "Pilipinas",
+    "municipality": "Sta. Maria, Laguna",
+    "systemName": "Pinagsamang Sistema ng Reklamo",
+    "systemDescription": "Isang digital na plataporma para sa barangay officials na madaling magsumite, subaybayan, at lutasin ang mga reklamo."
+  },
+  "auth": {
+    "barangayLogin": "Login ng Barangay",
+    "signinInstruction": "Mag-login gamit ang opisyal na barangay account.",
+    "usernameOrEmail": "Username o Email",
+    "usernamePlaceholder": "hal. brgy.official@sta-maria.gov.ph",
+    "password": "Password",
+    "passwordPlaceholder": "Ilagay ang password",
+    "forgotPassword": "Nakalimutan ang Password?",
+    "login": "Mag-login",
+    "contactInfo": "Para sa account issues, kontakin ang Municipal IT Officer.",
+    "unauthorizedAccess": "Ang hindi awtorisadong access ay labag sa RA 10175."
+  },
+  "footer": {
+    "copyright": "© 2026 Munisipalidad ng Sta. Maria, Laguna. Lahat ng karapatan nakalaan."
+  }
+}

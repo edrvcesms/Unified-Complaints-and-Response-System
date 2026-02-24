@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from app.models.complaint import Complaint
+from app.models.incident_complaint import IncidentComplaintModel
 from sqlalchemy import select
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData
 from datetime import datetime
@@ -67,6 +68,27 @@ async def get_all_complaints(db: AsyncSession):
 
     except Exception as e:
         logger.error(f"Error in get_all_complaints: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(Complaint)
+            .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
+            .where(IncidentComplaintModel.incident_id == incident_id)
+            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level))
+        )
+        complaints = result.scalars().all()
+        
+        logger.info(f"Fetched complaints for incident ID {incident_id}: {complaints}")
+    
+        return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def get_weekly_complaint_stats(db: AsyncSession):

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useBarangayStore } from "../store/authStore";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 
 interface NavbarProps {
@@ -102,15 +103,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             aria-haspopup="true"
             aria-expanded={dropdownOpen}
             aria-label="Open profile menu"
-            className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5
-              border border-white/20 bg-white/10 hover:bg-white/20
-              transition duration-200 focus:outline-none focus:ring-2
-              focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#003087]"
+            className="flex items-center gap-3 pl-1.5 pr-4 py-1.5
+              
+              transition duration-200 "
           >
             {/* Avatar circle with initials — larger */}
             <div
               aria-hidden="true"
-              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full white bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0"
             >
               {initials}
             </div>
@@ -169,6 +169,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 </svg>
                 My Profile
               </button>
+
+              <div className="h-px bg-gray-100 mx-4" />
+
+              {/* Language Switcher */}
+              <LanguageSwitcher />
 
               <div className="h-px bg-gray-100 mx-4" />
 

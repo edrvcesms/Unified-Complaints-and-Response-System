@@ -1,8 +1,10 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 
 export const NotFound: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleClick = () => {
     navigate("/dashboard")
@@ -13,10 +15,10 @@ export const NotFound: React.FC = () => {
         <h1 className="text-9xl font-black text-gray-200 select-none">404</h1>
         <div className="-mt-10">
           <h2 className="text-2xl font-bold text-blue-800 mb-2">
-            Page Not Found
+            {t('errors.pageNotFound')}
           </h2>
           <p className="text-blue-500 mb-8 max-w-sm mx-auto">
-            Sorry, the page you're looking for doesn't exist or has been moved.
+            {t('errors.pageNotFoundMessage')}
           </p>
           <a
             onClick={() => handleClick()}
@@ -36,7 +38,7 @@ export const NotFound: React.FC = () => {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back to Dashboard
+            {t('errors.backToDashboard')}
           </a>
         </div>
       </div>

@@ -34,6 +34,6 @@ async def logout(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await logout_user(request)
 
 @router.post("/refresh-token", status_code=status.HTTP_200_OK)
-@limiter.limit("30/minute")
+@limiter.limit("100/minute")
 async def refresh_token(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await refresh_access_token(request, db)

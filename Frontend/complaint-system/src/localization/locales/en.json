@@ -1,0 +1,74 @@
+
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of complaint activity in Sta. Maria, Laguna",
+    "totalComplaints": "Total Complaints",
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "resolved": "Resolved",
+    "weeklyActivity": "Weekly Complaint Activity",
+    "weeklySubtitle": "Complaints submitted vs. resolved this week",
+    "recentComplaints": "Recent Complaints",
+    "columns": {
+      "id": "ID",
+      "title": "Complaint",
+      "category": "Category",
+      "status": "Status",
+      "total": "Total"
+    }
+  },
+  "incidents": {
+    "manage": "Manage Incidents",
+    "viewInstruction": "Click the view icon to review incident details and related complaints.",
+    "severityLevel": "Severity Level:",
+    "columns": {
+      "incidentId": "Incident ID",
+      "title": "Complaint",
+      "category": "Category",
+      "severity": "Severity",
+      "complaintCounts": "Complaint Counts",
+      "view": "View"
+    },
+    "details": {
+      "description": "Description",
+      "additionalDetails": "Additional Details",
+      "firstReported": "First Reported",
+      "lastReported": "Last Reported",
+      "relatedComplaints": "Related Complaints",
+      "viewAllComplaints": "View All Complaints",
+      "backToIncidents": "Back to Incidents",
+      "totalComplaints": "Total Complaints"
+    }
+  },
+  "errors": {
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundMessage": "Sorry, the page you're looking for doesn't exist or has been moved.",
+    "backToDashboard": "Back to Dashboard",
+    "unauthorized": "Unauthorized Access",
+    "unauthorizedMessage": "You do not have permission to access this page. Please log in with appropriate credentials.",
+    "failedToLoad": "Failed to Load",
+    "failedToLoadMessage": "An error occurred while loading the page. Please try again later."
+  },
+  "appInfo": {
+    "country": "Republic of the Philippines",
+    "municipality": "Sta. Maria, Laguna",
+    "systemName": "Unified Complaints and Response System",
+    "systemDescription": "A unified digital platform for barangay officials to efficiently file, track, and resolve community complaints."
+  },
+  "auth": {
+    "barangayLogin": "Barangay Login",
+    "signinInstruction": "Sign in with your official barangay credentials.",
+    "usernameOrEmail": "Username or Email",
+    "usernamePlaceholder": "e.g. brgy.official@sta-maria.gov.ph",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot Password?",
+    "login": "Login",
+    "contactInfo": "For account issues, contact your Municipal IT Officer.",
+    "unauthorizedAccess": "Unauthorized access is a violation of RA 10175."
+  },
+  "footer": {
+    "copyright": "© 2026 Municipality of Sta. Maria, Laguna. All rights reserved."
+  }
+}

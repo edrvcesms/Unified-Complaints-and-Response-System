@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { AlertBanner } from "./AlertBanner";
 import { ErrorMessage } from "./ErrorMessage";
 import { PasswordInput } from "./PasswordInputs";
@@ -28,13 +29,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSubmit,
   onForgotPassword,
   onTogglePassword,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8 space-y-6">
 
     {/* Heading */}
     <div className="space-y-1">
-      <h3 className="text-2xl font-bold text-gray-800">Barangay Login</h3>
-      <p className="text-sm text-gray-500">Sign in with your official barangay credentials.</p>
+      <h3 className="text-2xl font-bold text-gray-800">{t('auth.barangayLogin')}</h3>
+      <p className="text-sm text-gray-500">{t('auth.signinInstruction')}</p>
     </div>
 
     <form onSubmit={onSubmit} noValidate className="space-y-5">
@@ -42,7 +46,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* ── Email / Username ── */}
       <div className="space-y-1">
         <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
-          Username or Email
+          {t('auth.usernameOrEmail')}
         </label>
         <input
           id="email"
@@ -51,7 +55,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           autoComplete="username"
           value={formData.email}
           onChange={onChange}
-          placeholder="e.g. brgy.official@sta-maria.gov.ph"
+          placeholder={t('auth.usernamePlaceholder')}
           aria-describedby={errors.email ? "email-error" : undefined}
           aria-invalid={!!errors.email}
           className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
@@ -67,7 +71,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* ── Password ── */}
       <div className="space-y-1">
         <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-          Password
+          {t('auth.password')}
         </label>
         <PasswordInput
           id="password"
@@ -89,7 +93,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           onClick={onForgotPassword}
           className="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline transition cursor-pointer"
         >
-          Forgot Password?
+          {t('auth.forgotPassword')}
         </button>
       </div>
 
@@ -102,8 +106,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
     {/* Compliance note */}
     <p className="text-center text-xs text-gray-400 leading-relaxed pt-2 border-t border-gray-100">
-      For account issues, contact your Municipal IT Officer.<br />
-      Unauthorized access is a violation of RA 10175.
+      {t('auth.contactInfo')}<br />
+      {t('auth.unauthorizedAccess')}
     </p>
   </div>
-);
+  );
+};

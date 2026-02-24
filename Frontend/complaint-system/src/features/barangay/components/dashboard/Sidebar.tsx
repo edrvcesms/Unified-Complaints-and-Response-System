@@ -16,7 +16,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { path: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
-  { path: "/dashboard/complaints", label: "Manage Complaints", icon: <ComplaintsIcon /> },
+  { path: "/dashboard/incidents", label: "Manage Incidents", icon: <ComplaintsIcon /> },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {

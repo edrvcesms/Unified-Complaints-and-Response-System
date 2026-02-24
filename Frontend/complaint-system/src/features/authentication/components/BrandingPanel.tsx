@@ -1,10 +1,14 @@
+import { useTranslation } from 'react-i18next';
 import StaMariaLogo from "../../../assets/StaMariaLogo.jpg";;
 
 // ─── Component: BrandingPanel ─────────────────────────────────────────────────
 // Full-height left panel shown only on large screens (lg+).
 // Displays the municipal seal, system name, and a brief description.
 
-export const BrandingPanel: React.FC = () => (
+export const BrandingPanel: React.FC = () => {
+  const { t } = useTranslation();
+  
+  return (
   <div
     className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
     style={{ background: "linear-gradient(160deg, #003087 0%, #0055b3 60%, #0077cc 100%)" }}
@@ -26,21 +30,21 @@ export const BrandingPanel: React.FC = () => (
       {/* Title block */}
       <div className="text-white space-y-2">
         <p className="text-xs uppercase tracking-widest font-semibold text-blue-200">
-          Republic of the Philippines
+          {t('appInfo.country')}
         </p>
         <h1 className="text-3xl font-extrabold leading-tight tracking-tight drop-shadow">
-          Sta. Maria, Laguna
+          {t('appInfo.municipality')}
         </h1>
         <h2 className="text-xl font-semibold text-blue-100">
-          Unified Complaints and Response System
+          {t('appInfo.systemName')}
         </h2>
         <div className="w-16 h-1 bg-white mx-auto rounded-full mt-3" />
       </div>
 
       <p className="text-blue-200 text-sm leading-relaxed max-w-xs">
-        A unified digital platform for barangay officials to efficiently
-        file, track, and resolve community complaints.
+        {t('appInfo.systemDescription')}
       </p>
     </div>
   </div>
-);
+  );
+};

@@ -45,7 +45,9 @@ export interface ComplaintsPageProps {
   isLoading: boolean;
 }
 
-export type StatusFilter = "all" | "submitted" | "under_review" | "resolved";
+export type StatusFilter = "all" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
+
+export type SeverityScoreFilter = "all" | "0-3.9" | "4.0-5.9" | "6.0-7.9" | "8.0+";
 
 export interface ComplaintsPageProps {
   complaints: Complaint[];
@@ -61,9 +63,18 @@ export interface ActionButtonsProps {
 
 export const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: "All", value: "all" },
-  { label: "Submitted", value: "submitted" },
-  { label: "Under Review", value: "under_review" },
-  { label: "Resolved", value: "resolved" },
+  { label: "Low", value: "LOW" },
+  { label: "Medium", value: "MEDIUM" },
+  { label: "High", value: "HIGH" },
+  { label: "Very High", value: "VERY_HIGH" },
+];
+
+export const SEVERITY_SCORE_FILTERS: { label: string; value: SeverityScoreFilter }[] = [
+  { label: "All Scores", value: "all" },
+  { label: "0-3.9 (Low)", value: "0-3.9" },
+  { label: "4.0-5.9 (Medium)", value: "4.0-5.9" },
+  { label: "6.0-7.9 (High)", value: "6.0-7.9" },
+  { label: "8.0+ (Critical)", value: "8.0+" },
 ];
 
 export const ITEMS_PER_PAGE = 8;

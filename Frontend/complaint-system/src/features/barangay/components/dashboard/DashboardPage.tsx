@@ -1,12 +1,12 @@
 // ─── pages/DashboardPage.tsx ──────────────────────────────────────────────────
 
-import { useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useMemo } from "react";import { useTranslation } from 'react-i18next';import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Complaint, ComplaintStats, WeeklyDataPoint } from "../../../../types/complaints/complaint";
 import { useWeeklyComplaintStats } from "../../../../hooks/useComplaints";
 import { SkeletonCard } from "../general/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../general/Icons";
 import type { StatCardProps } from "../../../../types/general/statCard";
+import { formatCategoryName } from "../../../../utils/categoryFormatter";
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, icon }) => (
   <div className={`bg-white rounded-xl border ${border} p-5 flex items-center gap-4 shadow-sm`}>
@@ -26,6 +26,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoading }) => {
+  const { t } = useTranslation();
 
   const stats: ComplaintStats = useMemo(() => ({
     total: complaints.length,
@@ -38,7 +39,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
-  const { data: weeklyStats, isLoading: statsLoading } = useWeeklyComplaintStats();
+  const { stats: weeklyStats, isLoading: statsLoading } = useWeeklyComplaintStats();
 
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
     if (!weeklyStats) return [];
@@ -64,8 +65,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     <div className="space-y-6">
       {/* Heading */}
       <div>
-        <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Overview of complaint activity in Sta. Maria, Laguna</p>
+        <h1 className="text-xl font-bold text-gray-800">{t('dashboard.title')}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stat Cards */}
@@ -74,10 +75,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label="Total Complaints" value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
-            <StatCard label="Submitted" value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
-            <StatCard label="Under Review" value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label="Resolved" value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label={t('dashboard.totalComplaints')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
+            <StatCard label={t('dashboard.submitted')} value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
+            <StatCard label={t('dashboard.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
+            <StatCard label={t('dashboard.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
           </>
         )}
       </div>
@@ -85,8 +86,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       {/* Weekly Chart */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-gray-700">Weekly Complaint Activity</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Complaints submitted vs. resolved this week</p>
+          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.weeklyActivity')}</h2>
+          <p className="text-xs text-gray-400 mt-0.5">{t('dashboard.weeklySubtitle')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
@@ -104,8 +105,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       {/* Recent Complaints */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Recent Complaints</h2>
-          <span className="text-xs text-gray-400">{complaints.length} total</span>
+          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentComplaints')}</h2>
+          <span className="text-xs text-gray-400">{complaints.length} {t('dashboard.columns.total').toLowerCase()}</span>
         </div>
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -118,10 +119,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Title</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.id')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.title')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">{t('dashboard.columns.category')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('dashboard.columns.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -129,7 +130,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                   <tr key={c.id} className="hover:bg-gray-50 transition">
                     <td className="px-5 py-3 font-mono text-xs text-gray-400">#{c.id}</td>
                     <td className="px-5 py-3 text-gray-800 font-medium text-xs truncate max-w-[160px]">{c.title}</td>
-                    <td className="px-5 py-3 text-gray-500 text-xs hidden md:table-cell">{c.category?.category_name ?? "—"}</td>
+                    <td className="px-5 py-3 text-gray-500 text-xs hidden md:table-cell">{formatCategoryName(c.category?.category_name)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}

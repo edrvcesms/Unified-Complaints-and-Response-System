@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { BrandingPanel } from "../components/BrandingPanel";
 import { LoginForm } from "../components/LoginForm";
 import { MobileHeader } from "../components/Mobileheader";
 import { useLoginForm } from "../../../hooks/useLoginForm";
+import { LanguageSwitcher } from "../../../components/LanguageSwitcher";
 
 
 // ─── Page: LoginPage ──────────────────────────────────────────────────────────
@@ -9,6 +11,7 @@ import { useLoginForm } from "../../../hooks/useLoginForm";
 // together via the useLoginForm hook. Contains no business logic itself.
 
 export const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const {
     formData,
     errors,
@@ -21,7 +24,12 @@ export const LoginPage: React.FC = () => {
   } = useLoginForm();
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row font-sans relative">
+      {/* Language Switcher - Top Right */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       {/* Left — government branding (desktop only) */}
       <BrandingPanel />
 
@@ -44,7 +52,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Page footer */}
         <p className="mt-6 text-xs text-gray-400 text-center">
-          © {new Date().getFullYear()} Municipality of Sta. Maria, Laguna. All rights reserved.
+          {t('footer.copyright')}
         </p>
       </div>
     </div>

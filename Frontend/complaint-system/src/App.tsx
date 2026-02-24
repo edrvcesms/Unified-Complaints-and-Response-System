@@ -10,7 +10,8 @@ import { AuthRoutes } from "./routes/ProtectedRoutes"
 import LoadingIndicator from "./components/LoadingIndicator"
 import Navbar from "./layouts/Navbar"
 import DashboardLayout from "./layouts/DashboardLayout"
-import { ComplaintsPage } from "./features/barangay/pages/Complaints"
+import { IncidentPage } from "./features/barangay/pages/Incident"
+import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 
 function App() {
 
@@ -36,7 +37,8 @@ function App() {
           <Route element={<BarangayProtectedRoute />}>
             <Route path="/dashboard/*" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
-              <Route path="complaints" element={<ComplaintsPage />} />
+              <Route path="incidents" element={<IncidentPage />} />
+              <Route path="incidents/:incidentId" element={<IncidentDetails />} />
             </Route>
           </Route>
 

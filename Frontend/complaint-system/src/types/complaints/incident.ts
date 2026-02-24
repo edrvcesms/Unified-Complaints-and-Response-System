@@ -9,6 +9,12 @@ export interface Incident {
   barangay_id: number;
   category_id: number;
   department_id: number;
+  severity_level: string;
+  status: string;
+  complaint_count: number;
+  severity_score: number;
+  first_reported_at: Date;
+  last_reported_at: Date;
   category: Category;
   barangay: BarangayData;
   complaint_clusters: ComplaintCluster[];

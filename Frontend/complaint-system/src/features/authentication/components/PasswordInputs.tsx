@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface PasswordInputProps {
   id: string;
   name: string;
@@ -31,7 +33,10 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   hasError,
   onChange,
   onToggle,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  return (
   <div className="relative">
     <input
       id={id}
@@ -40,7 +45,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       autoComplete="current-password"
       value={value}
       onChange={onChange}
-      placeholder="Enter your password"
+      placeholder={t('auth.passwordPlaceholder')}
       aria-describedby={hasError ? `${id}-error` : undefined}
       aria-invalid={hasError}
       className={`w-full px-4 py-2.5 pr-11 rounded-lg border text-sm text-gray-800 placeholder-gray-400
@@ -59,4 +64,5 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       {showPassword ? <EyeOffIcon /> : <EyeIcon />}
     </button>
   </div>
-);
+  );
+};

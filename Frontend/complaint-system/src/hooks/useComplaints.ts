@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryClient } from "../main";
 import {
   getComplaintById,
   getComplaints,
@@ -17,27 +18,44 @@ export const COMPLAINT_KEYS = {
   resolved:   ["complaints", "resolved"]    as const,
 };
 
-export const useComplaintDetails = (complaintId: number) =>
-  useQuery<Complaint>({
+export const useComplaintDetails = (complaintId: number) => {
+  const { data, isLoading, error } = useQuery<Complaint>({
     queryKey: ["complaints", complaintId],
-    queryFn:  () => getComplaintById(complaintId),
+    queryFn: () => getComplaintById(complaintId),
     refetchOnWindowFocus: false,
-    enabled: !!complaintId,
   });
+  return {
+    complaint: data,
+    isLoading,
+    error,
+  };
+}
 
-export const useComplaints = () =>
-  useQuery<Complaint[]>({
+export const useComplaints = () => {
+  const { data, isLoading, error } = useQuery<Complaint[]>({
     queryKey: COMPLAINT_KEYS.all,
-    queryFn:  getComplaints,
+    queryFn: getComplaints,
     refetchOnWindowFocus: false,
   });
+  return {
+    complaints: data,
+    isLoading,
+    error,
+  };
+}
 
-export const useWeeklyComplaintStats = () =>
-  useQuery({
-    queryKey: ["complaints", "weekly_stats"],
-    queryFn:  getWeeklyComplaintStats,
-    refetchOnWindowFocus: false
+export const useWeeklyComplaintStats = () => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["complaints", "stats", "weekly"],
+    queryFn: getWeeklyComplaintStats,
+    refetchOnWindowFocus: false,
   });
+  return {
+    stats: data,
+    isLoading,
+    error,
+  };
+}
 
 export const useReviewComplaint = () => {
   const queryClient = useQueryClient();
@@ -50,7 +68,6 @@ export const useReviewComplaint = () => {
 };
 
 export const useResolveComplaint = () => {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (complaintId: number) => resolveComplaint(complaintId),
     onSuccess: () => {

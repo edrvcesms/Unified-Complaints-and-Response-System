@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface SubmitButtonProps {
   isLoading: boolean;
 }
@@ -9,7 +11,10 @@ const Spinner = () => (
   </svg>
 );
 
-export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => (
+export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => {
+  const { t } = useTranslation();
+  
+  return (
   <button
     type="submit"
     disabled={isLoading}
@@ -21,6 +26,7 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => (
       }`}
   >
     {isLoading && <Spinner />}
-    {isLoading ? "Signing in…" : "Login"}
+    {isLoading ? "Signing in…" : t('auth.login')}
   </button>
-);
+  );
+};

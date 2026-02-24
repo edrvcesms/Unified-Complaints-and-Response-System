@@ -16,3 +16,4 @@ class Barangay(Base):
     
     barangay_account = relationship("BarangayAccount", back_populates="barangay", uselist=False)
     complaint = relationship("Complaint", back_populates="barangay")
+    incidents = relationship("IncidentModel", back_populates="barangay")

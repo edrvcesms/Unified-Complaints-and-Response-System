@@ -35,7 +35,7 @@ class User(Base):
     updated_at = Column(DateTime, nullable=True)
 
     report = relationship("Report", back_populates="user")
-    barangay_account = relationship("BarangayAccount", back_populates="user")
+    barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
     department_account = relationship("DepartmentAccount", back_populates="user")
     complaint = relationship("Complaint", back_populates="user")
     attachment = relationship("Attachment", back_populates="uploader")

@@ -24,6 +24,7 @@ class IncidentComplaintModel(Base):
 
    
     incident = relationship("IncidentModel", back_populates="complaint_clusters")
+    complaint = relationship("Complaint", back_populates="incident_links")
 
     __table_args__ = (
      

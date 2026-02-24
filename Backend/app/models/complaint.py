@@ -35,3 +35,4 @@ class Complaint(Base):
     response = relationship("Response", back_populates="complaint")
     feedback = relationship("Feedback", back_populates="complaint")
     notifications = relationship("Notification", back_populates="complaint")
+    incident_links = relationship("IncidentComplaintModel", back_populates="complaint", cascade="all, delete-orphan")

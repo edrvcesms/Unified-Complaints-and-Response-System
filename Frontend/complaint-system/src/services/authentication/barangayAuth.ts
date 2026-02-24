@@ -5,7 +5,7 @@ import { useBarangayStore } from "../../store/authStore";
 
 export const loginBarangayAccount = async (data: LoginRequestData) => {
   try {
-    const response = await authApi.post("/login", data, { withCredentials: true });
+    const response = await authApi.post("/login", data);
     console.log("Login response:", response.data);
     const { barangayAccessToken, barangayAccountData } = response.data;
     useBarangayStore.getState().setBarangayAccessToken(barangayAccessToken);
@@ -20,7 +20,7 @@ export const loginBarangayAccount = async (data: LoginRequestData) => {
 
 export const logoutBarangayAccount = async () => {
   try {
-    await authApi.post("/logout", { withCredentials: true });
+    await authApi.post("/logout", {});
   } catch (error) {
     const errorMessage = handleApiError(error);
     console.error("Logout failed:", errorMessage.message);

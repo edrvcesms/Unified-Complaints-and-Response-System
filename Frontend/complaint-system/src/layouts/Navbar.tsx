@@ -3,19 +3,15 @@ import { useNavigate } from "react-router-dom";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useBarangayStore } from "../store/authStore";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NavbarProps {
-  /** Callback fired when the user clicks Logout */
   onLogout: () => void;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const navigate = useNavigate();
 
-  // ── Data from store ─────────────────────────────────────────────────────────
   const barangayName = useBarangayStore(
     (state) => state.barangayAccountData?.barangay_name ?? "Barangay"
   );
@@ -23,7 +19,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     (state) => state.barangayAccountData?.barangay_account.user.role ?? "Official"
   );
 
-  // ── Avatar initials — first letter of each word, max 2 ─────────────────────
   const initials = barangayName
     .split(" ")
     .map((word) => word[0])
@@ -31,13 +26,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     .join("")
     .toUpperCase();
 
-  // ── Dropdown state ──────────────────────────────────────────────────────────
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
 
-  // Ref used to detect clicks outside the dropdown
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ── Close on outside click ──────────────────────────────────────────────────
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -52,7 +44,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dropdownOpen]);
 
-  // ── Close on Escape key ─────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setDropdownOpen(false);
@@ -60,8 +51,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleProfileClick = () => {
     setDropdownOpen(false);
@@ -73,22 +62,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     onLogout();
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
   return (
-    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/30 sticky top-0 z-50">
-      {/* Gold accent bar — government document aesthetic */}
-      <div className="h-1 w-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-500" />
-
+    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
+      {/* Gold accent bar */}
       <nav
-        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between"
+        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"
         aria-label="Main navigation"
       >
         {/* ── Left — Logo + System Name ── */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Municipal seal */}
-          <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0 shadow-md">
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
+          {/* Municipal seal — larger */}
+          <div className="w-10 h-10 sm:w-13 sm:h-13 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0 shadow-lg">
             <img
               src={StaMariaLogo}
               alt="Sta. Maria, Laguna Seal"
@@ -98,11 +83,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
           {/* System name */}
           <div className="min-w-0">
-            <p className="text-white font-bold text-sm sm:text-base leading-tight truncate tracking-tight">
+            <p className="text-white font-bold text-sm sm:text-base lg:text-xl leading-tight truncate tracking-tight">
               Sta. Maria, Laguna
             </p>
-            <p className="text-blue-300 text-[10px] sm:text-xs leading-tight truncate tracking-widest uppercase font-medium">
-              Complaint Management System
+            <p className="text-blue-300 text-[10px] sm:text-xs lg:text-sm leading-tight truncate tracking-widest uppercase font-medium mt-0.5">
+              Unified Complaints and Response System
             </p>
           </div>
         </div>
@@ -117,29 +102,28 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             aria-haspopup="true"
             aria-expanded={dropdownOpen}
             aria-label="Open profile menu"
-            className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1
+            className="flex items-center gap-3 rounded-full pl-1.5 pr-4 py-1.5
               border border-white/20 bg-white/10 hover:bg-white/20
               transition duration-200 focus:outline-none focus:ring-2
               focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#003087]"
           >
-            {/* Avatar circle with initials */}
+            {/* Avatar circle with initials — larger */}
             <div
               aria-hidden="true"
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500
-                flex items-center justify-center text-blue-900 font-bold text-xs shadow-sm flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full white bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0"
             >
               {initials}
             </div>
 
-            {/* Barangay name — hidden on very small screens */}
-            <span className="hidden sm:block text-white text-sm font-medium max-w-[140px] truncate">
+            {/* Barangay name */}
+            <span className="hidden sm:block text-white text-base font-medium max-w-[160px] truncate">
               {barangayName}
             </span>
 
-            {/* Chevron — rotates when dropdown is open */}
+            {/* Chevron */}
             <svg
               aria-hidden="true"
-              className={`w-3.5 h-3.5 text-blue-200 transition-transform duration-200 flex-shrink-0
+              className={`w-4 h-4 text-blue-200 transition-transform duration-200 flex-shrink-0
                 ${dropdownOpen ? "rotate-180" : "rotate-0"}`}
               fill="none"
               stroke="currentColor"
@@ -154,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             <div
               role="menu"
               aria-label="Profile menu"
-              className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl
+              className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl
                 border border-gray-100 overflow-hidden z-50"
               style={{ animation: "fadeSlideDown 0.15s ease-out" }}
             >
@@ -166,9 +150,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               `}</style>
 
               {/* User info header */}
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+              <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
                 <p className="text-sm font-semibold text-gray-800 truncate">{barangayName}</p>
-                <p className="text-xs text-gray-500 truncate capitalize">{role}</p>
+                <p className="text-xs text-gray-500 truncate capitalize mt-0.5">{role}</p>
               </div>
 
               {/* Profile option */}
@@ -176,7 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 role="menuitem"
                 type="button"
                 onClick={handleProfileClick}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700
+                className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700
                   hover:bg-blue-50 hover:text-blue-800 transition duration-150 text-left"
               >
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,14 +170,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 My Profile
               </button>
 
-              <div className="h-px bg-gray-100 mx-3" />
+              <div className="h-px bg-gray-100 mx-4" />
 
               {/* Logout button */}
               <button
                 role="menuitem"
                 type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600
+                className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-600
                   hover:bg-red-50 transition duration-150 text-left"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

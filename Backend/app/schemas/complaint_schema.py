@@ -4,7 +4,7 @@ from datetime import datetime
 from .user_schema import UserData
 from .barangay_schema import BarangayModel
 from .category_schema import CategoryModel
-from .sector_schema import SectorModel
+from .department_schema import DepartmentModel
 from .priority_level_schema import PriorityLevelModel
 from pydantic import BaseModel
 from datetime import datetime 
@@ -17,8 +17,6 @@ class ComplaintBaseModel(BaseModel):
     location_details: Optional[str] = None
     barangay_id: int
     category_id: int
-    department_id: Optional[int] = None
-    priority_level_id: Optional[int] = None
 
 class ComplaintCreateData(ComplaintBaseModel):
     pass
@@ -30,7 +28,7 @@ class ComplaintWithUserData(ComplaintBaseModel):
     user: UserData
     barangay: BarangayModel
     category: Optional[CategoryModel] = None
-    sector: Optional[SectorModel] = None
+    department: Optional[DepartmentModel] = None
     priority_level: Optional[PriorityLevelModel] = None
     priority_level_id: Optional[int] = None  # ← was int, now Optional
 

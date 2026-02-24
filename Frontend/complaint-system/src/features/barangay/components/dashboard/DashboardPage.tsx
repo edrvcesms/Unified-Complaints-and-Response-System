@@ -2,11 +2,11 @@
 
 import { useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import type { Complaint, ComplaintStats, WeeklyDataPoint } from "../../../types/complaints/complaint";
-import { useWeeklyComplaintStats } from "../../../hooks/useComplaints";
-import { SkeletonCard } from "./Components";
-import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../components/Components";
-import type { StatCardProps } from "../../../types/general/statCard";
+import type { Complaint, ComplaintStats, WeeklyDataPoint } from "../../../../types/complaints/complaint";
+import { useWeeklyComplaintStats } from "../../../../hooks/useComplaints";
+import { SkeletonCard } from "../general/Skeletons";
+import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../general/Icons";
+import type { StatCardProps } from "../../../../types/general/statCard";
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, icon }) => (
   <div className={`bg-white rounded-xl border ${border} p-5 flex items-center gap-4 shadow-sm`}>

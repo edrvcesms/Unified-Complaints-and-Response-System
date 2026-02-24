@@ -23,19 +23,12 @@ async def cluster_complaints(complaint_data: ComplaintCreateData, user_id: int, 
         "description": complaint_data.description,
         "barangay_id": complaint_data.barangay_id,
         "category_id": complaint_data.category_id,
-        "sector_id": complaint_data.sector_id,
-        "priority_level_id": complaint_data.priority_level_id,
         "category_time_window_hours": category_config["time_window_hours"],
         "category_base_severity_weight": category_config["base_severity_weight"],
         "similarity_threshold": category_config["similarity_threshold"],
         "created_at": datetime.utcnow().isoformat(),
     }
     
-    #cluster_complaint_task.apply_async(
-    #    args=[task_payload],
-       # queue="clustering",
-   # )
-
     
     
     

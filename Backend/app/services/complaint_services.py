@@ -11,7 +11,6 @@ from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
-
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
@@ -121,8 +120,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             location_details=complaint_data.location_details,
             barangay_id=complaint_data.barangay_id,
             category_id=complaint_data.category_id,
-            department_id=complaint_data.department_id,
-            priority_level_id=complaint_data.priority_level_id,
             status=ComplaintStatus.SUBMITTED.value,
             user_id=user_id,
             created_at=datetime.utcnow()
@@ -141,8 +138,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             f"weight={category_config['base_severity_weight']}, "
             f"threshold={category_config['similarity_threshold']}"
         )
-
-
 
         logger.info(f"Step 5 starting — clustering complaint id={new_complaint.id}")
         use_case = ClusterComplaintUseCase(
@@ -340,3 +335,4 @@ async def delete_complaint(complaint_id: int, user_id: int, db: AsyncSession):
         await db.rollback()
         logger.error(f"Error in delete_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    

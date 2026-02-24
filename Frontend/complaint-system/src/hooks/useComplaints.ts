@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  getComplaintById,
   getComplaints,
   getWeeklyComplaintStats,
 } from "../services/complaints/complaints";
@@ -15,6 +16,14 @@ export const COMPLAINT_KEYS = {
   underReview:["complaints", "under_review"]as const,
   resolved:   ["complaints", "resolved"]    as const,
 };
+
+export const useComplaintDetails = (complaintId: number) =>
+  useQuery<Complaint>({
+    queryKey: ["complaints", complaintId],
+    queryFn:  () => getComplaintById(complaintId),
+    refetchOnWindowFocus: false,
+    enabled: !!complaintId,
+  });
 
 export const useComplaints = () =>
   useQuery<Complaint[]>({

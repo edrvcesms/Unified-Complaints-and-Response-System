@@ -3,7 +3,7 @@ import type { BarangayAccountData } from "../../types/barangay/barangayAccount";
 
 export const refreshToken = async (): Promise<{ access_token: string, barangayAccountData: BarangayAccountData | null } | null> => {
   try {
-    const response = await authApi.post("/refresh-token", {}, { withCredentials: true });
+    const response = await authApi.post("/refresh-token", {});
     console.log("Refresh token response:", response.data);
     return response.data;
   }catch (error: any) {

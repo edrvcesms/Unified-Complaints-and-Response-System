@@ -15,3 +15,4 @@ class Department(Base):
 
     department_account = relationship("DepartmentAccount", back_populates="department")
     complaint = relationship("Complaint", back_populates="department")
+    incidents = relationship("IncidentModel", back_populates="department")

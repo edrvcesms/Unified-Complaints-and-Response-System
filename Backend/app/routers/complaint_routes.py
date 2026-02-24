@@ -14,23 +14,23 @@ from fastapi.requests import Request
 router = APIRouter()
 
 @router.get("/all", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_all_complaints(db)
 
 @router.get("/stats/weekly", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def weekly_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_weekly_complaint_stats(db)
 
 @router.get("/my-complaints", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def list_my_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_my_complaints(current_user.id, db)
 
 
 @router.get("/{complaint_id}", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def get_complaint(request: Request, complaint_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_complaint_by_id(complaint_id, db)
     

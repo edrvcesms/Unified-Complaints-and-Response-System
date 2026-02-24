@@ -15,3 +15,4 @@ class Category(Base):
     updated_at = Column(DateTime, nullable=True)
 
     complaint = relationship("Complaint", back_populates="category")
+    incidents = relationship("IncidentModel", back_populates="category")

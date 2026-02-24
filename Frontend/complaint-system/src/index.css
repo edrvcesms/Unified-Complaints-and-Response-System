@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+html {
+  font-size: 125%; /* 16px → 20px — scales all rem units */
+  -webkit-text-size-adjust: 100%; /* prevent iOS font inflation */
+}
+
+/* Scale back down at smaller breakpoints to prevent overflow */
+@media (max-width: 1024px) {
+  html {
+    font-size: 115%; /* ~18.4px on tablet */
+  }
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 106.25%; /* ~17px on mobile — gentle bump, avoids overflow */
+  }
+}
+
+:root {
+  /* These match your responsive navbar: h-16/h-20/h-24 + 6px gold bar,
+     multiplied by the zoom factor at each breakpoint */
+  --navbar-h: 87.5px;   /* 70px × 1.25 */
+}
+
+@media (min-width: 640px) {
+  :root { --navbar-h: 107.5px; } /* 86px × 1.25 */
+}
+
+@media (min-width: 1024px) {
+  :root { --navbar-h: 127.5px; } /* 102px × 1.25 */
+}

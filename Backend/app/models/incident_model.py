@@ -42,7 +42,10 @@ class IncidentModel(Base):
     last_reported_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident")
+    complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")
+    barangay = relationship("Barangay", back_populates="incidents")
+    category = relationship("Category", back_populates="incidents")
+    department = relationship("Department", back_populates="incidents")
 
     __table_args__ = (
         # Composite index for the most common query pattern:

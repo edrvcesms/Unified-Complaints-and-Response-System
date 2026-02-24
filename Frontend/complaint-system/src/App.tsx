@@ -8,7 +8,9 @@ import { NotFound } from "./features/general/NotFound"
 import { useEffect } from "react"
 import { AuthRoutes } from "./routes/ProtectedRoutes"
 import LoadingIndicator from "./components/LoadingIndicator"
-import Navbar from "./components/Navbar"
+import Navbar from "./layouts/Navbar"
+import DashboardLayout from "./layouts/DashboardLayout"
+import { ComplaintsPage } from "./features/barangay/pages/Complaints"
 
 function App() {
 
@@ -32,8 +34,10 @@ function App() {
       <NetworkProvider>
         <Routes>
           <Route element={<BarangayProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/complaints" element={<Dashboard />} />
+            <Route path="/dashboard/*" element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="complaints" element={<ComplaintsPage />} />
+            </Route>
           </Route>
 
           <Route element={<AuthRoutes />}>

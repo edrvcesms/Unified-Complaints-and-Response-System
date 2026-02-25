@@ -28,3 +28,25 @@ export const getComplaintsByIncidentId = async (incidentId: number): Promise<Com
     throw error;
   }
 };
+
+export const resolveIncident = async (incidentId: number): Promise<void> => {
+  try {
+    const response = await incidentsApi.patch(`/${incidentId}/resolve`);
+    console.log(`Resolved incident with ID ${incidentId}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error resolving incident with ID ${incidentId}:`, error);
+    throw error;
+  }
+};
+
+export const reviewIncident = async (incidentId: number): Promise<void> => {
+  try {
+    const response = await incidentsApi.patch(`/${incidentId}/review`);
+    console.log(`Marked incident with ID ${incidentId} for review:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error marking incident with ID ${incidentId} for review:`, error);
+    throw error;
+  }
+};

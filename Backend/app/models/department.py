@@ -14,5 +14,3 @@ class Department(Base):
     updated_at = Column(DateTime, nullable=True)
 
     department_account = relationship("DepartmentAccount", back_populates="department")
-    complaint = relationship("Complaint", back_populates="department")
-    incidents = relationship("IncidentModel", back_populates="department")

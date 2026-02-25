@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData
 from datetime import datetime
 from app.utils.logger import logger
@@ -20,7 +20,7 @@ from app.tasks import cluster_complaint_task
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.priority_level), selectinload(Complaint.attachment)).where(Complaint.id == complaint_id))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
         
         if not complaint:
@@ -38,7 +38,7 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
 
 async def get_all_complaints(db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         
         complaints = result.scalars().all()
         
@@ -61,7 +61,7 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
-            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment))
+            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
         )
         complaints = result.scalars().all()
         
@@ -161,7 +161,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 selectinload(Complaint.user),
                 selectinload(Complaint.barangay),
                 selectinload(Complaint.category),
-                selectinload(Complaint.department),
                 selectinload(Complaint.attachment),
             )
             .where(Complaint.id == new_complaint.id)
@@ -180,62 +179,81 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.error(f"Error in submit_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-async def review_complaints(complaint_id: int, db: AsyncSession):
+    
+async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
     try:
-        result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-        complaint = result.scalars().first()
-        
-        if not complaint:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
-        
-        complaint.status = ComplaintStatus.UNDER_REVIEW.value
+        result = await db.execute(
+            select(IncidentComplaintModel.complaint_id)
+            .where(IncidentComplaintModel.incident_id == incident_id)
+        )
+        complaint_ids = result.scalars().all()
+
+        if not complaint_ids:
+            return {"message": "No complaints found for this incident"}
+
+        await db.execute(
+            update(Complaint)
+            .where(Complaint.id.in_(complaint_ids))
+            .values(status=ComplaintStatus.UNDER_REVIEW.value)
+        )
+
         await db.commit()
-        delete_cache("all_complaints")
-        logger.info(f"Complaint with ID {complaint_id} is now under review")
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
-        complaints = result.scalars().all()
-        logger.info(f"Fetched all complaints after updating status: {complaints}")
-        await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)
-        logger.info(f"set cache for all complaints after review_complaints")
-        return JSONResponse(content={"message": f"Complaint with ID {complaint_id} is now under review"})
+
+        await delete_cache("all_complaints")
+        for complaint_id in complaint_ids:
+            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
+            complaint = result.scalars().first()
+            if complaint:
+                await delete_cache(f"user_complaints:{complaint.user_id}")
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "All complaints under this incident are now under review"}
+        )
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(IncidentComplaintModel.complaint_id)
+            .where(IncidentComplaintModel.incident_id == incident_id)
+        )
+        complaint_ids = result.scalars().all()
+
+        if not complaint_ids:
+            return {"message": "No complaints found for this incident"}
+
+        await db.execute(
+            update(Complaint)
+            .where(Complaint.id.in_(complaint_ids))
+            .values(status=ComplaintStatus.RESOLVED.value, resolved_at=datetime.utcnow())
+        )
+
+        await db.commit()
+
+        await delete_cache("all_complaints")
+        for complaint_id in complaint_ids:
+            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
+            complaint = result.scalars().first()
+            if complaint:
+                await delete_cache(f"user_complaints:{complaint.user_id}")
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "All complaints under this incident have been resolved"}
+        )
     
     except HTTPException:
         raise
     
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in review_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def resolve_complaint(complaint_id: int, db: AsyncSession):
-    try:
-        result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-        complaint = result.scalars().first()
-        
-        if not complaint:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
-        
-        complaint.status = ComplaintStatus.RESOLVED.value
-        complaint.resolved_at = datetime.utcnow()
-        await db.commit()
-        delete_cache("all_complaints")
-        logger.info(f"Complaint with ID {complaint_id} has been resolved")
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.department), selectinload(Complaint.category), selectinload(Complaint.attachment)))
-        complaints = result.scalars().all()
-        logger.info(f"Fetched all complaints after updating status: {complaints}")
-        await set_cache("all_complaints", [ComplaintWithUserData.model_validate(complaint, from_attributes=True).model_dump_json() for complaint in complaints], expiration=1)
-        return JSONResponse(content={"message": f"Complaint with ID {complaint_id} has been resolved"})
-    
-    except HTTPException:
-        raise
-    
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"Error in resolve_complaint: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
-
-
 async def get_my_complaints(user_id: int, db: AsyncSession):
     try:
         cached = await get_cache(f"user_complaints:{user_id}")
@@ -294,8 +312,13 @@ async def delete_complaint(complaint_id: int, user_id: int, db: AsyncSession):
         
         await db.delete(complaint)
         await db.commit()
+        await delete_cache("all_complaints")
+        await delete_cache(f"user_complaints:{user_id}")
         logger.info(f"Deleted complaint with ID {complaint_id} by user {user_id}")
-        return {"message": "Complaint deleted successfully"}
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "Complaint deleted successfully"}
+        )
     
     except HTTPException:
         raise

@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useComplaintDetails } from "../../../hooks/useComplaints";
-import { ArrowLeft, AlertCircle, MapPin } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { StatusBadge } from '../components/StatusBadge';
-import { AttachmentViewer } from '../components/AttachmentViewer';
 import { ComplaintInfoGrid } from '../components/ComplaintInfoGrid';
+import { AttachmentButton } from '../components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
 
 export const ComplaintDetails: React.FC = () => {
@@ -45,92 +45,101 @@ export const ComplaintDetails: React.FC = () => {
         Back to Complaints
       </button>
 
-      {/* Complaint Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{complaint.title}</h1>
-            <p className="text-sm text-gray-500 mt-1">Complaint #{complaint.id}</p>
-          </div>
-          <StatusBadge status={complaint.status} />
-        </div>
-
-        <ComplaintInfoGrid complaint={complaint} />
-      </div>
-
-      {/* Description */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
-        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-          {complaint.description}
-        </p>
-      </div>
-
-      {/* Location Details */}
-      {complaint.location_details && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Location Details</h2>
-          <div className="flex items-start gap-3">
-            <MapPin className="text-gray-400 mt-0.5" size={18} />
-            <p className="text-sm text-gray-700 leading-relaxed">
-              {complaint.location_details}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Attachments */}
-      {complaint.attachment && complaint.attachment.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Attachments ({complaint.attachment.length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {complaint.attachment.map((attachment) => (
-              <AttachmentViewer key={attachment.id} attachment={attachment} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Additional Information */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Submitted</p>
-            <p className="text-sm font-medium text-gray-900">
-              {new Date(complaint.created_at).toLocaleDateString("en-PH", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Status</p>
-            <p className="text-sm font-medium text-gray-900 capitalize">
-              {complaint.status.replace("_", " ")}
-            </p>
-          </div>
-          {complaint.user && (
-            <>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
+          {/* Complaint Header */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Reporter Email</p>
+                <h1 className="text-2xl font-bold text-gray-900">{complaint.title}</h1>
+                <p className="text-sm text-gray-500 mt-1">Complaint #{complaint.id}</p>
+              </div>
+              <StatusBadge status={complaint.status} />
+            </div>
+
+            <ComplaintInfoGrid complaint={complaint} />
+          </div>
+
+          {/* Description */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {complaint.description}
+            </p>
+          </div>
+
+          {/* Location Details */}
+          {/* {complaint.location_details && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Location Details</h2>
+              <div className="flex items-start gap-3">
+                <MapPin className="text-gray-400 mt-0.5" size={18} />
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {complaint.location_details}
+                </p>
+              </div>
+            </div>
+          )} */}
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="space-y-6">
+          {/* Additional Information */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Submitted</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {complaint.user.email}
+                  {new Date(complaint.created_at).toLocaleDateString("en-PH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1">Reporter Phone</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {complaint.user.phone_number || "N/A"}
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <p className="text-sm font-medium text-gray-900 capitalize">
+                  {complaint.status.replace("_", " ")}
                 </p>
               </div>
-            </>
-          )}
+              {complaint.user && (
+                <>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Reporter Email</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {complaint.user.email}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Reporter Phone</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {complaint.user.phone_number || "N/A"}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Attachments */}
+            {complaint.attachment && complaint.attachment.length > 0 && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Attachments ({complaint.attachment.length})
+                </h3>
+                <div className="space-y-3">
+                  {complaint.attachment.map((attachment) => (
+                    <AttachmentButton key={attachment.id} attachment={attachment} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

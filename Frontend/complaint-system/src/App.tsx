@@ -12,6 +12,7 @@ import Navbar from "./layouts/Navbar"
 import DashboardLayout from "./layouts/DashboardLayout"
 import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
+import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
 import { ComplaintDetails } from "./features/barangay/pages/ComplaintDetails"
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="incidents" element={<IncidentPage />} />
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
+              <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
             </Route>
           </Route>

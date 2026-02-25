@@ -4,14 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.database.database import async_engine, Base
 from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
 from app.domain.infrastracture.jobs.incident_jobs import run_resolve_expired_incidents
 
 # Routers
-from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, incident_routes
+from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, incident_routes, lgu_routes
 from app.admin import _super_admin_routes as _super_admin
 
 scheduler = AsyncIOScheduler()
@@ -68,3 +67,4 @@ app.include_router(incident_routes.router, prefix="/api/v1/incidents", tags=["In
 app.include_router(user_auth_routes.router, prefix="/api/v1/auth", tags=["User Authentication"])
 app.include_router(user_routes.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(complaint_routes.router, prefix="/api/v1/complaints", tags=["Complaints"])
+app.include_router(lgu_routes.router, prefix="/api/v1/lgu", tags=["LGU"])

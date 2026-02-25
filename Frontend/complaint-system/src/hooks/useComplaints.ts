@@ -1,14 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryClient } from "../main";
+import { useQuery } from "@tanstack/react-query";
 import {
   getComplaintById,
   getComplaints,
   getWeeklyComplaintStats,
 } from "../services/complaints/complaints";
-import {
-  reviewComplaint,
-  resolveComplaint,
-} from "../services/complaints/manageComplaints";
 import type { Complaint } from "../types/complaints/complaint";
 
 export const COMPLAINT_KEYS = {
@@ -56,22 +51,3 @@ export const useWeeklyComplaintStats = () => {
     error,
   };
 }
-
-export const useReviewComplaint = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (complaintId: number) => reviewComplaint(complaintId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["complaints"] });
-    },
-  });
-};
-
-export const useResolveComplaint = () => {
-  return useMutation({
-    mutationFn: (complaintId: number) => resolveComplaint(complaintId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["complaints"] });
-    },
-  });
-};

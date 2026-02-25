@@ -26,8 +26,7 @@ class IncidentModel(Base):
     description = Column(Text, nullable=False)
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
-    department_id = Column(Integer, ForeignKey("department.id"), nullable=True)
-    priority_level_id = Column(Integer, ForeignKey("priority_level.id"), nullable=True)
+    department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
 
     status = Column(String(20), nullable=False, default="ACTIVE", index=True)
     complaint_count = Column(Integer, nullable=False, default=1)
@@ -45,8 +44,7 @@ class IncidentModel(Base):
     complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")
     barangay = relationship("Barangay", back_populates="incidents")
     category = relationship("Category", back_populates="incidents")
-    department = relationship("Department", back_populates="incidents")
-
+    department_account = relationship("DepartmentAccount", back_populates="incidents")
     __table_args__ = (
         # Composite index for the most common query pattern:
         # "Find active incidents in this barangay + category"

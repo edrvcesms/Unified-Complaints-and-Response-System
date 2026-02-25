@@ -1,83 +1,35 @@
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, Calendar, MapPin, Users } from "lucide-react";
-import { StatusBadge } from '../components/StatusBadge';
-import type { Complaint } from "../../../types/complaints/complaint";
+import { useIncidentDetails } from "../../../hooks/useIncidents";
+import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import LoadingIndicator from "../../general/LoadingIndicator";
-
-const getSeverityColor = (severity: string) => {
-  switch (severity) {
-    case "LOW":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "MEDIUM":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "HIGH":
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    case "VERY_HIGH":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-};
-
-const ComplaintCard: React.FC<{ complaint: Complaint; onClick: (id: number) => void }> = ({ complaint, onClick }) => (
-  <div 
-    onClick={() => onClick(complaint.id)}
-    className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
-  >
-    <div className="flex justify-between items-start mb-3">
-      <div>
-        <h4 className="font-semibold text-gray-900 text-sm">
-          #{complaint.id} - {complaint.title}
-        </h4>
-        <p className="text-xs text-gray-500 mt-1">
-          {complaint.user
-            ? `${complaint.user.first_name} ${complaint.user.last_name}`
-            : "Unknown"}
-        </p>
-      </div>
-      <StatusBadge status={complaint.status} />
-    </div>
-    <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-      {complaint.description}
-    </p>
-    <div className="flex items-center gap-4 text-xs text-gray-500">
-      <div className="flex items-center gap-1">
-        <MapPin size={14} />
-        <span>{complaint.location_details || "N/A"}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <Calendar size={14} />
-        <span>{new Date(complaint.created_at).toLocaleDateString("en-PH")}</span>
-      </div>
-    </div>
-  </div>
-);
+import { useResolveIncident, useReviewIncident } from '../../../hooks/useIncidents';
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
-  const [showComplaints, setShowComplaints] = useState(false);
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
-  const {
-    complaints,
-    isLoading: complaintsLoading,
-    error: complaintsError,
-    refetch: refetchComplaints,
-  } = useIncidentComplaints(Number(incidentId), showComplaints);
 
-  const handleViewComplaints = () => {
-    setShowComplaints(true);
-    refetchComplaints();
+  const resolveIncidentMutation = useResolveIncident(Number(incidentId));
+  const reviewIncidentMutation = useReviewIncident(Number(incidentId));
+
+  const handleViewAllComplaints = () => {
+    navigate(`/dashboard/incidents/${incidentId}/complaints`);
   };
 
-  const handleComplaintClick = (complaintId: number) => {
-    navigate(`/dashboard/incidents/complaints/${complaintId}`);
+  const handleResolve = () => {
+    if (confirm("Are you sure you want to resolve this incident?")) {
+      resolveIncidentMutation.mutate();
+    }
+  };
+
+  const handleReview = () => {
+    if (confirm("Are you sure you want to mark this incident for review?")) {
+      reviewIncidentMutation.mutate();
+    }
   };
 
   if (isLoading) {
@@ -106,155 +58,162 @@ export const IncidentDetails: React.FC = () => {
         {t('incidents.details.backToIncidents')}
       </button>
 
-      {/* Incident Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{incident.title}</h1>
-            <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
+          {/* Incident Header */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{incident.title}</h1>
+                <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                  <AlertCircle className="text-blue-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">Category</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {formatCategoryName(incident.category?.category_name)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                  <MapPin className="text-purple-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">Barangay</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {incident.barangay?.barangay_name || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                  <AlertCircle className="text-orange-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">Severity Level</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {incident.severity_level.replace("_", " ")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                  <Users className="text-green-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">{t('incidents.details.totalComplaints')}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {incident.complaint_count}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <span
-            className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border ${getSeverityColor(incident.severity_level)}`}
-          >
-            {incident.severity_level.replace("_", " ")}
-          </span>
+
+          {/* Description */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {incident.description}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <AlertCircle className="text-blue-600" size={20} />
+        {/* RIGHT COLUMN */}
+        <div className="space-y-6">
+          {/* Additional Details */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {t('incidents.details.additionalDetails')}
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.firstReported')}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {new Date(incident.first_reported_at).toLocaleDateString("en-PH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Severity Score</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {incident.severity_score}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.lastReported')}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {new Date(incident.last_reported_at).toLocaleDateString("en-PH", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <p className="text-sm font-medium text-gray-900 capitalize">
+                  {incident.status.replace("_", " ")}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">Category</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {formatCategoryName(incident.category?.category_name)}
-              </p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <MapPin className="text-purple-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Barangay</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {incident.barangay?.barangay_name || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <Users className="text-green-600" size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">{t('incidents.details.totalComplaints')}</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {incident.complaint_count}
+            {/* Related Complaints Section */}
+            <div className="border-t pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
+                </h3>
+                <button
+                  onClick={handleViewAllComplaints}
+                  className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  {t('incidents.details.viewAllComplaints')}
+                </button>
+              </div>
+              <p className="text-sm text-gray-600">
+                View all the related complaints in this incident.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Description */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
-        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-          {incident.description}
-        </p>
-      </div>
-
-      {/* Additional Details */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {t('incidents.details.additionalDetails')}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">{t('incidents.details.firstReported')}</p>
-            <p className="text-sm font-medium text-gray-900">
-              {new Date(incident.first_reported_at).toLocaleDateString("en-PH", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">{t('incidents.details.lastReported')}</p>
-            <p className="text-sm font-medium text-gray-900">
-              {new Date(incident.last_reported_at).toLocaleDateString("en-PH", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Severity Score</p>
-            <p className="text-sm font-medium text-gray-900">
-              {incident.severity_score}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Status</p>
-            <p className="text-sm font-medium text-gray-900 capitalize">
-              {incident.status.replace("_", " ")}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* View Complaints Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
-          </h2>
-          {!showComplaints && (
-            <button
-              onClick={handleViewComplaints}
-              className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              {t('incidents.details.viewAllComplaints')}
-            </button>
-          )}
-        </div>
-
-        {showComplaints && (
-          <div className="space-y-3">
-            {complaintsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : complaintsError ? (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                Failed to load complaints. Please try again.
-              </div>
-            ) : complaints && complaints.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {complaints.map((complaint) => (
-                  <ComplaintCard 
-                    key={complaint.id} 
-                    complaint={complaint} 
-                    onClick={handleComplaintClick}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 text-center py-8">
-                No complaints found for this incident.
-              </p>
-            )}
-          </div>
-        )}
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={handleReview}
+          disabled={reviewIncidentMutation.isPending}
+          className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
+        </button>
+        <button
+          onClick={handleResolve}
+          disabled={resolveIncidentMutation.isPending}
+          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
+        </button>
       </div>
     </div>
   );

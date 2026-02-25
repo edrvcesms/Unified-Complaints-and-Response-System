@@ -3,7 +3,7 @@ import { Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "./Pagination";
-import LoadingIndicator from "../../general/LoadingIndicator";
+import { SkeletonRow } from "./Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 interface IncidentTableRowProps {
@@ -123,11 +123,13 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
 
         <tbody className="divide-y divide-gray-100">
           {isLoading ? (
-            <tr>
-              <td colSpan={6} className="px-4 py-16 text-center">
-                <LoadingIndicator />
-              </td>
-            </tr>
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
           ) : incidents.length === 0 ? (
             <tr>
               <td

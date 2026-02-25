@@ -1,18 +1,21 @@
 from fastapi import HTTPException, status
+from pinecone import Pinecone
+from sqlalchemy.ext import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.department import Department
 from app.models.user import User
 from app.models.category import Category
 from app.models.barangay import Barangay
-from app.models.priority_level import PriorityLevel
+from app.models.department import Department
 from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentCreate, DepartmentCreate, PriorityLevelCreate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentAccountCreate, LGUAccountCreate
 from sqlalchemy import select
 from app.core.security import hash_password
 from datetime import datetime
 from app.constants.roles import UserRole
+from app.core.config import settings
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -71,71 +74,90 @@ async def create_complaint_category(category_data: ComplaintCategoryCreate, db: 
     await db.refresh(new_category)
     return new_category
 
-async def create_priority_level(priority_data: PriorityLevelCreate, db: AsyncSession):
-
+async def create_department(department_data: DepartmentAccountCreate, db: AsyncSession) -> Department:
     result = await db.execute(
-        select(PriorityLevel).where(PriorityLevel.priority_name == priority_data.priority_name)
+        select(User).where(User.email == department_data.email)
     )
     if result.scalars().first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Priority level already exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department account already exists")
 
-    new_priority = PriorityLevel(
-        priority_name=priority_data.priority_name,
-        created_at=datetime.utcnow()
-    )
-    db.add(new_priority)
-    await db.commit()
-    await db.refresh(new_priority)
-    return new_priority
+    hashed_password = hash_password(department_data.password)
 
-async def create_department(department_data: DepartmentCreate, db: AsyncSession):
-    
-    result = await db.execute(
-        select(Department).where(Department.department_name == department_data.department_name)
+    new_account = User(
+        email=department_data.email,
+        hashed_password=hashed_password,
+        created_at=datetime.utcnow(),
+        role=UserRole.DEPARTMENT_STAFF.value,
+        is_administrator=True
     )
-    if result.scalars().first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department already exists")
 
     new_department = Department(
         department_name=department_data.department_name,
         description=department_data.description,
         created_at=datetime.utcnow()
     )
-    db.add(new_department)
+    department_account = DepartmentAccount(
+        user=new_account,
+        department=new_department,
+        created_at=datetime.utcnow()
+    )
+    db.add_all([new_account, department_account, new_department])
     await db.commit()
     await db.refresh(new_department)
     return new_department
-
-async def create_department_account(user_id: int, department_id: int, db: AsyncSession):
+    
+async def create_lgu_account(lgu_data: LGUAccountCreate, db: AsyncSession):
     try:
         result = await db.execute(
-            select(DepartmentAccount).where(DepartmentAccount.department_id == department_id)
+            select(User).where(User.email == lgu_data.email)
         )
         if result.scalars().first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department already has a department account")
-        
-        result = await db.execute(
-            select(Department).where(Department.id == department_id)
-        )
-        department = result.scalars().first()
-        if not department:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
-        
-        result = await db.execute(
-            select(User).where(User.id == user_id)
-        )
-        user = result.scalars().first()
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="LGU account already exists")
 
-        department_account = DepartmentAccount(
-            user_id=user_id,
-            department_id=department_id,
-            created_at=datetime.utcnow()
+        hashed_password = hash_password(lgu_data.password)
+
+        new_account = User(
+            email=lgu_data.email,
+            hashed_password=hashed_password,
+            created_at=datetime.utcnow(),
+            role=UserRole.LGU_OFFICIAL.value,
+            is_administrator=True
         )
-        db.add(department_account)
+
+        db.add(new_account)
         await db.commit()
-        await db.refresh(department_account)
-        return department_account
+        await db.refresh(new_account)
+        return new_account
     except HTTPException as e:
         raise e
+    
+async def delete_pinecone_data(index_name: str):
+    try:
+        # Create Pinecone client
+        pc = Pinecone(api_key=settings.PINECONE_API_KEY, environment=settings.PINECONE_ENVIRONMENT)
+        
+        # List all indexes (run in thread since it's blocking)
+        indexes = await asyncio.to_thread(pc.list_indexes)
+        print("Existing Pinecone indexes:", indexes)  # DEBUG
+        
+        if index_name not in indexes:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Index '{index_name}' not found. Existing indexes: {indexes}"
+            )
+        
+        # Connect to the index
+        index = pc.Index(index_name)
+        
+        # Delete all vectors
+        await asyncio.to_thread(index.delete, delete_all=True)
+        
+        return {"message": f"All data deleted from index '{index_name}'"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting Pinecone data: {str(e)}"
+        )

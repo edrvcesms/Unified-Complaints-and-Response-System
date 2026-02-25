@@ -5,7 +5,6 @@ from .category import Category
 from .complaint import Complaint
 from .complaint_image import ComplaintImage
 from .feedback import Feedback
-from .priority_level import PriorityLevel
 from .report import Report
 from .response import Response
 from .department import Department
@@ -13,3 +12,6 @@ from .user import User
 from .audit_logs import AuditLogs
 from .notification import Notification
 from .department_account import DepartmentAccount
+from .incident_model import IncidentModel
+from .incident_complaint import IncidentComplaintModel
+from .category_config import CategoryConfigModel

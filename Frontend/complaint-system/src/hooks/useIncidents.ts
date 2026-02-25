@@ -1,5 +1,6 @@
-import { getIncidents, getIncidentById, getComplaintsByIncidentId } from "../services/incidents/incidents";
-import { useQuery } from "@tanstack/react-query";
+import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, reviewIncident } from "../services/incidents/incidents";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
 import type { Complaint } from "../types/complaints/complaint";
 
@@ -45,4 +46,26 @@ export const useIncidentComplaints = (incidentId: number, enabled: boolean = fal
     error,
     refetch,
   };
+};
+
+export const useResolveIncident = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["resolveIncident", incidentId],
+    mutationFn: () => resolveIncident(incidentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    }
+  });
+  return mutation;
+};
+
+export const useReviewIncident = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["reviewIncident", incidentId],
+    mutationFn: () => reviewIncident(incidentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    }
+  });
+  return mutation;
 };

@@ -28,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     .toUpperCase();
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -60,11 +61,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     setDropdownOpen(false);
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
     onLogout();
   };
 
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
+
   return (
-    <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
+    <>
+      <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
       {/* Gold accent bar */}
       <nav
         className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
@@ -103,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             aria-haspopup="true"
             aria-expanded={dropdownOpen}
             aria-label="Open profile menu"
-            className="flex items-center gap-3 pl-1.5 pr-4 py-1.5
+            className="flex items-center gap-3 pl-1.5 pr-4 py-1.5 cursor-pointer
               
               transition duration-200 "
           >
@@ -161,7 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 type="button"
                 onClick={handleProfileClick}
                 className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700
-                  hover:bg-blue-50 hover:text-blue-800 transition duration-150 text-left"
+                  hover:bg-blue-50 hover:text-blue-800 transition duration-150 text-left cursor-pointer"
               >
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -183,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 type="button"
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-600
-                  hover:bg-red-50 transition duration-150 text-left"
+                  hover:bg-red-50 transition duration-150 text-left cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -196,6 +207,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
         </div>
       </nav>
     </header>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Logout</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelLogout}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

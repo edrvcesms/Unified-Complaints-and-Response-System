@@ -17,7 +17,6 @@ export const useComplaintDetails = (complaintId: number) => {
   const { data, isLoading, error } = useQuery<Complaint>({
     queryKey: ["complaints", complaintId],
     queryFn: () => getComplaintById(complaintId),
-    refetchOnWindowFocus: false,
   });
   return {
     complaint: data,
@@ -30,7 +29,6 @@ export const useComplaints = () => {
   const { data, isLoading, error } = useQuery<Complaint[]>({
     queryKey: COMPLAINT_KEYS.all,
     queryFn: getComplaints,
-    refetchOnWindowFocus: false,
   });
   return {
     complaints: data,
@@ -43,7 +41,6 @@ export const useWeeklyComplaintStats = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["complaints", "stats", "weekly"],
     queryFn: getWeeklyComplaintStats,
-    refetchOnWindowFocus: false,
   });
   return {
     stats: data,

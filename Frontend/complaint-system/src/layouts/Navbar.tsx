@@ -3,10 +3,18 @@ import { useNavigate } from "react-router-dom";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useBarangayStore } from "../store/authStore";
 import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
+import { ConfirmationModal } from "../features/general/ConfirmationModal";
+import { useConfirmationModal } from "../hooks/useConfirmationModal";
 
 
 interface NavbarProps {
   onLogout: () => void;
+}
+
+const ROLES = {
+  barangay_official: "Barangay Official",
+  lgu_official: "LGU Official",
+  department_staff: "Department Staff",
 }
 
 
@@ -17,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     (state) => state.barangayAccountData?.barangay_name ?? "Barangay"
   );
   const role = useBarangayStore(
-    (state) => state.barangayAccountData?.barangay_account.user.role ?? "Official"
+    (state) => state.barangayAccountData?.barangay_account.user.role ?? "User"
   );
 
   const initials = barangayName
@@ -28,7 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     .toUpperCase();
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
-  const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
+
+  const confirmationModal = useConfirmationModal();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -61,16 +70,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
   const handleLogout = () => {
     setDropdownOpen(false);
-    setShowLogoutModal(true);
-  };
-
-  const confirmLogout = () => {
-    setShowLogoutModal(false);
-    onLogout();
-  };
-
-  const cancelLogout = () => {
-    setShowLogoutModal(false);
+    confirmationModal.openModal({
+      title: "Logout",
+      message: "Are you sure you want to logout?",
+      confirmText: "Logout",
+      confirmColor: "red",
+      onConfirm: () => onLogout(),
+    });
   };
 
   return (
@@ -163,7 +169,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               {/* User info header */}
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
                 <p className="text-sm font-semibold text-gray-800 truncate">{barangayName}</p>
-                <p className="text-xs text-gray-500 truncate capitalize mt-0.5">{role}</p>
+                <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[role as keyof typeof ROLES] || role}</p>
               </div>
 
               {/* Profile option */}
@@ -208,33 +214,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
       </nav>
     </header>
 
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Logout</h3>
-            <p className="text-sm text-gray-600 mb-6">
-              Are you sure you want to logout?
-            </p>
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={cancelLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmLogout}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText={confirmationModal.confirmText}
+        confirmColor={confirmationModal.confirmColor}
+        onConfirm={confirmationModal.confirm}
+        onCancel={confirmationModal.closeModal}
+        isLoading={confirmationModal.isLoading}
+      />
     </>
   );
 };

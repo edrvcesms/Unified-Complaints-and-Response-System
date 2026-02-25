@@ -34,7 +34,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       icon={<Tag size={20} />}
       label="Category"
       value={formatCategoryName(complaint.category?.category_name)}
-      bgColor="bg-blue-100"
+      bgColor=""
       iconColor="text-blue-600"
     />
     
@@ -42,7 +42,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       icon={<MapPin size={20} />}
       label="Barangay"
       value={complaint.barangay?.barangay_name || "N/A"}
-      bgColor="bg-purple-100"
+      bgColor=""
       iconColor="text-purple-600"
     />
     
@@ -62,7 +62,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
           ? `${complaint.user.first_name} ${complaint.user.last_name}`
           : "Unknown"
       }
-      bgColor="bg-orange-100"
+      bgColor=""
       iconColor="text-orange-600"
     />
     
@@ -74,7 +74,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
         month: "short",
         day: "numeric",
       })}
-      bgColor="bg-yellow-100"
+      bgColor=""
       iconColor="text-yellow-600"
     />
     

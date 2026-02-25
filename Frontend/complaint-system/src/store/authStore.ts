@@ -15,7 +15,7 @@ interface BarangayAuthState {
     isAuthenticated: boolean;
     mapDataFromBackend: (data: any) => void;
     clearBarangayAuth: () => Promise<void>;
-    // fetchBarangayAccountData: () => Promise<void>;
+    clearBarangayAuthLocal: () => void;
     refreshAccessToken: () => Promise<void>;
 }
 
@@ -82,22 +82,23 @@ export const useBarangayStore = create<BarangayAuthState>((set) => ({
             });
         } catch (error) {
             console.error("Error during logout:", error);
+            set({
+                barangayAccessToken: null,
+                barangayAccountData: null,
+                isAuthenticated: false
+            });
         } finally {
             set({ isLoading: false });
         }
     },
-    // fetchBarangayAccountData: async () => {
-    //     set({ isLoading: true });
-    //     try {
-    //         const response = await barangayApi.get("/profile");
-    //         set({ barangayAccountData: response.data, isAuthenticated: true });
-    //     } catch (error) {
-    //         console.error("Failed to fetch barangay account data:", error);
-    //         set({ barangayAccountData: null, isAuthenticated: false });
-    //     } finally {
-    //         set({ isLoading: false });
-    //     }
-    // },
+    clearBarangayAuthLocal: () => {
+        set({
+            barangayAccessToken: null,
+            barangayAccountData: null,
+            isAuthenticated: false,
+            isLoading: false
+        });
+    },
     refreshAccessToken: async () => {
         set({ isCheckingAuth: true });
 

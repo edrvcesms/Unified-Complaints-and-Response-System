@@ -16,7 +16,7 @@ const processQueue = (error?: any) => {
   failedQueue = [];
 };
 
-const SKIP_REFRESH_URLS = ["/login", "/refresh-token"];
+const SKIP_REFRESH_URLS = ["/login", "/refresh-token", "/logout"];
 
 const shouldSkipRefresh = (url?: string): boolean => {
   if (!url) return false;
@@ -52,7 +52,10 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
-          }).then(() => instance(originalRequest));
+          }).then(() => instance(originalRequest)).catch(err => {
+            // If queued request fails, don't retry
+            return Promise.reject(err);
+          });
         }
 
         originalRequest._retry = true;
@@ -60,7 +63,9 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
 
         try {
           const refreshed = await refreshToken();
-          if (!refreshed) throw new Error("Refresh failed");
+          if (!refreshed) {
+            throw new Error("Refresh failed");
+          }
 
           useBarangayStore.getState().setBarangayAccessToken(refreshed.access_token);
           processQueue(null);
@@ -68,7 +73,9 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          useBarangayStore.getState().clearBarangayAuth();
+          // Use clearBarangayAuthLocal to avoid calling logout API and creating infinite loop
+          useBarangayStore.getState().clearBarangayAuthLocal();
+          // Don't retry after refresh failure
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

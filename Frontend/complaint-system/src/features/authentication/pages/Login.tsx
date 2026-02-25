@@ -5,11 +5,6 @@ import { MobileHeader } from "../components/Mobileheader";
 import { useLoginForm } from "../../../hooks/useLoginForm";
 import { LanguageSwitcher } from "../../general/LanguageSwitcher";
 
-
-// ─── Page: LoginPage ──────────────────────────────────────────────────────────
-// Root page component. Composes BrandingPanel + LoginForm and wires everything
-// together via the useLoginForm hook. Contains no business logic itself.
-
 export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
   const {

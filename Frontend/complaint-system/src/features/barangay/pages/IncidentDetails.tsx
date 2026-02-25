@@ -1,10 +1,15 @@
 import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useResolveIncident, useReviewIncident } from '../../../hooks/useIncidents';
+import { ConfirmationModal } from "../../general/ConfirmationModal";
+import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
+import { SuccessModal } from "../../general/SuccessModal";
+import { ErrorModal } from "../../general/ErrorModal";
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -16,20 +21,96 @@ export const IncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
 
+  const confirmationModal = useConfirmationModal();
+  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  // Handle successful resolve
+  useEffect(() => {
+    if (resolveIncidentMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been resolved successfully.',
+      });
+    }
+  }, [resolveIncidentMutation.isSuccess]);
+
+  // Handle successful review
+  useEffect(() => {
+    if (reviewIncidentMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been marked for review successfully.',
+      });
+    }
+  }, [reviewIncidentMutation.isSuccess]);
+
+  // Handle resolve error
+  useEffect(() => {
+    if (resolveIncidentMutation.isError) {
+      confirmationModal.closeModal();
+      const error = resolveIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [resolveIncidentMutation.isError]);
+
+  // Handle review error
+  useEffect(() => {
+    if (reviewIncidentMutation.isError) {
+      confirmationModal.closeModal();
+      const error = reviewIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [reviewIncidentMutation.isError]);
+
   const handleViewAllComplaints = () => {
     navigate(`/dashboard/incidents/${incidentId}/complaints`);
   };
 
   const handleResolve = () => {
-    if (confirm("Are you sure you want to resolve this incident?")) {
-      resolveIncidentMutation.mutate();
-    }
+    confirmationModal.openModal({
+      title: "Resolve Incident",
+      message: "Are you sure you want to resolve this incident? This action will mark the incident as resolved.",
+      confirmText: "Resolve",
+      confirmColor: "green",
+      onConfirm: async () => {
+        await resolveIncidentMutation.mutateAsync();
+      },
+    });
   };
 
   const handleReview = () => {
-    if (confirm("Are you sure you want to mark this incident for review?")) {
-      reviewIncidentMutation.mutate();
-    }
+    confirmationModal.openModal({
+      title: "Mark for Review",
+      message: "Are you sure you want to mark this incident for review?",
+      confirmText: "Confirm",
+      confirmColor: "yellow",
+      onConfirm: async () => {
+        await reviewIncidentMutation.mutateAsync();
+      },
+    });
   };
 
   if (isLoading) {
@@ -73,7 +154,7 @@ export const IncidentDetails: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                   <AlertCircle className="text-blue-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -85,7 +166,7 @@ export const IncidentDetails: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                   <MapPin className="text-purple-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -97,7 +178,7 @@ export const IncidentDetails: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">
                   <AlertCircle className="text-orange-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -109,7 +190,7 @@ export const IncidentDetails: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
                   <Users className="text-green-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -215,6 +296,34 @@ export const IncidentDetails: React.FC = () => {
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
         </button>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText={confirmationModal.confirmText}
+        confirmColor={confirmationModal.confirmColor}
+        onConfirm={confirmationModal.confirm}
+        onCancel={confirmationModal.closeModal}
+        isLoading={confirmationModal.isLoading}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        title={successModal.title}
+        message={successModal.message}
+        onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        title={errorModal.title}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ isOpen: false, title: '', message: '' })}
+      />
     </div>
   );
 };

@@ -16,7 +16,7 @@ export interface BarangayData {
   barangay_email: string;
 }
 
-interface BarangayAccount {
+export interface BarangayAccount {
   id: number;
   user_id: number;
   barangay_id: number;

@@ -8,7 +8,6 @@ export const useIncidents = () => {
   const { data, isLoading, error } = useQuery<Incident[]>({
     queryKey: ["incidents"],
     queryFn: getIncidents,
-    refetchOnWindowFocus: false,
   });
 
   return {
@@ -22,7 +21,6 @@ export const useIncidentDetails = (incidentId: number) => {
   const { data, isLoading, error } = useQuery<Incident>({
     queryKey: ["incidents", incidentId],
     queryFn: () => getIncidentById(incidentId),
-    refetchOnWindowFocus: false,
   });
 
   return {
@@ -36,7 +34,6 @@ export const useIncidentComplaints = (incidentId: number, enabled: boolean = fal
   const { data, isLoading, error, refetch } = useQuery<Complaint[]>({
     queryKey: ["incidents", incidentId, "complaints"],
     queryFn: () => getComplaintsByIncidentId(incidentId),
-    refetchOnWindowFocus: false,
     enabled: enabled, // Control when to fetch
   });
 
@@ -53,7 +50,9 @@ export const useResolveIncident = (incidentId: number) => {
     mutationKey: ["resolveIncident", incidentId],
     mutationFn: () => resolveIncident(incidentId),
     onSuccess: () => {
+      // Invalidate both incident list and specific incident details
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
     }
   });
   return mutation;
@@ -64,7 +63,9 @@ export const useReviewIncident = (incidentId: number) => {
     mutationKey: ["reviewIncident", incidentId],
     mutationFn: () => reviewIncident(incidentId),
     onSuccess: () => {
+      // Invalidate both incident list and specific incident details
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
     }
   });
   return mutation;

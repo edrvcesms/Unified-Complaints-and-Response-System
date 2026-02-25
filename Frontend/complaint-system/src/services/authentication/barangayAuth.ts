@@ -1,30 +1,31 @@
 import { authApi } from "../axios/apiServices";
-import type { LoginRequestData } from "../../types/auth/login";
+import type { LoginRequestData, LoginResponseData } from "../../types/auth/login";
 import { handleApiError } from "../../utils/apiErrorHandler";
 import { useBarangayStore } from "../../store/authStore";
 
-export const loginBarangayAccount = async (data: LoginRequestData) => {
+export const loginBarangayAccount = async (
+  data: LoginRequestData
+): Promise<LoginResponseData> => {
   try {
-    const response = await authApi.post("/login", data);
-    console.log("Login response:", response.data);
-    const { barangayAccessToken, barangayAccountData } = response.data;
-    useBarangayStore.getState().setBarangayAccessToken(barangayAccessToken);
-    useBarangayStore.getState().mapDataFromBackend(barangayAccountData);
-    return response.data;
+    const response = await authApi.post<LoginResponseData>("/login", data);
+
+    const { barangayAccessToken, barangayAccountData } = response;
+
+    const store = useBarangayStore.getState();
+    store.setBarangayAccessToken(barangayAccessToken);
+    store.mapDataFromBackend(barangayAccountData);
+
+    return response;
   } catch (error) {
-    const errorMessage = handleApiError(error);
-    console.error("Login failed:", errorMessage.message);
-    throw error;
+    throw handleApiError(error);
   }
 };
 
-export const logoutBarangayAccount = async () => {
+export const logoutBarangayAccount = async (): Promise<void> => {
   try {
-    await authApi.post("/logout", {});
+    await authApi.post<void>("/logout", {});
+    useBarangayStore.getState().clearBarangayAuth?.();
   } catch (error) {
-    const errorMessage = handleApiError(error);
-    console.error("Logout failed:", errorMessage.message);
-    console.error("Logout failed:", error);
-    throw error;
+    throw handleApiError(error);
   }
 };

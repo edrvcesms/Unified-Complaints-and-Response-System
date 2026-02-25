@@ -187,9 +187,19 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
             .where(IncidentComplaintModel.incident_id == incident_id)
         )
         complaint_ids = result.scalars().all()
-
+        
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
+
+        # Check if any complaints are already under review
+        complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = complaints.scalars().all()
+        for complaint in complaints:
+            if complaint.status == ComplaintStatus.UNDER_REVIEW:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="This incident is already under review"
+                )
 
         await db.execute(
             update(Complaint)
@@ -211,6 +221,9 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
             content={"message": "All complaints under this incident are now under review"}
         )
 
+    except HTTPException:
+        raise
+
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -226,6 +239,16 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
+
+        # Check if any complaints are already resolved
+        complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = complaints.scalars().all()
+        for complaint in complaints:
+            if complaint.status == ComplaintStatus.RESOLVED:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This incident is already resolved"
+                )
 
         await db.execute(
             update(Complaint)

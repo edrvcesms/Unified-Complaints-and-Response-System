@@ -3,15 +3,17 @@ import type { Incident } from "../../types/complaints/incident";
 import type { Complaint } from "../../types/complaints/complaint";
 
 export const getIncidents = async (): Promise<Incident[]> => {
-  const response = await incidentsApi.get(`/`);
-  return response.data;
+  try {
+    return await incidentsApi.get("/");
+  } catch (error) {
+    console.error("Error fetching incidents:", error);
+    throw error;
+  }
 };
 
 export const getIncidentById = async (incidentId: number): Promise<Incident> => {
   try {
-    const response = await incidentsApi.get(`/${incidentId}`);
-    console.log(`Fetched incident with ID ${incidentId}:`, response.data);
-    return response.data;
+    return await incidentsApi.get(`/${incidentId}`);
   } catch (error) {
     console.error(`Error fetching incident with ID ${incidentId}:`, error);
     throw error;
@@ -20,9 +22,7 @@ export const getIncidentById = async (incidentId: number): Promise<Incident> => 
 
 export const getComplaintsByIncidentId = async (incidentId: number): Promise<Complaint[]> => {
   try {
-    const response = await incidentsApi.get(`/${incidentId}/complaints`);
-    console.log(`Fetched complaints for incident ${incidentId}:`, response.data);
-    return response.data;
+    return await incidentsApi.get(`/${incidentId}/complaints`);
   } catch (error) {
     console.error(`Error fetching complaints for incident ${incidentId}:`, error);
     throw error;
@@ -31,9 +31,7 @@ export const getComplaintsByIncidentId = async (incidentId: number): Promise<Com
 
 export const resolveIncident = async (incidentId: number): Promise<void> => {
   try {
-    const response = await incidentsApi.patch(`/${incidentId}/resolve`);
-    console.log(`Resolved incident with ID ${incidentId}:`, response.data);
-    return response.data;
+    return await incidentsApi.patch(`/${incidentId}/resolve`);
   } catch (error) {
     console.error(`Error resolving incident with ID ${incidentId}:`, error);
     throw error;
@@ -42,9 +40,7 @@ export const resolveIncident = async (incidentId: number): Promise<void> => {
 
 export const reviewIncident = async (incidentId: number): Promise<void> => {
   try {
-    const response = await incidentsApi.patch(`/${incidentId}/review`);
-    console.log(`Marked incident with ID ${incidentId} for review:`, response.data);
-    return response.data;
+    return await incidentsApi.patch(`/${incidentId}/review`);
   } catch (error) {
     console.error(`Error marking incident with ID ${incidentId} for review:`, error);
     throw error;

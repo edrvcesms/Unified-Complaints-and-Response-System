@@ -1,11 +1,5 @@
 import React from "react";
 
-/**
- * Department Dashboard Component
- * 
- * Main dashboard for department staff to view assigned incidents.
- * This is a placeholder that can be expanded with department-specific features.
- */
 
 export const DepartmentDashboard: React.FC = () => {
   return (

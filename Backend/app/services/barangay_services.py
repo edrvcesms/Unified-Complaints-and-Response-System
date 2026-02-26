@@ -16,7 +16,6 @@ async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUs
         if cached_barangay:
             logger.info(f"Barangay profile for user ID {user_id} retrieved from cache")
             barangay_from_cache = BarangayWithUserData.model_validate_json(cached_barangay)
-            logger.info(f"🔍 CACHE DEBUG - User ID: {user_id}, Cached Barangay: {barangay_from_cache.barangay_name}")
             return barangay_from_cache
         
         result = await db.execute(

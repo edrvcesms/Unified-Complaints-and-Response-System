@@ -12,10 +12,5 @@ interface WeeklyStats {
 }
 
 export const getWeeklyForwardedIncidentsStats = async (): Promise<WeeklyStats> => {
-  try {
-    return await lguApi.get('/stats/weekly-forwarded-incidents');
-  } catch (error) {
-    console.error('Error fetching weekly forwarded incidents stats:', error);
-    throw error;
-  };
+  return await lguApi.get('/stats/weekly-forwarded-incidents');
 };

@@ -6,7 +6,7 @@ import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { SearchInput } from "../../barangay/components/SearchInputs";
 import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown } from "../../barangay/components/Filters";
-import { StatCard, ErrorMessage, BackButton } from "../../general";
+import { ErrorMessage, BackButton } from "../../general";
 
 export const BarangayIncidents: React.FC = () => {
   const { barangayId } = useParams<{ barangayId: string }>();
@@ -23,7 +23,6 @@ export const BarangayIncidents: React.FC = () => {
     sortBy,
     currentPage,
     paginated,
-    filtered,
     totalPages,
     handleSearch,
     handleFilterChange,

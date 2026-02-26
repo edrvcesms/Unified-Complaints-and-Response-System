@@ -13,4 +13,4 @@ class Department(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
 
-    department_account = relationship("DepartmentAccount", back_populates="department")
+    department_account = relationship("DepartmentAccount", back_populates="department", uselist=False)

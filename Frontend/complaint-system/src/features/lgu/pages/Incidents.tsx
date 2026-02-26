@@ -2,8 +2,8 @@ import { useAllForwardedIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { SearchInput } from "../../barangay/components/SearchInputs";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown } from "../../barangay/components/Filters";
-import { StatCard, ErrorMessage, PageHeader } from "../../general";
+import { StatusFilterDropdown, SortDropdown } from "../../barangay/components/Filters";
+import { ErrorMessage, PageHeader } from "../../general";
 
 export const LguIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAllForwardedIncidents();
@@ -11,15 +11,12 @@ export const LguIncidents: React.FC = () => {
   const {
     search,
     filterStatus,
-    filterSeverityScore,
     sortBy,
     currentPage,
     paginated,
-    filtered,
     totalPages,
     handleSearch,
     handleFilterChange,
-    handleSeverityScoreFilterChange,
     handleSortChange,
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);

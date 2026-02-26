@@ -80,14 +80,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
       <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
       {/* Gold accent bar */}
       <nav
-        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"
         aria-label="Main navigation"
       >
         {/* ── Left — Logo + System Name ── */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
           {/* Municipal seal — larger */}
-          <div className="w-10 h-10 sm:w-13 sm:h-13 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white/30 flex-shrink-0 shadow-lg">
+          <div className="w-10 h-10 sm:w-13 sm:h-13 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-lg">
             <img
               src={StaMariaLogo}
               alt="Sta. Maria, Laguna Seal"
@@ -107,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
         </div>
 
         {/* ── Right — Profile Dropdown ── */}
-        <div className="relative flex-shrink-0" ref={dropdownRef}>
+        <div className="relative shrink-0" ref={dropdownRef}>
 
           {/* Profile toggle button */}
           <button
@@ -123,20 +123,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             {/* Avatar circle with initials — larger */}
             <div
               aria-hidden="true"
-              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm shrink-0"
             >
               {initials}
             </div>
 
             {/* Barangay/User name */}
-            <span className="hidden sm:block text-white text-base font-medium max-w-[160px] truncate">
+            <span className="hidden sm:block text-white text-base font-medium max-w-40 truncate">
               {displayName}
             </span>
 
             {/* Chevron */}
             <svg
               aria-hidden="true"
-              className={`w-4 h-4 text-blue-200 transition-transform duration-200 flex-shrink-0
+              className={`w-4 h-4 text-blue-200 transition-transform duration-200 shrink-0
                 ${dropdownOpen ? "rotate-180" : "rotate-0"}`}
               fill="none"
               stroke="currentColor"

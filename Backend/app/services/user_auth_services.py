@@ -163,7 +163,6 @@ async def login_user(login_data: LoginData, db: AsyncSession):
                 logger.warning(f"Login attempt for barangay official with no associated barangay: {login_data.email}")
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated barangay not found")
             barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
-            logger.info(f"🔍 LOGIN DEBUG - Email: {login_data.email}, User ID: {user.id}, Barangay: {barangay_data.barangay_name}, Barangay Email: {barangay_data.barangay_email}")
 
         if user.role == UserRole.DEPARTMENT_STAFF:
             department = await get_department_account(user.id, db)
@@ -307,8 +306,6 @@ async def logout_user(request: Request):
                 "message": "Logout successful"
             }
         )
-        await delete_cache("all_complaints")
-        
         response.delete_cookie(key="refresh_token")
         return response
     

@@ -3,3 +3,4 @@ export { ErrorMessage } from './ErrorMessage';
 export { LoadingSpinner } from './LoadingSpinner';
 export { PageHeader } from './PageHeader';
 export { StatCard } from './StatCard';
+export { Sidebar } from './Sidebar';

@@ -9,7 +9,13 @@ from app.utils.logger import logger
 
 async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWithUserData:
     try:
-      result = await db.execute(select(Department).options(selectinload(Department.department_account).selectinload(DepartmentAccount.user)).where(Department.department_account.has(DepartmentAccount.user_id == user_id)))
+      result = await db.execute(
+          select(Department)
+          .options(
+              selectinload(Department.department_account).selectinload(DepartmentAccount.user)
+          )
+          .where(Department.department_account.has(DepartmentAccount.user_id == user_id))
+      )
       
       logger.info(f"Executed query to get department with user ID: {user_id}")
     

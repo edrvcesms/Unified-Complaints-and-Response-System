@@ -1,45 +1,5 @@
 # Complaint Clustering System — Santa Maria, Laguna
 
-## Project Structure
-
-```
-complaint_system/
-│
-├── domain/                          # Layer 1: Zero dependencies
-│   ├── entities/
-│   │   ├── incident.py              # IncidentEntity
-│   │   └── complaint_cluster.py     # ComplaintClusterEntity
-│   ├── interfaces/
-│   │   ├── i_embedding_service.py   # IEmbeddingService (ABC)
-│   │   ├── i_vector_repository.py   # IVectorRepository (ABC)
-│   │   ├── i_incident_repository.py # IIncidentRepository (ABC)
-│   │   ├── i_severity_calculator.py # ISeverityCalculator (ABC)
-│   │   └── i_velocity_detector.py   # IVelocityDetector (ABC)
-│   └── value_objects/
-│       ├── severity_level.py        # SeverityLevel Enum + from_score()
-│       ├── similarity_result.py     # SimilarityResult (frozen dataclass)
-│       └── veloc![alt text](image.png)ity_window.py       # VelocityWindow (frozen dataclass)
-│
-├── application/                     # Layer 2: Business logic
-│   └── use_cases/
-│       ├── cluster_complaint.py     # ClusterComplaintUseCase (main flow)
-│       ├── recalculate_severity.py  # RecalculateSeverityUseCase + WeightedSeverityCalculator
-│       └── detect_velocity_spike.py # DetectVelocitySpikeUseCase
-│----
-│   ├── embeddings/
-│   │   └── sentence_transformer_service.py  # all-MiniLM-L6-v2 impl of IEmbeddingService
-│   ├── vector_store/
-│   │   └── pinecone_vector_repository.py    # Pinecone impl of IVectorRepository
-│   └── container.py                 # DI wiring (only place concrete classes meet)
-│
-├── api/                             # Layer 4: Presentation
-│   └── routes/
-│       └── complaints.py            # Updated route — dispatches Celery task
-│
-├── main.py                          # FastAPI app + lifespan (Pinecone init)
-├── requirements.txt
-└── .env.example
-```
 
 ## How It Works
 

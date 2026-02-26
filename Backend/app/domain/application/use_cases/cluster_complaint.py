@@ -60,15 +60,15 @@ class ClusterComplaintUseCase:
     3. For each candidate incident, fetch its seed vector from Pinecone and compute
        cosine similarity locally.
     4. Confidence band decision:
-         score >= threshold + 0.10  → LLM verifies with HIGH confidence (leans YES)
-         score >= threshold         → LLM verifies with LOW confidence (leans NO)
+         score >= threshold + 0.10  → LLM verifies (high confidence, leans YES)
+         score >= threshold         → LLM verifies (ambiguous zone, leans NO)
          score < threshold          → auto reject, new incident
     5. Upsert complaint vector into Pinecone with resolved incident_id.
     6. Return result (incident_id, is_new, similarity_score).
 
     Postgres is the source of truth for candidate discovery.
     Pinecone is used only for vector storage and retrieval.
-    LLM is called for all candidates above threshold with confidence-aware prompting.
+    LLM is called for all candidates above threshold.
     Severity recalculation is handled separately (SRP).
     """
 
@@ -85,7 +85,14 @@ class ClusterComplaintUseCase:
         self._verifier = incident_verifier
 
     async def execute(self, data: ClusterComplaintInput) -> ClusterComplaintResult:
-        logger.info(f"Clustering complaint_id={data.complaint_id}")
+        logger.info(
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Clustering complaint_id={data.complaint_id}\n"
+            f"  Description : '{data.description[:120]}'\n"
+            f"  Barangay    : {data.barangay_id}\n"
+            f"  Category    : {data.category_id}\n"
+            f"  Threshold   : {data.similarity_threshold:.2f} | High: {data.similarity_threshold + 0.10:.2f}"
+        )
 
         embedding = await self._embedding_svc.generate(data.description)
         created_at_unix = data.created_at.timestamp()
@@ -96,23 +103,41 @@ class ClusterComplaintUseCase:
             category_id=data.category_id,
             time_window_hours=data.category_time_window_hours,
         )
-        logger.info(f"Found {len(active_incidents)} active incidents in window")
+        logger.info(f"Found {len(active_incidents)} active incident(s) in window")
 
         # Step 2 — Score each incident using local cosine similarity
         best_incident = None
         best_score = 0.0
 
         for incident in active_incidents:
-            incident_vector = await self._vector_repo.fetch_incident_vector(incident.id)
+            incident_vector = await self._vector_repo.fetch_incident_vector(
+               incident_id=incident.id,
+    )
             if not incident_vector:
+                logger.warning(f"No vector found for incident_id={incident.id}, skipping")
                 continue
 
             score = self._vector_repo.compute_similarity(embedding, incident_vector)
-            logger.info(f"Incident {incident.id} similarity score: {score:.4f}")
+
+            logger.info(
+                f"Similarity check:\n"
+                f"  New complaint   : '{data.description[:100]}'\n"
+                f"  Incident {incident.id:>4}    : '{incident.description[:100]}'\n"
+                f"  Score           : {score:.4f} "
+                f"(threshold={data.similarity_threshold:.2f}, high={data.similarity_threshold + 0.10:.2f})"
+            )
 
             if score > best_score:
                 best_score = score
                 best_incident = incident
+
+        if best_incident:
+            logger.info(
+                f"Best candidate → incident_id={best_incident.id}, "
+                f"score={best_score:.4f}"
+            )
+        else:
+            logger.info("No candidate found — will create new incident")
 
         # Step 3 — Confidence band decision
         high_confidence_threshold = data.similarity_threshold + 0.10
@@ -121,42 +146,43 @@ class ClusterComplaintUseCase:
 
         if best_incident is not None:
             if best_score >= high_confidence_threshold:
-                # High confidence — LLM verifies but leans YES
-                # Only rejects if subject or location is clearly different
                 logger.info(
-                    f"High confidence score={best_score:.4f} >= {high_confidence_threshold:.2f}, "
-                    f"calling LLM verifier (HIGH)"
+                    f"HIGH confidence (score={best_score:.4f} >= {high_confidence_threshold:.2f}) — calling LLM\n"
+                    f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
+                    f"  B (new complaint): '{data.description[:120]}'"
                 )
                 is_match = await self._verifier.is_same_incident(
                     complaint_a=best_incident.description,
                     complaint_b=data.description,
-                  
+                )
+                logger.info(
+                    f"LLM verdict (HIGH): "
+                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'}"
                 )
 
             elif best_score >= ambiguous_threshold:
-                # Ambiguous zone — LLM verifies and leans NO
-                # Only merges if subject and location clearly match
                 logger.info(
-                    f"Ambiguous score={best_score:.4f} >= {ambiguous_threshold:.2f}, "
-                    f"calling LLM verifier (LOW)"
+                    f"AMBIGUOUS (score={best_score:.4f} >= {ambiguous_threshold:.2f}) — calling LLM\n"
+                    f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
+                    f"  B (new complaint): '{data.description[:120]}'"
                 )
                 is_match = await self._verifier.is_same_incident(
                     complaint_a=best_incident.description,
                     complaint_b=data.description,
-                    
+                )
+                logger.info(
+                    f"LLM verdict (AMBIGUOUS): "
+                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'}"
                 )
 
             else:
-                # Clear non-match — below threshold
                 logger.info(
-                    f"Auto-reject: score={best_score:.4f} < {ambiguous_threshold:.2f}"
+                    f"AUTO-REJECT: score={best_score:.4f} < threshold={ambiguous_threshold:.2f} "
+                    f"— creating new incident"
                 )
 
             logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
 
-        existing_status = None
-        message = None
-        
         if is_match:
             # Check existing complaint statuses before merging
             statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)
@@ -200,6 +226,15 @@ class ClusterComplaintUseCase:
             incident_id=incident.id,
             status="ACTIVE",
             created_at_unix=created_at_unix,
+        )
+
+        logger.info(
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Clustering complete for complaint_id={data.complaint_id}\n"
+            f"  Result      : {'MERGED' if is_match else 'NEW INCIDENT'}\n"
+            f"  Incident ID : {incident.id}\n"
+            f"  Score       : {similarity_score:.4f}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
 
         return ClusterComplaintResult(
@@ -252,7 +287,7 @@ class ClusterComplaintUseCase:
             category_id=data.category_id,
             status="ACTIVE",
             complaint_count=1,
-            severity_score=data.category_base_severity_weight,  # seed with base weight
+            severity_score=data.category_base_severity_weight,
             severity_level=SeverityLevel.from_score(data.category_base_severity_weight),
             time_window_hours=data.category_time_window_hours,
             first_reported_at=now,
@@ -260,7 +295,6 @@ class ClusterComplaintUseCase:
         )
         created = await self._incident_repo.create(incident)
 
-        # Link the first complaint to this new incident
         cluster = ComplaintClusterEntity(
             id=None,
             incident_id=created.id,

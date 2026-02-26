@@ -76,3 +76,9 @@ class IVectorRepository(ABC):
     @abstractmethod
     async def update_status_by_incident(self, incident_id: int, status: str) -> None:
       ...
+      
+    @abstractmethod
+    async def fetch_incident_vectors_batch(
+    self, incident_ids: list[int]
+) -> dict[int, list[float]]:
+      ...

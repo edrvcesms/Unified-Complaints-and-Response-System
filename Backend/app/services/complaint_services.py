@@ -20,6 +20,10 @@ from app.tasks import cluster_complaint_task
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
     try:
+        complaint_cache = await get_cache(f"complaint:{complaint_id}")
+        if complaint_cache is not None:
+            logger.info(f"Cache hit for complaint ID: {complaint_id}")
+            return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
         result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
         
@@ -27,7 +31,9 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
         logger.info(f"Fetched complaint with ID {complaint_id}")
-        return ComplaintWithUserData.model_validate(complaint, from_attributes=True)
+        complaint = ComplaintWithUserData.model_validate(complaint, from_attributes=True)
+        await set_cache(f"complaint:{complaint_id}", complaint.model_dump_json(), expiration=3600)
+        return complaint
     
     except HTTPException:
         raise
@@ -38,6 +44,10 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
 
 async def get_all_complaints(db: AsyncSession):
     try:
+        complaints_cache = await get_cache("all_complaints")
+        if complaints_cache is not None:
+            logger.info("Cache hit for all complaints")
+            return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         
         complaints = result.scalars().all()
@@ -46,6 +56,7 @@ async def get_all_complaints(db: AsyncSession):
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
         
+        await set_cache("all_complaints", [c.model_dump_json() for c in complaints_list], expiration=3600)
         return complaints_list
     
     except HTTPException:
@@ -57,6 +68,10 @@ async def get_all_complaints(db: AsyncSession):
     
 async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
     try:
+        complaints_cache = await get_cache(f"incident_complaints:{incident_id}")
+        if complaints_cache is not None:
+            logger.info(f"Cache hit for complaints of incident ID: {incident_id}")
+            return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         result = await db.execute(
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
@@ -66,8 +81,9 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
         complaints = result.scalars().all()
         
         logger.info(f"Fetched complaints for incident ID {incident_id}: {len(complaints)} complaints found")
-    
-        return [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
+        await set_cache(f"incident_complaints:{incident_id}", [c.model_dump_json() for c in complaints_list], expiration=3600)
+        return complaints_list
     
     except HTTPException:
         raise
@@ -78,6 +94,10 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
     
 async def get_weekly_complaint_stats(db: AsyncSession):
     try:
+        weekly_stats_cache = await get_cache("weekly_complaint_stats")
+        if weekly_stats_cache is not None:
+            logger.info("Cache hit for weekly complaint stats")
+            return weekly_stats_cache
         one_week_ago = datetime.utcnow() - timedelta(days=7)
         result = await db.execute(
             select(Complaint)
@@ -104,6 +124,7 @@ async def get_weekly_complaint_stats(db: AsyncSession):
             if complaint.status == ComplaintStatus.RESOLVED.value:
                 stats["daily_counts"][day]["resolved"] += 1
         
+        await set_cache("weekly_complaint_stats", stats, expiration=3600)
         return stats
     
     except HTTPException:
@@ -168,7 +189,18 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         updated_complaint = result.scalars().first()
 
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
+        
         await delete_cache(f"user_complaints:{user_id}")
+        await delete_cache("all_complaints")
+        await delete_cache("weekly_complaint_stats")
+        
+        if updated_complaint.incident_id:
+            await delete_cache(f"incident:{updated_complaint.incident_id}")
+            await delete_cache(f"incident_complaints:{updated_complaint.incident_id}")
+        
+        if updated_complaint.barangay_id:
+            await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
+            
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
     except HTTPException:
@@ -191,7 +223,6 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
 
-        # Check if any complaints are already under review
         complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
         complaints = complaints.scalars().all()
         for complaint in complaints:
@@ -209,8 +240,18 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         await db.commit()
 
+        first_complaint = complaints[0] if complaints else None
+        barangay_id = first_complaint.barangay_id if first_complaint else None
+
         await delete_cache("all_complaints")
+        await delete_cache(f"incident:{incident_id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache("weekly_complaint_stats")
+        if barangay_id:
+            await delete_cache(f"barangay_incidents:{barangay_id}")
+        
         for complaint_id in complaint_ids:
+            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
@@ -240,7 +281,6 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
 
-        # Check if any complaints are already resolved
         complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
         complaints = complaints.scalars().all()
         for complaint in complaints:
@@ -258,8 +298,18 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         await db.commit()
 
+        first_complaint = complaints[0] if complaints else None
+        barangay_id = first_complaint.barangay_id if first_complaint else None
+
         await delete_cache("all_complaints")
+        await delete_cache(f"incident:{incident_id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache("weekly_complaint_stats")
+        if barangay_id:
+            await delete_cache(f"barangay_incidents:{barangay_id}")
+        
         for complaint_id in complaint_ids:
+            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
@@ -321,33 +371,4 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
-    
-async def delete_complaint(complaint_id: int, user_id: int, db: AsyncSession):
-    try:
-        result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-        complaint = result.scalars().first()
-
-        if not complaint:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
-        
-        if complaint.user_id != user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to delete this complaint")
-        
-        await db.delete(complaint)
-        await db.commit()
-        await delete_cache("all_complaints")
-        await delete_cache(f"user_complaints:{user_id}")
-        logger.info(f"Deleted complaint with ID {complaint_id} by user {user_id}")
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"message": "Complaint deleted successfully"}
-        )
-    
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        await db.rollback()
-        logger.error(f"Error in delete_complaint: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     

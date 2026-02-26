@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
 from app.schemas.incident_schema import IncidentData
-from app.utils.caching import delete_cache
+from app.utils.caching import delete_cache, set_cache, get_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
 from sqlalchemy import select, update
@@ -15,6 +15,10 @@ from app.constants.complaint_status import ComplaintStatus
 
 async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
+        forwarded_incidents_cache = await get_cache(f"forwarded_barangay_incidents:{barangay_id}")
+        if forwarded_incidents_cache is not None:
+            logger.info(f"Cache hit for forwarded incidents of barangay ID: {barangay_id}")
+            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in forwarded_incidents_cache]
         result = await db.execute(
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
@@ -38,8 +42,9 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         
         
         logger.info(f"Found {len(incidents)} forwarded incidents for barangay ID: {barangay_id}")
-        
-        return incidents
+        incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        await set_cache(f"forwarded_barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
+        return incidents_list
       
     except HTTPException:
         raise

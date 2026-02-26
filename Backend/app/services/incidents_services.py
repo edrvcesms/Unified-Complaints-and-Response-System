@@ -11,10 +11,16 @@ from app.utils.logger import logger
 from app.models.complaint import Complaint
 from app.constants.roles import UserRole
 from app.utils.logger import logger
+from app.utils.caching import delete_cache, set_cache, get_cache
 from sqlalchemy.orm import selectinload
 
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
+        incidents_cache = await get_cache(f"barangay_incidents:{barangay_id}")
+        if incidents_cache is not None:
+            logger.info(f"Cache hit for barangay ID: {barangay_id}")
+            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in incidents_cache]
+        
         subq = (
             select(IncidentComplaintModel.incident_id)
             .join(IncidentComplaintModel.complaint)
@@ -48,8 +54,9 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
 
         incidents = result.scalars().all()
         logger.info(f"Found {len(incidents)} incidents for barangay ID: {barangay_id}")
-        
-        return [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        await set_cache(f"barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
+        return incidents_list
       
     except HTTPException:
         raise
@@ -62,6 +69,11 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     
 async def get_incident_by_id(incident_id: int, db: AsyncSession):
     try:
+        incident_cache = await get_cache(f"incident:{incident_id}")
+        if incident_cache is not None:
+            logger.info(f"Cache hit for incident ID: {incident_id}")
+            return IncidentData.model_validate_json(incident_cache) if isinstance(incident_cache, str) else IncidentData.model_validate(incident_cache, from_attributes=True)
+        
         result = await db.execute(
             select(IncidentModel)
             .options(
@@ -85,8 +97,10 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
         
         logger.info(f"Fetched incident with ID {incident_id}")
+        incident_data = IncidentData.model_validate(incident, from_attributes=True)
+        await set_cache(f"incident:{incident_id}", incident_data.model_dump_json(),  expiration=3600)
         
-        return IncidentData.model_validate(incident, from_attributes=True)  
+        return incident_data  
         
     except HTTPException:
         raise
@@ -97,6 +111,14 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
     
 async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
     try:
+        incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
+        incident = incident_result.scalars().first()
+        
+        if not incident:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        
+        barangay_id = incident.barangay_id
+        
         result = await db.execute(select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id))
         
         complaint_ids = result.scalars().all()
@@ -110,8 +132,16 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
             .values(status=ComplaintStatus.FORWARDED_TO_LGU.value)
         )
         await db.commit()
+        
         await delete_cache("all_complaints")
+        await delete_cache(f"incident:{incident_id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache(f"barangay_incidents:{barangay_id}")
+        await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
+        await delete_cache("weekly_complaint_stats")
+        
         for complaint_id in complaint_ids:
+            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
@@ -130,6 +160,14 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
     
 async def assign_incident_to_department(incident_id: int, department_account_id: int, db: AsyncSession):
     try:
+        incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
+        incident = incident_result.scalars().first()
+        
+        if not incident:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+        
+        barangay_id = incident.barangay_id
+        
         result = await db.execute(select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id))
         complaint_ids = result.scalars().all()
         
@@ -147,8 +185,15 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
             .values(department_account_id=department_account_id)
         )
         await db.commit()
+        
         await delete_cache("all_complaints")
+        await delete_cache(f"incident:{incident_id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache(f"barangay_incidents:{barangay_id}")
+        await delete_cache("weekly_complaint_stats")
+        
         for complaint_id in complaint_ids:
+            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:

@@ -314,7 +314,10 @@ export const IncidentDetails: React.FC = () => {
         isOpen={successModal.isOpen}
         title={successModal.title}
         message={successModal.message}
-        onClose={() => setSuccessModal({ isOpen: false, title: '', message: '' })}
+        onClose={() => {
+          navigate(`/dashboard/incidents`);
+          setSuccessModal({ isOpen: false, title: '', message: '' });
+        }}
       />
 
       {/* Error Modal */}

@@ -1,3 +1,4 @@
+
 import { createApiClient } from "./apiClient";
 import { createApiInstance } from "./axiosInstance";
 
@@ -7,8 +8,10 @@ export const authInstance = createApiInstance(`${BASE_URL}/auth`, true);
 export const barangayInstance = createApiInstance(`${BASE_URL}/barangays`, true);
 export const complaintsInstance = createApiInstance(`${BASE_URL}/complaints`, true);
 export const incidentsInstance = createApiInstance(`${BASE_URL}/incidents`, true);
+export const lguInstance = createApiInstance(`${BASE_URL}/lgu`, true);
 
 export const authApi = createApiClient(authInstance);
 export const barangayApi = createApiClient(barangayInstance);
 export const complaintsApi = createApiClient(complaintsInstance);
 export const incidentsApi = createApiClient(incidentsInstance);
+export const lguApi = createApiClient(lguInstance);

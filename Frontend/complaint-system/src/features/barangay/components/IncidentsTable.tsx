@@ -25,6 +25,28 @@ const getSeverityColor = (severity: string) => {
   }
 };
 
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "resolved":
+      return "bg-green-100 text-green-800";
+    case "under_review":
+      return "bg-blue-100 text-blue-800";
+    case "submitted":
+      return "bg-yellow-100 text-yellow-800";
+    case "in_progress":
+      return "bg-orange-100 text-orange-800";
+    case "pending":
+      return "bg-gray-100 text-gray-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const formatStatus = (status: string) => {
+  if (!status) return "N/A";
+  return status.replace("_", " ").toUpperCase();
+};
+
 export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
   incident,
 }) => {
@@ -37,26 +59,35 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       {/* ID */}
-      <td className="px-4 py-3 text-xs text-gray-500 font-mono">
+      <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">
         #{incident.id}
       </td>
 
       {/* Title */}
-      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
         {incident.title}
       </td>
 
       {/* Category — hidden on mobile */}
-      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">
         {formatCategoryName(incident.category?.category_name)}
       </td>
 
       {/* Severity Level */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 text-center">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(incident.severity_level)}`}
         >
           {incident.severity_level.replace("_", " ")}
+        </span>
+      </td>
+
+      {/* Status */}
+      <td className="px-4 py-3 text-center">
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incident.complaint_clusters[0]?.complaint?.status || "")}`}
+        >
+          {formatStatus(incident.complaint_clusters[0]?.complaint?.status || "")}
         </span>
       </td>
 
@@ -96,10 +127,11 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
   const { t } = useTranslation();
 
   const TABLE_HEADERS = [
-    { label: t('incidents.columns.incidentId'), className: "" },
-    { label: t('incidents.columns.title'), className: "" },
-    { label: t('incidents.columns.category'), className: "hidden md:table-cell" },
-    { label: t('incidents.columns.severity'), className: "" },
+    { label: t('incidents.columns.incidentId'), className: "text-center" },
+    { label: t('incidents.columns.title'), className: "text-center" },
+    { label: t('incidents.columns.category'), className: "hidden md:table-cell text-center" },
+    { label: t('incidents.columns.severity'), className: "text-center" },
+    { label: t('incidents.columns.status'), className: "text-center" },
     { label: t('incidents.columns.complaintCounts'), className: "hidden sm:table-cell text-center" },
     { label: t('incidents.columns.view'), className: "text-center" },
   ];
@@ -109,7 +141,7 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200 text-left">
+          <tr className="bg-gray-50 border-b border-gray-200 text-center">
             {TABLE_HEADERS.map(({ label, className }) => (
               <th
                 key={label}
@@ -133,7 +165,7 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
           ) : incidents.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-4 py-16 text-center text-sm text-gray-500"
               >
                 No incidents found.

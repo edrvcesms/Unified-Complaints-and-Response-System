@@ -37,7 +37,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
     {/* Heading */}
     <div className="space-y-1">
-      <h3 className="text-2xl font-bold text-gray-800">{t('auth.barangayLogin')}</h3>
+      <h3 className="text-2xl font-bold text-gray-800">{t('auth.officialLogin')}</h3>
       <p className="text-sm text-gray-500">{t('auth.signinInstruction')}</p>
     </div>
 

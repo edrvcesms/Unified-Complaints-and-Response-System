@@ -1,12 +1,15 @@
 import asyncio
 from datetime import datetime
 import os
+from app.models.notification import Notification
+from app.models.complaint import Complaint
 from app.models.attachment import Attachment
 from fastapi_mail import FastMail, MessageSchema
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary
 from app.core.email_config import conf
+from sqlalchemy import select
 from app.utils.logger import logger
 from fastapi import UploadFile
 from app.celery_worker import celery_worker
@@ -213,6 +216,43 @@ def cluster_complaint_task(self, complaint_data: dict):
 
             result = await use_case.execute(input_dto)
             logger.info(f"[cluster_complaint_task] Clustering use case completed for complaint_id={cluster_data.complaint_id} with result: {result}")
+            
+            if not result.is_new_incident and result.existing_incident_status:
+                
+                complaint_result = await db.execute(
+                    select(Complaint).where(Complaint.id == cluster_data.complaint_id)
+                )
+                complaint = complaint_result.scalars().first()
+                
+                if complaint and result.existing_incident_status != "submitted":
+                    old_status = complaint.status
+                    complaint.status = result.existing_incident_status
+                    complaint.updated_at = datetime.utcnow()
+                    
+                    if result.existing_incident_status in ["forwarded_to_lgu", "forwarded_to_department"] and not complaint.forwarded_at:
+                        complaint.forwarded_at = datetime.utcnow()
+                    
+                    if result.existing_incident_status == "resolved" and not complaint.resolved_at:
+                        complaint.resolved_at = datetime.utcnow()
+                    
+                    logger.info(
+                        f"[cluster_complaint_task] Updated complaint {cluster_data.complaint_id} "
+                        f"status from '{old_status}' to '{result.existing_incident_status}'"
+                    )
+                    
+                    notification = Notification(
+                        user_id=cluster_data.user_id,
+                        complaint_id=cluster_data.complaint_id,
+                        title="This complaint is already part of an existing incident",
+                        message=result.message or f"Your complaint has been merged with an existing incident that is currently {result.existing_incident_status.replace('_', ' ')}.",
+                        notification_type="info",
+                        channel="in_app",
+                        is_read=False,
+                        sent_at=datetime.utcnow()
+                    )
+                    db.add(notification)
+                    logger.info(f"[cluster_complaint_task] Created notification for user {cluster_data.user_id} about merged incident")
+            
             await db.commit()
             return result
 
@@ -223,9 +263,18 @@ def cluster_complaint_task(self, complaint_data: dict):
         queue="severity",
     )
 
+    if not result.is_new_incident and result.existing_incident_status:
+        logger.info(
+            f"Complaint merged with existing incident (ID: {result.incident_id}). "
+            f"Existing status: {result.existing_incident_status}. "
+            f"Message: {result.message}"
+        )
+
     return {
         "incident_id": result.incident_id,
         "is_new_incident": result.is_new_incident,
         "similarity_score": result.similarity_score,
         "severity_level": result.severity_level,
+        "existing_incident_status": result.existing_incident_status,
+        "message": result.message,
     }

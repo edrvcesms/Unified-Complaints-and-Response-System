@@ -9,7 +9,7 @@ import { validateEmail, validatePassword } from "../utils/validators";
 export const useLoginForm = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "", role: "barangay_official" });
+  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "", role: "official" });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
 

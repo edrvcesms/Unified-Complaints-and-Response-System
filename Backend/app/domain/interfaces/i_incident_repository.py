@@ -48,4 +48,12 @@ class IIncidentRepository(ABC):
     category_id: int,
     time_window_hours: float,
 ) -> list[IncidentEntity]:
-      ...  
+      ...
+      
+    @abstractmethod
+    async def get_incident_complaint_statuses(self, incident_id: int) -> list[str]:
+        """
+        Get all complaint statuses for a given incident.
+        Used to check if the incident is already under review.
+        """
+        ...  

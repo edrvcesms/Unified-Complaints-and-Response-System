@@ -11,6 +11,7 @@ OCP: New clustering strategies (e.g. location-aware) would implement a new
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
 from app.domain.entities.complaint_cluster import ComplaintClusterEntity
 from app.domain.entities.incident import IncidentEntity
@@ -45,6 +46,8 @@ class ClusterComplaintResult:
     is_new_incident: bool
     similarity_score: float
     severity_level: str
+    existing_incident_status: Optional[str] = None  # e.g., "under_review", "submitted"
+    message: Optional[str] = None  # Message to display to the user
 
 
 class ClusterComplaintUseCase:
@@ -151,7 +154,34 @@ class ClusterComplaintUseCase:
 
             logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
 
+        existing_status = None
+        message = None
+        
         if is_match:
+            # Check existing complaint statuses before merging
+            statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)
+            logger.info(f"Existing incident {best_incident.id} has complaint statuses: {statuses}")
+            
+            # Determine the highest priority status
+            if "under_review" in statuses:
+                existing_status = "under_review"
+                message = "This incident is already under review by the barangay admin."
+            elif "forwarded_to_lgu" in statuses:
+                existing_status = "forwarded_to_lgu"
+                message = "This incident has already been forwarded to the LGU for action."
+            elif "forwarded_to_department" in statuses:
+                existing_status = "forwarded_to_department"
+                message = "This incident has already been forwarded to the department for action."
+            elif "resolved" in statuses:
+                existing_status = "resolved"
+                message = "This incident has already been resolved."
+            elif len(statuses) > 0 and all(s == "submitted" for s in statuses):
+                existing_status = "submitted"
+                message = "Similar complaints have already been submitted for this incident."
+            else:
+                existing_status = statuses[0] if statuses else "submitted"
+                message = "This complaint has been merged with an existing incident."
+            
             incident, similarity_score = await self._merge_into_existing(
                 data=data,
                 incident_id=best_incident.id,
@@ -177,6 +207,8 @@ class ClusterComplaintUseCase:
             is_new_incident=not is_match,
             similarity_score=similarity_score,
             severity_level=incident.severity_level.value,
+            existing_incident_status=existing_status,
+            message=message,
         )
 
     async def _merge_into_existing(

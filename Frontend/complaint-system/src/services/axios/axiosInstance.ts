@@ -53,7 +53,6 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           }).then(() => instance(originalRequest)).catch(err => {
-            // If queued request fails, don't retry
             return Promise.reject(err);
           });
         }
@@ -73,9 +72,7 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          // Use clearBarangayAuthLocal to avoid calling logout API and creating infinite loop
           useBarangayStore.getState().clearBarangayAuthLocal();
-          // Don't retry after refresh failure
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

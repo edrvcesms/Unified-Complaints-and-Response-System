@@ -165,3 +165,18 @@ class IncidentRepository(IIncidentRepository):
     )
       models = result.scalars().all()
       return [self._to_entity(m) for m in models]
+      
+    async def get_incident_complaint_statuses(self, incident_id: int) -> list[str]:
+        """
+        Get all complaint statuses for a given incident.
+        Returns a list of unique statuses.
+        """
+        from app.models.complaint import Complaint
+        
+        result = await self._db.execute(
+            select(Complaint.status)
+            .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
+            .where(IncidentComplaintModel.incident_id == incident_id)
+        )
+        statuses = result.scalars().all()
+        return list(set(statuses))  # Return unique statuses

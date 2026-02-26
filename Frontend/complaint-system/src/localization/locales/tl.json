@@ -26,6 +26,7 @@
       "title": "Reklamo",
       "category": "Kategorya",
       "severity": "Kalubhaan",
+      "status": "Katayuan",
       "complaintCounts": "Bilang ng Reklamo",
       "view": "Tingnan"
     },
@@ -53,15 +54,16 @@
     "country": "Republika ng Pilipinas",
     "municipality": "Sta. Maria, Laguna",
     "systemName": "Unified Complaints and Response System",
-    "systemDescription": "Isang digital na plataporma para sa mga officials na madaling mag monitor, subaybayan, at lutasin ang mga reklamo."
+    "systemDescription": "Isang digital na plataporma para sa mga opisyal ng gobyerno na madaling mag monitor, subaybayan, at lutasin ang mga reklamo."
   },
   "auth": {
+    "officialLogin": "Opisyal na Login",
     "barangayLogin": "Login ng Barangay",
     "lguLogin": "Login ng LGU",
     "departmentLogin": "Login ng Departamento",
     "departmentLoginInstruction": "Mag-login gamit ang opisyal na department account.",
     "lguLoginInstruction": "Mag-login gamit ang opisyal na LGU account.",
-    "signinInstruction": "Mag-login gamit ang opisyal na barangay account.",
+    "signinInstruction": "Mag-login gamit ang iyong opisyal na kredensyal upang ma-access ang sistema.",
     "usernameOrEmail": "Username o Email",
     "usernamePlaceholder": "hal. user.official@sta-maria.gov.ph",
     "password": "Password",

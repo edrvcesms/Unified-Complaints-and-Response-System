@@ -5,16 +5,25 @@
     "totalComplaints": "Kabuuang Reklamo",
     "submitted": "Isinumite",
     "underReview": "Tinitingnan",
+    "forwardedToLgu": "Ipinadala sa LGU",
     "resolved": "Nalutas",
     "weeklyActivity": "Lingguhang Aktibidad",
     "weeklySubtitle": "Reklamong isinumite vs. nalutas ngayong linggo",
     "recentComplaints": "Mga Kamakailang Reklamo",
+    "noRecentActivities": "Walang Kamakailang Aktibidad",
+    "noRecentActivitiesMessage": "Wala pang isinumiteng reklamo.",
     "columns": {
       "id": "ID",
       "title": "Reklamo",
       "category": "Kategorya",
       "status": "Katayuan",
       "total": "Kabuuan"
+    },
+    "statuses": {
+      "submitted": "Isinumite",
+      "underReview": "Tinitingnan",
+      "forwarded": "Ipinadala",
+      "resolved": "Nalutas"
     }
   },
   "incidents": {

@@ -5,7 +5,7 @@ import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useResolveIncident, useReviewIncident } from '../../../hooks/useIncidents';
+import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu } from '../../../hooks/useIncidents';
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { SuccessModal } from "../../general/SuccessModal";
@@ -20,6 +20,7 @@ export const IncidentDetails: React.FC = () => {
 
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
+  const forwardToLguMutation = useForwardIncidentToLgu(Number(incidentId));
 
   const confirmationModal = useConfirmationModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -57,6 +58,18 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [reviewIncidentMutation.isSuccess]);
 
+  // Handle successful forward to LGU
+  useEffect(() => {
+    if (forwardToLguMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been delegated to LGU successfully.',
+      });
+    }
+  }, [forwardToLguMutation.isSuccess]);
+
   // Handle resolve error
   useEffect(() => {
     if (resolveIncidentMutation.isError) {
@@ -85,6 +98,20 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [reviewIncidentMutation.isError]);
 
+  // Handle forward to LGU error
+  useEffect(() => {
+    if (forwardToLguMutation.isError) {
+      confirmationModal.closeModal();
+      const error = forwardToLguMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to delegate incident to LGU. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [forwardToLguMutation.isError]);
+
   const handleViewAllComplaints = () => {
     navigate(`/dashboard/incidents/${incidentId}/complaints`);
   };
@@ -109,6 +136,18 @@ export const IncidentDetails: React.FC = () => {
       confirmColor: "yellow",
       onConfirm: async () => {
         await reviewIncidentMutation.mutateAsync();
+      },
+    });
+  };
+
+  const handleForwardToLgu = () => {
+    confirmationModal.openModal({
+      title: "Delegate to LGU",
+      message: "Are you sure you want to delegate this incident to the Local Government Unit? This action cannot be undone.",
+      confirmText: "Delegate to LGU",
+      confirmColor: "blue",
+      onConfirm: async () => {
+        await forwardToLguMutation.mutateAsync();
       },
     });
   };
@@ -287,6 +326,13 @@ export const IncidentDetails: React.FC = () => {
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
+        </button>
+        <button
+          onClick={handleForwardToLgu}
+          disabled={forwardToLguMutation.isPending}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {forwardToLguMutation.isPending ? "Forwarding..." : "Delegate to LGU"}
         </button>
         <button
           onClick={handleResolve}

@@ -1,5 +1,5 @@
 import { complaintsApi } from "../axios/apiServices";
-import type { Complaint } from "../../types/complaints/complaint";
+import type { Complaint, WeeklyComplaintStats } from "../../types/complaints/complaint";
 
 export const getComplaints = async (): Promise<Complaint[]> => {
   try {
@@ -19,7 +19,7 @@ export const getComplaintById = async (complaintId: number): Promise<Complaint> 
   }
 };
 
-export const getWeeklyComplaintStats = async () => {
+export const getWeeklyComplaintStats = async (): Promise<WeeklyComplaintStats> => {
   try {
     return await complaintsApi.get("/stats/weekly");
   } catch (error) {

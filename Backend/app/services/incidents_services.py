@@ -9,7 +9,6 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.constants.roles import UserRole
 from app.utils.logger import logger
 from app.utils.caching import delete_cache, set_cache, get_cache
 from sqlalchemy.orm import selectinload
@@ -137,8 +136,10 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"barangay_incidents:{barangay_id}")
+        await delete_cache(f"barangay_{barangay_id}_complaints")
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
-        await delete_cache("weekly_complaint_stats")
+        await delete_cache("all_forwarded_incidents")  # Clear LGU's all forwarded incidents cache
+        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -190,7 +191,8 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"barangay_incidents:{barangay_id}")
-        await delete_cache("weekly_complaint_stats")
+        await delete_cache(f"barangay_{barangay_id}_complaints")
+        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")

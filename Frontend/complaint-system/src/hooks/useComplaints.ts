@@ -4,7 +4,7 @@ import {
   getComplaints,
   getWeeklyComplaintStats,
 } from "../services/complaints/complaints";
-import type { Complaint } from "../types/complaints/complaint";
+import type { Complaint, WeeklyComplaintStats } from "../types/complaints/complaint";
 
 export const COMPLAINT_KEYS = {
   all:        ["complaints", "all"]         as const,
@@ -38,7 +38,7 @@ export const useComplaints = () => {
 }
 
 export const useWeeklyComplaintStats = () => {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<WeeklyComplaintStats>({
     queryKey: ["complaints", "stats", "weekly"],
     queryFn: getWeeklyComplaintStats,
   });

@@ -4,7 +4,7 @@ import { useMemo } from "react";import { useTranslation } from 'react-i18next';i
 import type { Complaint, ComplaintStats, WeeklyDataPoint } from "../../../types/complaints/complaint";
 import { useWeeklyComplaintStats } from "../../../hooks/useComplaints";
 import { SkeletonCard } from "../components/Skeletons";
-import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../components/Icons";
+import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon, ForwardedIcon } from "../components/Icons";
 import type { StatCardProps } from "../../../types/general/statCard";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
@@ -32,6 +32,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     total: complaints.length,
     submitted: complaints.filter(c => c.status === "submitted").length,
     underReview: complaints.filter(c => c.status === "under_review").length,
+    forwarded: complaints.filter(c => c.status === "forwarded_to_lgu").length,
     resolved: complaints.filter(c => c.status === "resolved").length,
   }), [complaints]);
 
@@ -44,21 +45,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
     if (!weeklyStats) return [];
 
+    console.log("📊 Weekly Stats from backend:", weeklyStats);
+
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const today = new Date();
 
-    return Array.from({ length: 7 }).map((_, i) => {
+    const data = Array.from({ length: 7 }).map((_, i) => {
       const date = new Date();
       date.setDate(today.getDate() - (6 - i));
       const iso = date.toISOString().split("T")[0];
-      const counts = weeklyStats.daily_counts[iso] || { submitted: 0, resolved: 0 };
+      const counts = weeklyStats.daily_counts[iso] || { submitted: 0, resolved: 0, forwarded: 0, under_review: 0 };
 
       return {
         day: dayNames[date.getDay()],
         submitted: counts.submitted,
         resolved: counts.resolved,
+        forwarded: counts.forwarded,
+        under_review: counts.under_review,
       };
     });
+
+    console.log("📈 Transformed chart data:", JSON.stringify(data, null, 2));
+    return data;
   }, [weeklyStats]);
 
   return (
@@ -70,14 +78,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <StatCard label={t('dashboard.totalComplaints')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
             <StatCard label={t('dashboard.submitted')} value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
             <StatCard label={t('dashboard.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
+            <StatCard label={t('dashboard.forwardedToLgu')} value={stats.forwarded || 0} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
             <StatCard label={t('dashboard.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
           </>
         )}
@@ -96,8 +105,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }} cursor={{ fill: "#f9fafb" }} />
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
-            <Bar dataKey="submitted" name="Submitted" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="submitted" name={t('dashboard.submitted')} fill="#eab308" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="under_review" name={t('dashboard.underReview')} fill="#6366f1" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="forwarded" name={t('dashboard.forwardedToLgu')} fill="#f97316" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="resolved" name={t('dashboard.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -113,6 +124,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />
             ))}
+          </div>
+        ) : recent.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-gray-900 mb-1">{t('dashboard.noRecentActivities')}</p>
+            <p className="text-xs text-gray-500">{t('dashboard.noRecentActivitiesMessage')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -135,9 +156,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}
                         ${c.status === "under_review" ? "bg-blue-100 text-blue-800" : ""}
+                        ${c.status === "forwarded_to_lgu" ? "bg-orange-100 text-orange-800" : ""}
                         ${c.status === "resolved" ? "bg-green-100 text-green-800" : ""}
                       `}>
-                        {c.status === "under_review" ? "Under Review" : c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                        {c.status === "submitted" ? t('dashboard.statuses.submitted') :
+                         c.status === "under_review" ? t('dashboard.statuses.underReview') : 
+                         c.status === "forwarded_to_lgu" ? t('dashboard.statuses.forwarded') :
+                         c.status === "resolved" ? t('dashboard.statuses.resolved') :
+                         c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                       </span>
                     </td>
                   </tr>

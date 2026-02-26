@@ -1,4 +1,6 @@
 import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, reviewIncident } from "../services/incidents/incidents";
+import { delegateIncidentToLgu } from "../services/delegation/incidentDelegation";
+import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
@@ -34,7 +36,7 @@ export const useIncidentComplaints = (incidentId: number, enabled: boolean = fal
   const { data, isLoading, error, refetch } = useQuery<Complaint[]>({
     queryKey: ["incidents", incidentId, "complaints"],
     queryFn: () => getComplaintsByIncidentId(incidentId),
-    enabled: enabled, // Control when to fetch
+    enabled: enabled, 
   });
 
   return {
@@ -50,7 +52,6 @@ export const useResolveIncident = (incidentId: number) => {
     mutationKey: ["resolveIncident", incidentId],
     mutationFn: () => resolveIncident(incidentId),
     onSuccess: () => {
-      // Invalidate both incident list and specific incident details
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
     }
@@ -63,10 +64,52 @@ export const useReviewIncident = (incidentId: number) => {
     mutationKey: ["reviewIncident", incidentId],
     mutationFn: () => reviewIncident(incidentId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+    }
+  });
+  return mutation;
+};
+
+export const useForwardIncidentToLgu = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["forwardIncidentToLgu", incidentId],
+    mutationFn: () => delegateIncidentToLgu(incidentId),
+    onSuccess: () => {
       // Invalidate both incident list and specific incident details
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
     }
   });
   return mutation;
+};
+
+export const useForwardedIncidents = (barangayId: number) => {
+  const { data, isLoading, error } = useQuery<Incident[]>({
+    queryKey: ["forwardedIncidents", barangayId],
+    queryFn: () => getForwardedIncidents(barangayId),
+    enabled: !!barangayId,
+  });
+
+  return {
+    incidents: data,
+    isLoading,
+    error,
+  };
+};
+
+/**
+ * Hook for LGU officials to fetch all forwarded incidents from all barangays
+ */
+export const useAllForwardedIncidents = () => {
+  const { data, isLoading, error } = useQuery<Incident[]>({
+    queryKey: ["allForwardedIncidents"],
+    queryFn: getAllForwardedIncidents,
+  });
+
+  return {
+    incidents: data,
+    isLoading,
+    error,
+  };
 };

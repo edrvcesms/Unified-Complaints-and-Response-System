@@ -42,21 +42,32 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         logger.error(f"Error in get_complaint_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-async def get_all_complaints(db: AsyncSession):
+async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
     try:
-        complaints_cache = await get_cache("all_complaints")
+        cache_key = f"barangay_{barangay_id}_complaints" if barangay_id else "all_complaints"
+        complaints_cache = await get_cache(cache_key)
         if complaints_cache is not None:
-            logger.info("Cache hit for all complaints")
+            logger.info(f"Cache hit for complaints (barangay_id: {barangay_id or 'all'})")
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)))
         
+        query = select(Complaint).options(
+            selectinload(Complaint.user), 
+            selectinload(Complaint.barangay), 
+            selectinload(Complaint.category), 
+            selectinload(Complaint.attachment)
+        )
+        
+        if barangay_id is not None:
+            query = query.where(Complaint.barangay_id == barangay_id)
+        
+        result = await db.execute(query)
         complaints = result.scalars().all()
         
-        logger.info(f"Fetched all complaints: {len(complaints)} complaints found")
+        logger.info(f"Fetched complaints: {len(complaints)} complaints found (barangay_id: {barangay_id or 'all'})")
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
         
-        await set_cache("all_complaints", [c.model_dump_json() for c in complaints_list], expiration=3600)
+        await set_cache(cache_key, [c.model_dump_json() for c in complaints_list], expiration=3600)
         return complaints_list
     
     except HTTPException:
@@ -92,46 +103,52 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
         logger.error(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def get_weekly_complaint_stats(db: AsyncSession):
+async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSession):
     try:
-        weekly_stats_cache = await get_cache("weekly_complaint_stats")
+        weekly_stats_cache = await get_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         if weekly_stats_cache is not None:
-            logger.info("Cache hit for weekly complaint stats")
+            logger.info("Cache hit for weekly complaint stats by barangay")
             return weekly_stats_cache
         one_week_ago = datetime.utcnow() - timedelta(days=7)
         result = await db.execute(
             select(Complaint)
-            .where(Complaint.created_at >= one_week_ago)
+            .where(Complaint.barangay_id == barangay_id, Complaint.created_at >= one_week_ago)
         )
         complaints = result.scalars().all()
         
         stats = {
-            "total_submitted": len(complaints),
+            "total_submitted": sum(1 for c in complaints if c.status == ComplaintStatus.SUBMITTED.value),
             "total_resolved": sum(1 for c in complaints if c.status == ComplaintStatus.RESOLVED.value),
+            "total_forwarded": sum(1 for c in complaints if c.status == ComplaintStatus.FORWARDED_TO_LGU.value),
+            "total_under_review": sum(1 for c in complaints if c.status == ComplaintStatus.UNDER_REVIEW.value),
             "daily_counts": {}
         }
         
         stats["daily_counts"] = {}
         for i in range(7):
             day = (datetime.utcnow() - timedelta(days=6-i)).strftime("%Y-%m-%d")
-            stats["daily_counts"][day] = {"submitted": 0, "resolved": 0}
+            stats["daily_counts"][day] = {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
             
         for complaint in complaints:
             day = complaint.created_at.strftime("%Y-%m-%d")
             if day not in stats["daily_counts"]:
-                stats["daily_counts"][day] = {"submitted": 0, "resolved": 0}
+                stats["daily_counts"][day] = {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
             stats["daily_counts"][day]["submitted"] += 1
             if complaint.status == ComplaintStatus.RESOLVED.value:
                 stats["daily_counts"][day]["resolved"] += 1
+            elif complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value:
+                stats["daily_counts"][day]["forwarded"] += 1
+            elif complaint.status == ComplaintStatus.UNDER_REVIEW.value:
+                stats["daily_counts"][day]["under_review"] += 1
         
-        await set_cache("weekly_complaint_stats", stats, expiration=3600)
+        await set_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}", stats, expiration=3600)
         return stats
     
     except HTTPException:
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_weekly_complaint_stats: {e}")
+        logger.error(f"Error in get_weekly_complaint_stats_by_barangay: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
@@ -190,16 +207,15 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
 
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
         
+        # Invalidate all related caches
         await delete_cache(f"user_complaints:{user_id}")
         await delete_cache("all_complaints")
-        await delete_cache("weekly_complaint_stats")
+        await delete_cache(f"weekly_complaint_stats_by_barangay:{updated_complaint.barangay_id}")
         
-        if updated_complaint.incident_id:
-            await delete_cache(f"incident:{updated_complaint.incident_id}")
-            await delete_cache(f"incident_complaints:{updated_complaint.incident_id}")
-        
+        # Invalidate barangay incidents cache (incident will be created/updated by celery task)
         if updated_complaint.barangay_id:
             await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
+            await delete_cache(f"barangay_{updated_complaint.barangay_id}_complaints")
             
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
@@ -246,9 +262,10 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
         await delete_cache("all_complaints")
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache("weekly_complaint_stats")
+        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
+            await delete_cache(f"barangay_{barangay_id}_complaints")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -304,9 +321,10 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
         await delete_cache("all_complaints")
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache("weekly_complaint_stats")
+        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
+            await delete_cache(f"barangay_{barangay_id}_complaints")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")

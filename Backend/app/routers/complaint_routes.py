@@ -4,7 +4,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
-from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats
+from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats_by_barangay
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.services.complaint_cluster_service import cluster_complaints
@@ -16,12 +16,13 @@ router = APIRouter()
 @router.get("/all", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
 async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_all_complaints(db)
+    
+    return await get_all_complaints(db, barangay_id=current_user.barangay_account.barangay_id)
 
 @router.get("/stats/weekly", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
 async def weekly_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_weekly_complaint_stats(db)
+    return await get_weekly_complaint_stats_by_barangay(current_user.barangay_account.barangay_id, db)
 
 @router.get("/my-complaints", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")

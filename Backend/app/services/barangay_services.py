@@ -15,7 +15,9 @@ async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUs
         cached_barangay = await get_cache(f"barangay_profile:{user_id}")
         if cached_barangay:
             logger.info(f"Barangay profile for user ID {user_id} retrieved from cache")
-            return BarangayWithUserData.model_validate_json(cached_barangay)
+            barangay_from_cache = BarangayWithUserData.model_validate_json(cached_barangay)
+            logger.info(f"🔍 CACHE DEBUG - User ID: {user_id}, Cached Barangay: {barangay_from_cache.barangay_name}")
+            return barangay_from_cache
         
         result = await db.execute(
             select(Barangay)
@@ -29,6 +31,7 @@ async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUs
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
         
         barangay_with_user_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+        logger.info(f"🔍 DB DEBUG - User ID: {user_id}, DB Barangay: {barangay_with_user_data.barangay_name}")
         await set_cache(f"barangay_profile:{user_id}", barangay_with_user_data.model_dump_json(), expiration=3600)
         logger.info(f"Barangay profile for user ID {user_id} retrieved from database and cached")
         return barangay_with_user_data

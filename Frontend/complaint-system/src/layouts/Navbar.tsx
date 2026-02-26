@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
-import { useBarangayStore } from "../store/authStore";
+import { useUserRole } from "../hooks/useUserRole";
 import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
 import { ConfirmationModal } from "../features/general/ConfirmationModal";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
@@ -20,15 +20,11 @@ const ROLES = {
 
 export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const navigate = useNavigate();
+  const { userRole, getDisplayName } = useUserRole();
 
-  const barangayName = useBarangayStore(
-    (state) => state.barangayAccountData?.barangay_name ?? "Barangay"
-  );
-  const role = useBarangayStore(
-    (state) => state.barangayAccountData?.barangay_account.user.role ?? "User"
-  );
+  const displayName = getDisplayName();
 
-  const initials = barangayName
+  const initials = displayName
     .split(" ")
     .map((word) => word[0])
     .slice(0, 2)
@@ -132,9 +128,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               {initials}
             </div>
 
-            {/* Barangay name */}
+            {/* Barangay/User name */}
             <span className="hidden sm:block text-white text-base font-medium max-w-[160px] truncate">
-              {barangayName}
+              {displayName}
             </span>
 
             {/* Chevron */}
@@ -168,8 +164,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
               {/* User info header */}
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-                <p className="text-sm font-semibold text-gray-800 truncate">{barangayName}</p>
-                <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[role as keyof typeof ROLES] || role}</p>
+                <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+                <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[userRole as keyof typeof ROLES] || userRole || 'User'}</p>
               </div>
 
               {/* Profile option */}

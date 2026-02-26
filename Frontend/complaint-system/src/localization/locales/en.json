@@ -6,16 +6,25 @@
     "totalComplaints": "Total Complaints",
     "submitted": "Submitted",
     "underReview": "Under Review",
+    "forwardedToLgu": "Forwarded to LGU",
     "resolved": "Resolved",
     "weeklyActivity": "Weekly Complaint Activity",
     "weeklySubtitle": "Complaints submitted vs. resolved this week",
     "recentComplaints": "Recent Complaints",
+    "noRecentActivities": "No Recent Activities",
+    "noRecentActivitiesMessage": "No complaints have been submitted yet.",
     "columns": {
       "id": "ID",
       "title": "Complaint",
       "category": "Category",
       "status": "Status",
       "total": "Total"
+    },
+    "statuses": {
+      "submitted": "Submitted",
+      "underReview": "Under Review",
+      "forwarded": "Forwarded",
+      "resolved": "Resolved"
     }
   },
   "incidents": {

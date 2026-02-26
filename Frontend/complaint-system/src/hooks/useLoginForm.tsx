@@ -22,9 +22,8 @@ export const useLoginForm = () => {
 
     onSuccess: (data) => {
       console.log("Login successful:", data);
-      useBarangayStore.getState().setBarangayAccessToken(data.access_token);
-      useBarangayStore.getState().mapDataFromBackend(data.barangayAccountData);
-      useBarangayStore.getState().setBarangayAccountData(data.barangayAccountData);
+      useBarangayStore.getState().setAccessToken(data.access_token);
+      useBarangayStore.getState().mapDataFromBackend(data);
       console.log("Updated store with account data:", useBarangayStore.getState().barangayAccountData);
       navigate("/dashboard");
     },

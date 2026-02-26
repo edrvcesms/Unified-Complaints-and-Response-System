@@ -30,7 +30,7 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
   });
 
   instance.interceptors.request.use(async (config) => {
-    const token = useBarangayStore.getState().barangayAccessToken;
+    const token = useBarangayStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -66,13 +66,13 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
             throw new Error("Refresh failed");
           }
 
-          useBarangayStore.getState().setBarangayAccessToken(refreshed.access_token);
+          useBarangayStore.getState().setAccessToken(refreshed.access_token);
           processQueue(null);
           originalRequest.headers.Authorization = `Bearer ${refreshed.access_token}`;
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          useBarangayStore.getState().clearBarangayAuthLocal();
+          useBarangayStore.getState().clearAuthLocal();
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;

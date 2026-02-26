@@ -30,6 +30,8 @@ export interface WeeklyDataPoint {
   day: string;
   submitted: number;
   resolved: number;
+  forwarded?: number;
+  under_review?: number;
 }
 
 export interface ComplaintStats {
@@ -37,6 +39,24 @@ export interface ComplaintStats {
   submitted: number;
   underReview: number;
   resolved: number;
+  forwarded?: number;
+}
+
+export interface DailyComplaintCounts {
+  submitted: number;
+  resolved: number;
+  forwarded: number;
+  under_review: number;
+}
+
+export interface WeeklyComplaintStats {
+  total_submitted: number;
+  total_resolved: number;
+  total_forwarded: number;
+  total_under_review: number;
+  daily_counts: {
+    [date: string]: DailyComplaintCounts;
+  };
 }
 
 

@@ -142,6 +142,47 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
 
 
 async def login_user(login_data: LoginData, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).where(User.email == login_data.email))
+        user = result.scalars().first()
+
+        if not user:
+            logger.warning(f"Login attempt with unregistered email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if not decrypt_password(login_data.password, user.hashed_password):
+            logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        
+        if user.role != UserRole.USER:
+            logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
+
+        logger.info(f"User logged in successfully with email: {login_data.email}")
+
+        refresh_token = create_refresh_token(data={"user_id": user.id})
+        access_token = create_access_token(data={"user_id": user.id})
+
+        response = JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=jsonable_encoder({
+                "message": "Login successful",
+                "access_token": access_token,
+                "refresh_token": refresh_token if user.role == UserRole.USER else None
+            })
+        )
+
+        await set_cookies(response, refresh_token=refresh_token)
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error during login for {login_data.email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
+
+async def officials_login(login_data: LoginData, db: AsyncSession):
     barangay_data = None
     department_data = None
 
@@ -155,7 +196,11 @@ async def login_user(login_data: LoginData, db: AsyncSession):
 
         if not decrypt_password(login_data.password, user.hashed_password):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or password")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        
+        if user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
+            logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized role")
 
         if user.role == UserRole.BARANGAY_OFFICIAL:
             barangay = await get_barangay_account(user.id, db)
@@ -189,6 +234,7 @@ async def login_user(login_data: LoginData, db: AsyncSession):
                 "message": "Login successful",
                 "access_token": access_token,
                 "refresh_token": refresh_token if user.role == UserRole.USER else None,
+                "role": user.role,
                 "barangayAccountData": user_cache["barangay_data"] if barangay_data else None,
                 "departmentAccountData": user_cache["department_data"] if department_data else None
             })
@@ -203,8 +249,6 @@ async def login_user(login_data: LoginData, db: AsyncSession):
         await db.rollback()
         logger.error(f"Error during login for {login_data.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
-
-
 
 async def refresh_access_token(request: Request, db: AsyncSession):
     try:
@@ -274,6 +318,7 @@ async def refresh_access_token(request: Request, db: AsyncSession):
             content=jsonable_encoder({
                 "message": "Access token refreshed successfully",
                 "access_token": new_access_token,
+                "role": user.role,
                 "barangayAccountData": barangay_data if user.role == UserRole.BARANGAY_OFFICIAL else None,
                 "departmentAccountData": department_data if user.role == UserRole.DEPARTMENT_STAFF else None
             })

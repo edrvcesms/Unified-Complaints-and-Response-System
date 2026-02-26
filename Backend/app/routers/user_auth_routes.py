@@ -4,7 +4,7 @@ from app.dependencies.db_dependency import   get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.logger import logger
 from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData
-from app.services.user_auth_services import logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token
+from app.services.user_auth_services import logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login
 from slowapi.errors import RateLimitExceeded
 from fastapi.requests import Request
 import json
@@ -27,6 +27,11 @@ async def verify_otp(request: Request, data: str = Form(...), front_id: UploadFi
 @limiter.limit("30/minute")
 async def login(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
     return await login_user(login_data, db)
+
+@router.post("/officials-login", status_code=status.HTTP_200_OK)
+@limiter.limit("30/minute")
+async def officials_login_route(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
+    return await officials_login(login_data, db)
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")

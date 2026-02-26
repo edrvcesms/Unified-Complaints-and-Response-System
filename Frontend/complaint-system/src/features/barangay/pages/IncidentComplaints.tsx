@@ -38,7 +38,6 @@ export const IncidentComplaints: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <button
@@ -57,7 +56,6 @@ export const IncidentComplaints: React.FC = () => {
         </div>
       </div>
 
-      {/* Complaints List */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-gray-900">

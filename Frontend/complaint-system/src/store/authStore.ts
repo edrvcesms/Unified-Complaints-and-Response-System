@@ -3,6 +3,7 @@ import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import type { UserRole } from "../types/auth/userRole";
 import { refreshToken } from "../services/authentication/token";
 import { logoutBarangayAccount } from "../services/authentication/barangayAuth";
+import type { DepartmentAccount } from "../types/department/departmentAccount";
 
 interface AuthState {
     accessToken: string | null;
@@ -11,8 +12,8 @@ interface AuthState {
     setIsCheckingAuth: (checking: boolean) => void;
     barangayAccountData: BarangayAccountData | null;
     setBarangayAccountData: (data: BarangayAccountData | null) => void;
-    departmentAccountData: any | null;
-    setDepartmentAccountData: (data: any | null) => void;
+    departmentAccountData: DepartmentAccount | null;
+    setDepartmentAccountData: (data: DepartmentAccount | null) => void;
     userRole: UserRole | null;
     setUserRole: (role: UserRole | null) => void;
     isLoading: boolean;
@@ -39,7 +40,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
     mapDataFromBackend: (data: any) => {
-        // Determine role from the response data
         let role = null;
         let barangayData = null;
         let departmentData = null;
@@ -86,9 +86,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         } else if (data.departmentAccountData) {
             role = data.departmentAccountData.user?.role || 'department_staff';
             departmentData = data.departmentAccountData;
-        } else {
-            // For LGU or other roles without specific account data
-            role = data.role || 'lgu_official';
         }
 
         set({

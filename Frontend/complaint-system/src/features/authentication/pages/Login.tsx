@@ -20,18 +20,13 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row font-sans relative">
-      {/* Language Switcher - Top Right */}
       <div className="absolute top-4 right-4 z-10">
         <LanguageSwitcher />
       </div>
 
-      {/* Left — government branding (desktop only) */}
       <BrandingPanel />
 
-
-      {/* Right — login form panel */}
       <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 px-6 py-12 lg:px-16">
-        {/* Compact branding shown only on mobile */}
         <MobileHeader />
 
         <LoginForm
@@ -45,7 +40,6 @@ export const LoginPage: React.FC = () => {
           onTogglePassword={togglePasswordVisibility}
         />
 
-        {/* Page footer */}
         <p className="mt-6 text-xs text-gray-400 text-center">
           {t('footer.copyright')}
         </p>

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Bell } from "lucide-react";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useUserRole } from "../hooks/useUserRole";
 import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
@@ -32,28 +33,36 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     .toUpperCase();
 
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState<boolean>(false);
 
   const confirmationModal = useConfirmationModal();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
+      if (notificationDropdownRef.current && !notificationDropdownRef.current.contains(e.target as Node)) {
+        setNotificationDropdownOpen(false);
+      }
     };
 
-    if (dropdownOpen) {
+    if (dropdownOpen || notificationDropdownOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [dropdownOpen]);
+  }, [dropdownOpen, notificationDropdownOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDropdownOpen(false);
+      if (e.key === "Escape") {
+        setDropdownOpen(false);
+        setNotificationDropdownOpen(false);
+      }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
@@ -78,15 +87,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   return (
     <>
       <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
-      {/* Gold accent bar */}
       <nav
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
+        className="px-4 sm:px-6 lg:pr-8 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"
         aria-label="Main navigation"
       >
-        {/* ── Left — Logo + System Name ── */}
         <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
-          {/* Municipal seal — larger */}
           <div className="w-10 h-10 sm:w-13 sm:h-13 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-lg">
             <img
               src={StaMariaLogo}
@@ -95,7 +101,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             />
           </div>
 
-          {/* System name */}
           <div className="min-w-0">
             <p className="text-white font-bold text-sm sm:text-base lg:text-xl leading-tight truncate tracking-tight">
               Sta. Maria, Laguna
@@ -106,10 +111,69 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
           </div>
         </div>
 
-        {/* ── Right — Profile Dropdown ── */}
-        <div className="relative shrink-0" ref={dropdownRef}>
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          {/* Notification Bell */}
+          <div className="relative" ref={notificationDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setNotificationDropdownOpen((prev) => !prev)}
+              aria-haspopup="true"
+              aria-expanded={notificationDropdownOpen}
+              aria-label="Notifications"
+              className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-blue-600 transition duration-200 cursor-pointer"
+            >
+              <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+              {/* Notification badge (for future use) */}
+              {/* <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" /> */}
+            </button>
 
-          {/* Profile toggle button */}
+            {notificationDropdownOpen && (
+              <div
+                role="menu"
+                aria-label="Notifications menu"
+                className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl
+                  border border-gray-100 overflow-hidden z-50"
+                style={{ animation: "fadeSlideDown 0.15s ease-out" }}
+              >
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                  <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto">
+                  {/* Empty state - for future implementation */}
+                  <div className="px-5 py-8 text-center">
+                    <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                    <p className="text-sm text-gray-500">No notifications yet</p>
+                    <p className="text-xs text-gray-400 mt-1">You'll see updates here when they arrive</p>
+                  </div>
+
+                  {/* Notification items will go here */}
+                  {/* Example notification item:
+                  <button
+                    className="w-full px-5 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100"
+                  >
+                    <div className="flex gap-3">
+                      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800 font-medium">New complaint received</p>
+                        <p className="text-xs text-gray-500 mt-0.5">A new complaint has been filed in your area</p>
+                        <p className="text-xs text-gray-400 mt-1">2 minutes ago</p>
+                      </div>
+                    </div>
+                  </button>
+                  */}
+                </div>
+
+                {/* <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
+                  <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                    View all notifications
+                  </button>
+                </div> */}
+              </div>
+            )}
+          </div>
+
+          <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen((prev) => !prev)}
@@ -120,7 +184,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               
               transition duration-200 "
           >
-            {/* Avatar circle with initials — larger */}
             <div
               aria-hidden="true"
               className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm shrink-0"
@@ -128,12 +191,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               {initials}
             </div>
 
-            {/* Barangay/User name */}
             <span className="hidden sm:block text-white text-base font-medium max-w-40 truncate">
               {displayName}
             </span>
 
-            {/* Chevron */}
             <svg
               aria-hidden="true"
               className={`w-4 h-4 text-blue-200 transition-transform duration-200 shrink-0
@@ -146,7 +207,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             </svg>
           </button>
 
-          {/* ── Dropdown Menu ── */}
           {dropdownOpen && (
             <div
               role="menu"
@@ -162,13 +222,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 }
               `}</style>
 
-              {/* User info header */}
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
                 <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
                 <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[userRole as keyof typeof ROLES] || userRole || 'User'}</p>
               </div>
 
-              {/* Profile option */}
               <button
                 role="menuitem"
                 type="button"
@@ -185,12 +243,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
               <div className="h-px bg-gray-100 mx-4" />
 
-              {/* Language Switcher */}
               <LanguageSwitcher />
 
               <div className="h-px bg-gray-100 mx-4" />
 
-              {/* Logout button */}
               <button
                 role="menuitem"
                 type="button"
@@ -206,11 +262,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               </button>
             </div>
           )}
+          </div>
         </div>
       </nav>
     </header>
 
-      {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         title={confirmationModal.title}

@@ -5,10 +5,6 @@ import { PasswordInput } from "./PasswordInputs";
 import { SubmitButton } from "./SubmitButton";
 import type { LoginRequestData, LoginFormErrors } from "../../../types/auth/login";
 
-// ─── Component: LoginForm ─────────────────────────────────────────────────────
-// The login card — purely presentational. All state and handlers come from props
-// (fed by the useLoginForm hook in LoginPage).
-
 interface LoginFormProps {
   formData: LoginRequestData;
   errors: LoginFormErrors;
@@ -34,16 +30,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   
   return (
   <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8 space-y-6">
-
-    {/* Heading */}
     <div className="space-y-1">
       <h3 className="text-2xl font-bold text-gray-800">{t('auth.officialLogin')}</h3>
       <p className="text-sm text-gray-500">{t('auth.signinInstruction')}</p>
     </div>
 
     <form onSubmit={onSubmit} noValidate className="space-y-5">
-
-      {/* ── Email / Username ── */}
       <div className="space-y-1">
         <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
           {t('auth.usernameOrEmail')}
@@ -68,7 +60,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         {errors.email && <ErrorMessage id="email-error" message={errors.email} />}
       </div>
 
-      {/* ── Password ── */}
       <div className="space-y-1">
         <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
           {t('auth.password')}
@@ -85,7 +76,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         {errors.password && <ErrorMessage id="password-error" message={errors.password} />}
       </div>
 
-      {/* ── Remember Me + Forgot Password ── */}
       <div className="flex items-center justify-end gap-4">
 
         <button
@@ -97,14 +87,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </button>
       </div>
 
-      {/* ── Submit ── */}
       <SubmitButton isLoading={isLoading} />
     </form>
-    
-    {/* Server / auth error banner */}
+
     {errors.general && <AlertBanner message={errors.general} />}
 
-    {/* Compliance note */}
     <p className="text-center text-xs text-gray-400 leading-relaxed pt-2 border-t border-gray-100">
       {t('auth.contactInfo')}<br />
       {t('auth.unauthorizedAccess')}

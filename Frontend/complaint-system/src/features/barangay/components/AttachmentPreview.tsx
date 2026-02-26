@@ -1,6 +1,3 @@
-// ─── components/AttachmentPreview.tsx ────────────────────────────────────────
-// Renders image, video, or generic file download links
-
 interface Attachment {
   url: string;
   name?: string;
@@ -72,7 +69,6 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
             );
           }
 
-          // Generic file download
           return (
             <a
               key={idx}

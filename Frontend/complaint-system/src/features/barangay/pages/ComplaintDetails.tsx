@@ -36,7 +36,6 @@ export const ComplaintDetails: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -45,11 +44,8 @@ export const ComplaintDetails: React.FC = () => {
         Back to Complaints
       </button>
 
-      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* LEFT COLUMN */}
         <div className="space-y-6">
-          {/* Complaint Header */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -62,7 +58,6 @@ export const ComplaintDetails: React.FC = () => {
             <ComplaintInfoGrid complaint={complaint} />
           </div>
 
-          {/* Description */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -70,7 +65,6 @@ export const ComplaintDetails: React.FC = () => {
             </p>
           </div>
 
-          {/* Location Details */}
           {/* {complaint.location_details && (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-3">Location Details</h2>
@@ -84,9 +78,7 @@ export const ComplaintDetails: React.FC = () => {
           )} */}
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="space-y-6">
-          {/* Additional Information */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -126,7 +118,6 @@ export const ComplaintDetails: React.FC = () => {
               )}
             </div>
 
-            {/* Attachments */}
             {complaint.attachment && complaint.attachment.length > 0 && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">

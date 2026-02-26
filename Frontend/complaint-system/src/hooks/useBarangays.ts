@@ -2,9 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllBarangays, getBarangayById } from "../services/barangay/barangays";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 
-/**
- * Hook to fetch all barangays
- */
 export const useAllBarangays = () => {
   const { data, isLoading, error } = useQuery<BarangayAccountData[]>({
     queryKey: ["barangays"],
@@ -18,9 +15,6 @@ export const useAllBarangays = () => {
   };
 };
 
-/**
- * Hook to fetch a specific barangay by ID
- */
 export const useBarangayById = (barangayId: number) => {
   const { data, isLoading, error } = useQuery<BarangayAccountData>({
     queryKey: ["barangays", barangayId],

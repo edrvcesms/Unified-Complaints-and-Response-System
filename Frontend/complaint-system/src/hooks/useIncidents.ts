@@ -76,7 +76,6 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
     mutationKey: ["forwardIncidentToLgu", incidentId],
     mutationFn: () => delegateIncidentToLgu(incidentId),
     onSuccess: () => {
-      // Invalidate both incident list and specific incident details
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
     }
@@ -98,9 +97,6 @@ export const useForwardedIncidents = (barangayId: number) => {
   };
 };
 
-/**
- * Hook for LGU officials to fetch all forwarded incidents from all barangays
- */
 export const useAllForwardedIncidents = () => {
   const { data, isLoading, error } = useQuery<Incident[]>({
     queryKey: ["allForwardedIncidents"],

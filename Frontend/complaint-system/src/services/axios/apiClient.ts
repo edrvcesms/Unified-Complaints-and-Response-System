@@ -15,6 +15,7 @@ export const createApiClient = (axiosInstance: AxiosInstance) => {
       data?: unknown,
       config?: AxiosRequestConfig
     ): Promise<T> => {
+      console.log("POST Request to:", url, "with data:", data);
       const response = await axiosInstance.post<T>(url, data, config);
       return response.data;
     },

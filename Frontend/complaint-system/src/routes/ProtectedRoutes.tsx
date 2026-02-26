@@ -1,4 +1,3 @@
-// routes/ProtectedRoutes.tsx
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
@@ -25,23 +24,21 @@ interface RoleProtectedRouteProps {
   children?: React.ReactNode;
 }
 
-/**
- * Route guard that checks both authentication and user role
- */
 export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ 
   allowedRoles, 
   children 
 }) => {
-  const { isAuthenticated, userRole } = useUserRole();
+  const { isAuthenticated, userRole, hasInvalidRole } = useUserRole();
 
-  // Not authenticated - redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Authenticated but wrong role - redirect based on their role
+  if (hasInvalidRole) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (userRole && !allowedRoles.includes(userRole)) {
-    // Redirect to appropriate dashboard based on user's role
     if (userRole === 'barangay_official') {
       return <Navigate to="/dashboard" replace />;
     }
@@ -51,17 +48,12 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     if (userRole === 'department_staff') {
       return <Navigate to="/department/dashboard" replace />;
     }
-    // Fallback to login if role is unknown
     return <Navigate to="/login" replace />;
   }
 
-  // Authenticated and has correct role
   return children ? <>{children}</> : <Outlet />;
 };
 
-/**
- * Legacy component for backward compatibility - authenticates only, no role check
- */
 export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
@@ -75,9 +67,6 @@ export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = 
   );
 };
 
-/**
- * Route guard for barangay officials only
- */
 export const BarangayRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   return (
     <RoleProtectedRoute allowedRoles={['barangay_official']}>
@@ -86,9 +75,6 @@ export const BarangayRoute: React.FC<{ children?: React.ReactNode }> = ({ childr
   );
 };
 
-/**
- * Route guard for LGU officials only
- */
 export const LguRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   return (
     <RoleProtectedRoute allowedRoles={['lgu_official']}>
@@ -97,9 +83,6 @@ export const LguRoute: React.FC<{ children?: React.ReactNode }> = ({ children })
   );
 };
 
-/**
- * Route guard for department staff only
- */
 export const DepartmentRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   return (
     <RoleProtectedRoute allowedRoles={['department_staff']}>
@@ -108,13 +91,9 @@ export const DepartmentRoute: React.FC<{ children?: React.ReactNode }> = ({ chil
   );
 };
 
-/**
- * Routes that should only be accessible when NOT authenticated
- */
 export const AuthRoutes: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, userRole } = useUserRole();
 
-  // Already authenticated - redirect to appropriate dashboard
   if (isAuthenticated) {
     if (userRole === 'barangay_official') {
       return <Navigate to="/dashboard" replace />;

@@ -59,13 +59,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
 
   return (
     <div className="space-y-6">
-      {/* Heading */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
         <p className="text-sm text-gray-600 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
@@ -80,7 +78,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
         )}
       </div>
 
-      {/* Weekly Chart */}
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.weeklyActivity')}</h2>
@@ -101,7 +98,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
         </ResponsiveContainer>
       </div>
 
-      {/* Recent Complaints */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentComplaints')}</h2>

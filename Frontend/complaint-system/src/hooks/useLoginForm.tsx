@@ -15,7 +15,7 @@ export const useLoginForm = () => {
 
 
   const { mutate, isPending } = useSubmitForm<LoginRequestData>({
-    endpoint: "/login",
+    endpoint: "/officials-login",
     method: "post",
     axiosInstance: authInstance,
     validators: [validateEmail, validatePassword],

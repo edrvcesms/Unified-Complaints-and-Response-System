@@ -3,7 +3,7 @@ from enum import Enum
 
 class SeverityLevel(str, Enum):
     LOW = "LOW"
-    MEDIUM = "MEDIUM"
+    MODERATE = "MODERATE"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
 
@@ -18,6 +18,6 @@ class SeverityLevel(str, Enum):
         elif score >= 6.0:
             return SeverityLevel.HIGH
         elif score >= 4.0:
-            return SeverityLevel.MEDIUM
+            return SeverityLevel.MODERATE
         else:
             return SeverityLevel.LOW

@@ -72,8 +72,11 @@ The container is the **single assembly point** of the whole system. Everything e
 
 ## Project Structure
 
-```
 complaint_system/
+│
+├── docs/
+│   ├── OVERVIEW.md
+│   └── README.md
 │
 ├── domain/                          # Layer 1: The core rules — no external dependencies
 │   ├── entities/
@@ -100,8 +103,7 @@ complaint_system/
 │   ├── database/
 │   │   ├── models.py
 │   │   ├── incident_repository.py
-│   │   └── migrations/
-│   │       └── 001_incident_clustering.py
+│   │   └──
 │   ├── embeddings/
 │   │   └── sentence_transformer_service.py
 │   ├── vector_store/
@@ -118,7 +120,6 @@ complaint_system/
 ├── main.py
 ├── requirements.txt
 └── .env.example
-```
 
 ---
 

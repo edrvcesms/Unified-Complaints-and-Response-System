@@ -78,13 +78,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
         )}
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.weeklyActivity')}</h2>
           <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.weeklySubtitle')}</p>
         </div>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
+        <div className="w-full h-60 sm:h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
@@ -96,10 +97,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             <Bar dataKey="resolved" name={t('dashboard.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-4 sm:px-5 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentComplaints')}</h2>
           <span className="text-xs text-gray-500">{complaints.length} {t('dashboard.columns.total').toLowerCase()}</span>
         </div>
@@ -134,7 +136,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                 {recent.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-mono text-xs text-gray-500">#{c.id}</td>
-                    <td className="px-5 py-3 text-gray-900 font-medium text-sm truncate max-w-40">{c.title}</td>
+                    <td className="px-5 py-3 text-gray-900 font-medium text-sm">
+                      <div className="truncate max-w-[200px] sm:max-w-xs">{c.title}</div>
+                    </td>
                     <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">{formatCategoryName(c.category?.category_name)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold

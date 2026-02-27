@@ -27,11 +27,11 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
   return (
     <div 
       onClick={handleCardClick}
-      className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
     >
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <h4 className="font-semibold text-gray-900 text-sm">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 text-sm break-words">
             #{complaint.id} - {complaint.title}
           </h4>
           <p className="text-xs text-gray-500 mt-1">
@@ -40,7 +40,9 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
               : "Unknown"}
           </p>
         </div>
-        <StatusBadge status={complaint.status} />
+        <div className="shrink-0">
+          <StatusBadge status={complaint.status} />
+        </div>
       </div>
       <div className="mb-3">
         <p className={`text-xs text-gray-600 ${!isExpanded && shouldShowViewMore ? 'line-clamp-2' : ''}`}>
@@ -58,14 +60,14 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
           </button>
         )}
       </div>
-      <div className="flex items-center gap-4 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <MapPin size={14} />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs text-gray-500">
+        <div className="flex items-center gap-1 min-w-0">
+          <MapPin size={14} className="shrink-0" />
           <span className="truncate">{complaint.location_details || "N/A"}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Calendar size={14} />
-          <span>{new Date(complaint.created_at).toLocaleDateString("en-PH")}</span>
+          <span className="whitespace-nowrap">{new Date(complaint.created_at).toLocaleDateString("en-PH")}</span>
         </div>
       </div>
     </div>

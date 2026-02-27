@@ -2,10 +2,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
 import { ArrowLeft } from "lucide-react";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { SkeletonComplaintCard } from "../components/Skeletons";
-import { ComplaintCard } from "../components/ComplaintCard";
+import { SkeletonComplaintCard } from "../../barangay/components/Skeletons";
+import { ComplaintCard } from "../../barangay/components/ComplaintCard";
 
-export const IncidentComplaints: React.FC = () => {
+export const LguIncidentComplaints: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
 
@@ -17,7 +17,7 @@ export const IncidentComplaints: React.FC = () => {
   } = useIncidentComplaints(Number(incidentId), true);
 
   const handleComplaintClick = (complaintId: number) => {
-    navigate(`/dashboard/incidents/complaints/${complaintId}`);
+    navigate(`/lgu/incidents/complaints/${complaintId}`);
   };
 
   if (incidentLoading) {
@@ -36,7 +36,7 @@ export const IncidentComplaints: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       <div>
         <button
-          onClick={() => navigate(`/dashboard/incidents/${incidentId}`)}
+          onClick={() => navigate(`/lgu/incidents/${incidentId}`)}
           className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
         >
           <ArrowLeft size={16} />
@@ -51,7 +51,8 @@ export const IncidentComplaints: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-        <div className="mb-4 sm:mb-6">\n          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
             All Complaints ({incident.complaint_count})
           </h2>
           <p className="text-sm text-gray-600 mt-1">

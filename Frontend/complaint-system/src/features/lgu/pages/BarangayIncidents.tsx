@@ -5,7 +5,7 @@ import { useBarangayById } from "../../../hooks/useBarangays";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { SearchInput } from "../../barangay/components/SearchInputs";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown } from "../../barangay/components/Filters";
+import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { ErrorMessage, BackButton } from "../../general";
 
 export const BarangayIncidents: React.FC = () => {
@@ -21,6 +21,10 @@ export const BarangayIncidents: React.FC = () => {
     filterStatus,
     filterSeverityScore,
     sortBy,
+    dateFrom,
+    dateTo,
+    minDate,
+    maxDate,
     currentPage,
     paginated,
     totalPages,
@@ -28,6 +32,9 @@ export const BarangayIncidents: React.FC = () => {
     handleFilterChange,
     handleSeverityScoreFilterChange,
     handleSortChange,
+    handleDateFromChange,
+    handleDateToChange,
+    handleClearDateFilter,
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);
 
@@ -57,11 +64,36 @@ export const BarangayIncidents: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SearchInput value={search} onChange={handleSearch} />
-        <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
-        <SeverityScoreFilterDropdown current={filterSeverityScore} onChange={handleSeverityScoreFilterChange} />
-        <SortDropdown current={sortBy} onChange={handleSortChange} />
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        {/* Severity Filter */}
+        <div className="flex-1 min-w-[200px]">
+          <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+        </div>
+        {/* Date Range */}
+        <div className="flex-1 min-w-[140px]">
+          <DateFilter 
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            minDate={minDate}
+            maxDate={maxDate}
+            onDateFromChange={handleDateFromChange}
+            onDateToChange={handleDateToChange}
+            onClear={handleClearDateFilter}
+          />
+        </div>
+        {/* Sort Filter */}
+        <div className="flex-1 min-w-[200px]">
+          <SortDropdown current={sortBy} onChange={handleSortChange} />
+        </div>
+
+        {/* Hidden severity score filter - logic still applies */}
+        <div className="hidden">
+          <SeverityScoreFilterDropdown 
+            current={filterSeverityScore} 
+            onChange={handleSeverityScoreFilterChange} 
+          />
+        </div>
       </div>
 
 

@@ -40,12 +40,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
     mapDataFromBackend: (data: any) => {
-        let role = null;
+        let role = data.role || null;
         let barangayData = null;
         let departmentData = null;
 
         if (data.barangayAccountData) {
-            role = data.barangayAccountData.barangay_account?.user?.role || 'barangay_official';
             barangayData = {
                 id: data.barangayAccountData.id,
                 barangay_name: data.barangayAccountData.barangay_name,
@@ -83,8 +82,9 @@ export const useAuthStore = create<AuthState>((set) => ({
                     }
                 }
             };
-        } else if (data.departmentAccountData) {
-            role = data.departmentAccountData.user?.role || 'department_staff';
+        }
+        
+        if (data.departmentAccountData) {
             departmentData = data.departmentAccountData;
         }
 
@@ -141,7 +141,6 @@ export const useAuthStore = create<AuthState>((set) => ({
                     isAuthenticated: true
                 });
                 
-                // Map account data if available
                 const store = useAuthStore.getState();
                 store.mapDataFromBackend(data);
             } else {
@@ -167,5 +166,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 }));
 
-// Backward compatibility - keep the old export name
 export const useBarangayStore = useAuthStore;

@@ -58,22 +58,20 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      {/* ID */}
       <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">
         #{incident.id}
       </td>
 
-      {/* Title */}
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        {incident.title}
+        <div className="truncate max-w-[150px] sm:max-w-xs md:max-w-sm mx-auto" title={incident.title}>
+          {incident.title}
+        </div>
       </td>
 
-      {/* Category — hidden on mobile */}
       <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">
         {formatCategoryName(incident.category?.category_name)}
       </td>
 
-      {/* Severity Level */}
       <td className="px-4 py-3 text-center">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(incident.severity_level)}`}
@@ -82,7 +80,6 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
         </span>
       </td>
 
-      {/* Status */}
       <td className="px-4 py-3 text-center">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incident.complaint_clusters[0]?.complaint?.status || "")}`}
@@ -91,12 +88,10 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
         </span>
       </td>
 
-      {/* Complaint Count — hidden on small screens */}
       <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">
         {incident.complaint_count}
       </td>
 
-      {/* View */}
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
@@ -138,7 +133,9 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
 
   return (
   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto -mx-4 sm:mx-0">
+      <div className="inline-block min-w-full align-middle">
+        <div className="overflow-hidden">
       <table className="w-full">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200 text-center">
@@ -178,6 +175,8 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
           )}
         </tbody>
       </table>
+        </div>
+      </div>
     </div>
 
     <Pagination

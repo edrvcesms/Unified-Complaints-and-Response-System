@@ -21,12 +21,12 @@ export const Pagination: React.FC<PaginationProps> = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50">
       <p className="text-xs text-gray-600">
         Page <span className="font-semibold text-gray-900">{currentPage}</span> of{" "}
         <span className="font-semibold text-gray-900">{totalPages}</span>
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap justify-center">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}

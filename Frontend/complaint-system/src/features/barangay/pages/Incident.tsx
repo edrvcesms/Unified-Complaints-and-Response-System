@@ -3,7 +3,7 @@ import { useIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { IncidentsTable } from "../components/IncidentsTable";
 import { SearchInput } from "../components/SearchInputs";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown } from "../components/Filters";
+import { StatusFilterDropdown, SortDropdown, DateFilter } from "../components/Filters";
 
 export const IncidentPage: React.FC = () => {
   const { t } = useTranslation();
@@ -12,16 +12,21 @@ export const IncidentPage: React.FC = () => {
   const {
     search,
     filterStatus,
-    filterSeverityScore,
     sortBy,
+    dateFrom,
+    dateTo,
+    minDate,
+    maxDate,
     currentPage,
     paginated,
     filtered,
     totalPages,
     handleSearch,
     handleFilterChange,
-    handleSeverityScoreFilterChange,
     handleSortChange,
+    handleDateFromChange,
+    handleDateToChange,
+    handleClearDateFilter,
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);
 
@@ -35,7 +40,6 @@ export const IncidentPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Heading */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{t('incidents.manage')}</h1>
         <p className="text-sm text-gray-600 mt-1">
@@ -43,31 +47,36 @@ export const IncidentPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Filters + Search */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex flex-col gap-3">
-          <SearchInput value={search} onChange={handleSearch} />
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
-              <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Sort By</label>
-              <SortDropdown current={sortBy} onChange={handleSortChange} />
-            </div>
-            {/* Hidden severity score filter - logic still applies */}
-            <div className="hidden">
-              <SeverityScoreFilterDropdown 
-                current={filterSeverityScore} 
-                onChange={handleSeverityScoreFilterChange} 
-              />
-            </div>
+      <div>
+        <SearchInput value={search} onChange={handleSearch} />
+      </div>
+
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
+            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
           </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Sort By</label>
+            <SortDropdown current={sortBy} onChange={handleSortChange} />
+          </div>
+        </div>
+
+        <div className="shrink-0 w-full lg:w-auto">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
+          <DateFilter
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            minDate={minDate}
+            maxDate={maxDate}
+            onDateFromChange={handleDateFromChange}
+            onDateToChange={handleDateToChange}
+            onClear={handleClearDateFilter}
+          />
         </div>
       </div>
 
-      {/* Table (includes Pagination inside) */}
       <IncidentsTable
         incidents={paginated}
         isLoading={isLoading}
@@ -76,7 +85,6 @@ export const IncidentPage: React.FC = () => {
         onPageChange={setCurrentPage}
       />
 
-      {/* Result count */}
       {!isLoading && (
         <p className="text-xs text-gray-500 text-right">
           Showing {paginated.length} of {filtered.length} incidents

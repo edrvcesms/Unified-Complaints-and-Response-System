@@ -4,13 +4,27 @@ import type { StatusFilter, SeverityScoreFilter } from "../types/complaints/comp
 import { ITEMS_PER_PAGE } from "../types/complaints/complaint";
 import { formatCategoryName } from "../utils/categoryFormatter";
 
-export type SortOption = "severity_score_desc" | "severity_score_asc" | "severity_level_desc" | "severity_level_asc" | "none";
+export type SortOption = 
+  | "priority_high_to_low" 
+  | "priority_low_to_high" 
+  | "date_newest_first" 
+  | "date_oldest_first"
+  | "date_newest_last"
+  | "date_oldest_last"
+  | "none";
 
 const SEVERITY_LEVEL_ORDER = {
   "VERY_HIGH": 4,
   "HIGH": 3,
-  "MEDIUM": 2,
+  "MODERATE": 2,
   "LOW": 1,
+};
+
+// Combined priority score: severity level (weighted) + severity score
+const getPriorityScore = (incident: Incident): number => {
+  const levelWeight = SEVERITY_LEVEL_ORDER[incident.severity_level as keyof typeof SEVERITY_LEVEL_ORDER] || 0;
+  // Weight level more heavily (multiply by 3) and add numeric score
+  return (levelWeight * 3) + incident.severity_score;
 };
 
 export function useComplaintsFilter(complaints: Incident[]) {
@@ -19,6 +33,24 @@ export function useComplaintsFilter(complaints: Incident[]) {
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("none");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  // Calculate min and max dates from incidents
+  const { minDate, maxDate } = useMemo(() => {
+    if (!complaints || complaints.length === 0) {
+      return { minDate: "", maxDate: new Date().toISOString().split('T')[0] };
+    }
+
+    const dates = complaints.map(c => new Date(c.first_reported_at).getTime());
+    const earliestDate = new Date(Math.min(...dates));
+    const today = new Date();
+
+    return {
+      minDate: earliestDate.toISOString().split('T')[0],
+      maxDate: today.toISOString().split('T')[0]
+    };
+  }, [complaints]);
 
   const sorted = useMemo(() => {
     if (sortBy === "none") return complaints;
@@ -26,22 +58,18 @@ export function useComplaintsFilter(complaints: Incident[]) {
     const copy = [...complaints];
     
     switch (sortBy) {
-      case "severity_score_desc":
-        return copy.sort((a, b) => b.severity_score - a.severity_score);
-      case "severity_score_asc":
-        return copy.sort((a, b) => a.severity_score - b.severity_score);
-      case "severity_level_desc":
-        return copy.sort((a, b) => {
-          const orderA = SEVERITY_LEVEL_ORDER[a.severity_level as keyof typeof SEVERITY_LEVEL_ORDER] || 0;
-          const orderB = SEVERITY_LEVEL_ORDER[b.severity_level as keyof typeof SEVERITY_LEVEL_ORDER] || 0;
-          return orderB - orderA;
-        });
-      case "severity_level_asc":
-        return copy.sort((a, b) => {
-          const orderA = SEVERITY_LEVEL_ORDER[a.severity_level as keyof typeof SEVERITY_LEVEL_ORDER] || 0;
-          const orderB = SEVERITY_LEVEL_ORDER[b.severity_level as keyof typeof SEVERITY_LEVEL_ORDER] || 0;
-          return orderA - orderB;
-        });
+      case "priority_high_to_low":
+        return copy.sort((a, b) => getPriorityScore(b) - getPriorityScore(a));
+      case "priority_low_to_high":
+        return copy.sort((a, b) => getPriorityScore(a) - getPriorityScore(b));
+      case "date_newest_first":
+        return copy.sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime());
+      case "date_oldest_first":
+        return copy.sort((a, b) => new Date(a.first_reported_at).getTime() - new Date(b.first_reported_at).getTime());
+      case "date_newest_last":
+        return copy.sort((a, b) => new Date(b.last_reported_at).getTime() - new Date(a.last_reported_at).getTime());
+      case "date_oldest_last":
+        return copy.sort((a, b) => new Date(a.last_reported_at).getTime() - new Date(b.last_reported_at).getTime());
       default:
         return copy;
     }
@@ -69,6 +97,26 @@ export function useComplaintsFilter(complaints: Incident[]) {
         }
       };
 
+      const matchesDate = () => {
+        if (!dateFrom && !dateTo) return true;
+        
+        const incidentDate = new Date(c.first_reported_at);
+        const fromDate = dateFrom ? new Date(dateFrom) : null;
+        const toDate = dateTo ? new Date(dateTo) : null;
+        
+        if (fromDate && toDate) {
+          toDate.setHours(23, 59, 59, 999);
+          return incidentDate >= fromDate && incidentDate <= toDate;
+        } else if (fromDate) {
+          return incidentDate >= fromDate;
+        } else if (toDate) {
+          toDate.setHours(23, 59, 59, 999);
+          return incidentDate <= toDate;
+        }
+        
+        return true;
+      };
+
       const q = search.toLowerCase();
 
       const matchesSearch =
@@ -77,9 +125,9 @@ export function useComplaintsFilter(complaints: Incident[]) {
         c.barangay?.barangay_name?.toLowerCase().includes(q) ||
         String(c.id).includes(q);
 
-      return matchesStatus && matchesSeverityScore() && matchesSearch;
+      return matchesStatus && matchesSeverityScore() && matchesDate() && matchesSearch;
     });
-  }, [sorted, filterStatus, filterSeverityScore, search]);
+  }, [sorted, filterStatus, filterSeverityScore, search, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 
@@ -108,11 +156,31 @@ export function useComplaintsFilter(complaints: Incident[]) {
     setCurrentPage(1);
   };
 
+  const handleDateFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateFrom(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleDateToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateTo(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleClearDateFilter = () => {
+    setDateFrom("");
+    setDateTo("");
+    setCurrentPage(1);
+  };
+
   return {
     search,
     filterStatus,
     filterSeverityScore,
     sortBy,
+    dateFrom,
+    dateTo,
+    minDate,
+    maxDate,
     currentPage,
     paginated,
     filtered,
@@ -121,6 +189,9 @@ export function useComplaintsFilter(complaints: Incident[]) {
     handleFilterChange,
     handleSeverityScoreFilterChange,
     handleSortChange,
+    handleDateFromChange,
+    handleDateToChange,
+    handleClearDateFilter,
     setCurrentPage,
   };
 }

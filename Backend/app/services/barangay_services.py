@@ -81,6 +81,7 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
             .options(
                 selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
             )
+            .where(Barangay.barangay_account.has())
         )
         barangays = result.scalars().all()
         logger.info(f"Fetched all barangays: {len(barangays)} barangays found")

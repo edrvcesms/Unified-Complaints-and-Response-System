@@ -1,12 +1,12 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useComplaintDetails } from "../../../hooks/useComplaints";
 import { ArrowLeft, AlertCircle } from "lucide-react";
-import { StatusBadge } from '../components/StatusBadge';
-import { ComplaintInfoGrid } from '../components/ComplaintInfoGrid';
-import { AttachmentButton } from '../components/AttachmentButton';
+import { StatusBadge } from '../../barangay/components/StatusBadge';
+import { ComplaintInfoGrid } from '../../barangay/components/ComplaintInfoGrid';
+import { AttachmentButton } from '../../barangay/components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
 
-export const ComplaintDetails: React.FC = () => {
+export const LguComplaintDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
@@ -20,7 +20,7 @@ export const ComplaintDetails: React.FC = () => {
     return (
       <div className="space-y-6">
         <button
-          onClick={() => navigate("/dashboard/incidents")}
+          onClick={() => navigate("/lgu/incidents")}
           className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           <ArrowLeft size={16} />

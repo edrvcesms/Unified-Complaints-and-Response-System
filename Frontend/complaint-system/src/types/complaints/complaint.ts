@@ -65,7 +65,7 @@ export interface ComplaintsPageProps {
   isLoading: boolean;
 }
 
-export type StatusFilter = "all" | "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
+export type StatusFilter = "all" | "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
 
 export type SeverityScoreFilter = "all" | "0-3.9" | "4.0-5.9" | "6.0-7.9" | "8.0+";
 
@@ -84,7 +84,7 @@ export interface ActionButtonsProps {
 export const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: "All", value: "all" },
   { label: "Low", value: "LOW" },
-  { label: "Medium", value: "MEDIUM" },
+  { label: "Moderate", value: "MODERATE" },
   { label: "High", value: "HIGH" },
   { label: "Very High", value: "VERY_HIGH" },
 ];

@@ -4,10 +4,12 @@ import type { SortOption } from "../../../hooks/useFilter";
 
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
   { label: "Default", value: "none" },
-  { label: "Severity Score: High to Low", value: "severity_score_desc" },
-  { label: "Severity Score: Low to High", value: "severity_score_asc" },
-  { label: "Severity Level: High to Low", value: "severity_level_desc" },
-  { label: "Severity Level: Low to High", value: "severity_level_asc" },
+  { label: "Priority: High to Low", value: "priority_high_to_low" },
+  { label: "Priority: Low to High", value: "priority_low_to_high" },
+  { label: "Date: Newest First (First Reported)", value: "date_newest_first" },
+  { label: "Date: Oldest First (First Reported)", value: "date_oldest_first" },
+  { label: "Date: Newest Last (Last Reported)", value: "date_newest_last" },
+  { label: "Date: Oldest Last (Last Reported)", value: "date_oldest_last" },
 ];
 
 interface StatusFilterPillsProps {
@@ -67,31 +69,6 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
   </select>
 );
 
-interface SeverityScoreFilterPillsProps {
-  current: SeverityScoreFilter;
-  onChange: (score: SeverityScoreFilter) => void;
-}
-
-export const SeverityScoreFilterPills: React.FC<SeverityScoreFilterPillsProps> = ({
-  current,
-  onChange,
-}) => (
-  <div className="flex gap-2 flex-wrap">
-    {SEVERITY_SCORE_FILTERS.map(({ label, value }) => (
-      <button
-        key={value}
-        onClick={() => onChange(value)}
-        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-          current === value
-            ? "bg-purple-600 text-white"
-            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-        }`}
-      >
-        {label}
-      </button>
-    ))}
-  </div>
-);
 
 interface SeverityScoreFilterDropdownProps {
   current: SeverityScoreFilter;
@@ -153,4 +130,59 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
       </option>
     ))}
   </select>
+);
+
+interface DateFilterProps {
+  dateFrom: string;
+  dateTo: string;
+  minDate?: string;
+  maxDate?: string;
+  onDateFromChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDateToChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+}
+
+export const DateFilter: React.FC<DateFilterProps> = ({
+  dateFrom,
+  dateTo,
+  minDate,
+  maxDate,
+  onDateFromChange,
+  onDateToChange,
+  onClear,
+}) => (
+  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+    <input
+      type="date"
+      value={dateFrom}
+      onChange={onDateFromChange}
+      min={minDate}
+      max={maxDate}
+      className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+        bg-white hover:border-gray-400 transition-colors cursor-pointer"
+      placeholder="From"
+    />
+    <span className="text-gray-500 text-sm hidden sm:block">to</span>
+    <input
+      type="date"
+      value={dateTo}
+      onChange={onDateToChange}
+      min={minDate}
+      max={maxDate}
+      className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+        bg-white hover:border-gray-400 transition-colors cursor-pointer"
+      placeholder="To"
+    />
+    {(dateFrom || dateTo) && (
+      <button
+        onClick={onClear}
+        className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 
+          border border-red-300 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap cursor-pointer"
+      >
+        Clear
+      </button>
+    )}
+  </div>
 );

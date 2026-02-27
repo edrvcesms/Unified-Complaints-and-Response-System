@@ -29,7 +29,7 @@ interface ComplaintInfoGridProps {
 }
 
 export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mt-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
     <InfoCard
       icon={<Tag size={20} />}
       label="Category"
@@ -45,14 +45,6 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       bgColor=""
       iconColor="text-purple-600"
     />
-    
-    {/* <InfoCard
-      icon={<Building2 size={20} />}
-      label="Department"
-      value={complaint.department?.department_name || "N/A"}
-      bgColor="bg-green-100"
-      iconColor="text-green-600"
-    /> */}
     
     <InfoCard
       icon={<User size={20} />}
@@ -77,13 +69,5 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       bgColor=""
       iconColor="text-yellow-600"
     />
-    
-    {/* <InfoCard
-      icon={<MapPin size={20} />}
-      label="Location"
-      value={complaint.location_details || "N/A"}
-      bgColor="bg-red-100"
-      iconColor="text-red-600"
-    /> */}
   </div>
 );

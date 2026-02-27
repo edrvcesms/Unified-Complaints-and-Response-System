@@ -1,155 +1,19 @@
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu } from '../../../hooks/useIncidents';
-import { ConfirmationModal } from "../../general/ConfirmationModal";
-import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { SuccessModal } from "../../general/SuccessModal";
-import { ErrorModal } from "../../general/ErrorModal";
 
-export const IncidentDetails: React.FC = () => {
+export const LguIncidentDetails: React.FC = () => {
   const { t } = useTranslation();
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
 
-  const resolveIncidentMutation = useResolveIncident(Number(incidentId));
-  const reviewIncidentMutation = useReviewIncident(Number(incidentId));
-  const forwardToLguMutation = useForwardIncidentToLgu(Number(incidentId));
-
-  const confirmationModal = useConfirmationModal();
-  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
-    isOpen: false,
-    title: '',
-    message: '',
-  });
-  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
-    isOpen: false,
-    title: '',
-    message: '',
-  });
-
-  // Handle successful resolve
-  useEffect(() => {
-    if (resolveIncidentMutation.isSuccess) {
-      confirmationModal.closeModal();
-      setSuccessModal({
-        isOpen: true,
-        title: 'Success!',
-        message: 'The incident has been resolved successfully.',
-      });
-    }
-  }, [resolveIncidentMutation.isSuccess]);
-
-  // Handle successful review
-  useEffect(() => {
-    if (reviewIncidentMutation.isSuccess) {
-      confirmationModal.closeModal();
-      setSuccessModal({
-        isOpen: true,
-        title: 'Success!',
-        message: 'The incident has been marked for review successfully.',
-      });
-    }
-  }, [reviewIncidentMutation.isSuccess]);
-
-  // Handle successful forward to LGU
-  useEffect(() => {
-    if (forwardToLguMutation.isSuccess) {
-      confirmationModal.closeModal();
-      setSuccessModal({
-        isOpen: true,
-        title: 'Success!',
-        message: 'The incident has been delegated to LGU successfully.',
-      });
-    }
-  }, [forwardToLguMutation.isSuccess]);
-
-  // Handle resolve error
-  useEffect(() => {
-    if (resolveIncidentMutation.isError) {
-      confirmationModal.closeModal();
-      const error = resolveIncidentMutation.error as any;
-      const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
-      setErrorModal({
-        isOpen: true,
-        title: 'Error',
-        message: errorMessage,
-      });
-    }
-  }, [resolveIncidentMutation.isError]);
-
-  // Handle review error
-  useEffect(() => {
-    if (reviewIncidentMutation.isError) {
-      confirmationModal.closeModal();
-      const error = reviewIncidentMutation.error as any;
-      const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
-      setErrorModal({
-        isOpen: true,
-        title: 'Error',
-        message: errorMessage,
-      });
-    }
-  }, [reviewIncidentMutation.isError]);
-
-  // Handle forward to LGU error
-  useEffect(() => {
-    if (forwardToLguMutation.isError) {
-      confirmationModal.closeModal();
-      const error = forwardToLguMutation.error as any;
-      const errorMessage = error?.response?.data?.detail || 'Failed to delegate incident to LGU. Please try again.';
-      setErrorModal({
-        isOpen: true,
-        title: 'Error',
-        message: errorMessage,
-      });
-    }
-  }, [forwardToLguMutation.isError]);
-
   const handleViewAllComplaints = () => {
-    navigate(`/dashboard/incidents/${incidentId}/complaints`);
-  };
-
-  const handleResolve = () => {
-    confirmationModal.openModal({
-      title: "Resolve Incident",
-      message: "Are you sure you want to resolve this incident? This action will mark the incident as resolved.",
-      confirmText: "Resolve",
-      confirmColor: "green",
-      onConfirm: async () => {
-        await resolveIncidentMutation.mutateAsync();
-      },
-    });
-  };
-
-  const handleReview = () => {
-    confirmationModal.openModal({
-      title: "Mark for Review",
-      message: "Are you sure you want to mark this incident for review?",
-      confirmText: "Confirm",
-      confirmColor: "yellow",
-      onConfirm: async () => {
-        await reviewIncidentMutation.mutateAsync();
-      },
-    });
-  };
-
-  const handleForwardToLgu = () => {
-    confirmationModal.openModal({
-      title: "Delegate to LGU",
-      message: "Are you sure you want to delegate this incident to the Local Government Unit? This action cannot be undone.",
-      confirmText: "Delegate to LGU",
-      confirmColor: "blue",
-      onConfirm: async () => {
-        await forwardToLguMutation.mutateAsync();
-      },
-    });
+    navigate(`/lgu/incidents/${incidentId}/complaints`);
   };
 
   if (isLoading) {
@@ -170,7 +34,7 @@ export const IncidentDetails: React.FC = () => {
   return (
     <div className="space-y-6">
       <button
-        onClick={() => navigate("/dashboard/incidents")}
+        onClick={() => navigate("/lgu/incidents")}
         className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
@@ -309,58 +173,6 @@ export const IncidentDetails: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        <button
-          onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending}
-          className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
-        </button>
-        <button
-          onClick={handleForwardToLgu}
-          disabled={forwardToLguMutation.isPending}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {forwardToLguMutation.isPending ? "Forwarding..." : "Delegate to LGU"}
-        </button>
-        <button
-          onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending}
-          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
-        </button>
-      </div>
-
-      <ConfirmationModal
-        isOpen={confirmationModal.isOpen}
-        title={confirmationModal.title}
-        message={confirmationModal.message}
-        confirmText={confirmationModal.confirmText}
-        confirmColor={confirmationModal.confirmColor}
-        onConfirm={confirmationModal.confirm}
-        onCancel={confirmationModal.closeModal}
-        isLoading={confirmationModal.isLoading}
-      />
-
-      <SuccessModal
-        isOpen={successModal.isOpen}
-        title={successModal.title}
-        message={successModal.message}
-        onClose={() => {
-          navigate(`/dashboard/incidents`);
-          setSuccessModal({ isOpen: false, title: '', message: '' });
-        }}
-      />
-
-      <ErrorModal
-        isOpen={errorModal.isOpen}
-        title={errorModal.title}
-        message={errorModal.message}
-        onClose={() => setErrorModal({ isOpen: false, title: '', message: '' })}
-      />
     </div>
   );
 };

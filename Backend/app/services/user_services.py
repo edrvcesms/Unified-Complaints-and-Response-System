@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse
 from app.tasks import send_otp_email_task
 from app.utils.logger import logger
 from app.utils.caching import set_cache, get_cache, delete_cache
+from app.core.config import settings
+import httpx
 
 async def get_user_by_id(user_id: int, db: AsyncSession) -> UserData:
     try:
@@ -207,3 +209,82 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
         await db.rollback()
         logger.error(f"Error updating location for user ID {user_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+
+async def save_push_token(db: AsyncSession, user_id: str, token: str) -> User:
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+
+        if not user:
+            raise ValueError(f"User with id '{user_id}' not found.")
+
+        user.push_token = token
+
+        db.commit()
+        db.refresh(user)
+
+        return user
+    except ValueError:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"Failed to save push token for user '{user_id}': {e}") from e
+
+
+async def send_push_notification(
+    db: AsyncSession,
+    user_id: str,
+    title: str,
+    body: str,
+    data: dict = {},
+) -> dict:
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+
+        if not user:
+            raise ValueError(f"User with id '{user_id}' not found.")
+       
+       
+        if not user.push_token:
+            return {"status": "skipped", "reason": f"User '{user_id}' has no push token registered."}
+
+    except ValueError:
+        raise
+    except Exception as e:
+        raise Exception(f"Failed to fetch user '{user_id}' from database: {e}") from e
+
+    try:
+        payload = {
+            "to": user.push_token,
+            "title": title,
+            "body": body,
+            "data": data,
+            "sound": "default",
+            "priority": "high",
+        }
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                settings.EXPO_PUSH_URL,
+                json=payload,
+                headers={
+                    "Accept": "application/json",
+                    "Accept-Encoding": "gzip, deflate",
+                    "Content-Type": "application/json",
+                },
+            )
+
+        if response.status_code != 200:
+            raise Exception(f"Expo push notification failed: {response.status_code} - {response.text}")
+
+        result = response.json()
+
+        errors = [item for item in result.get("data", []) if item.get("status") == "error"]
+        if errors:
+            raise Exception(f"Expo reported delivery errors: {errors}")
+
+        return result
+    except Exception as e:
+        raise Exception(f"Failed to send push notification to user '{user_id}': {e}") from e

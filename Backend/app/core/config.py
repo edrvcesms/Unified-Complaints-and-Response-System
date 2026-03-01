@@ -21,6 +21,7 @@ class Settings:
     PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY")
     PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
+    EXPO_PUSH_URL = os.getenv("EXPO_PUSH_URL")
     
 
 settings = Settings()

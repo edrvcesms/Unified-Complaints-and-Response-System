@@ -22,7 +22,7 @@ export interface Complaint {
   attachment: Attachment[];
 }
 
-export type ComplaintStatus = "submitted" | "under_review" | "resolved";
+export type ComplaintStatus = "submitted" | "under_review" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department";
 
 export type ActivePage = "dashboard" | "complaints" | "complaint_details";
 

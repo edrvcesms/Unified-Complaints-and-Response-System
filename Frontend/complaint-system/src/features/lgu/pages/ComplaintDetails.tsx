@@ -5,10 +5,13 @@ import { StatusBadge } from '../../barangay/components/StatusBadge';
 import { ComplaintInfoGrid } from '../../barangay/components/ComplaintInfoGrid';
 import { AttachmentButton } from '../../barangay/components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
+import { useAuthStore } from "../../../store/authStore";
+import { formatStatus } from "../../../utils/incidentHelpers";
 
 export const LguComplaintDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const userRole = useAuthStore(state => state.userRole);
   
   const { complaint, isLoading, error } = useComplaintDetails(Number(id));
 
@@ -53,7 +56,7 @@ export const LguComplaintDetails: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">Complaint #{complaint.id}</p>
               </div>
               <div className="shrink-0">
-                <StatusBadge status={complaint.status} />
+                <StatusBadge status={complaint.status} userRole={userRole || undefined} />
               </div>
             </div>
 
@@ -88,7 +91,7 @@ export const LguComplaintDetails: React.FC = () => {
               <div>
                 <p className="text-xs text-gray-500 mb-1">Status</p>
                 <p className="text-sm font-medium text-gray-900 capitalize">
-                  {complaint.status.replace("_", " ")}
+                  {formatStatus(complaint.status, userRole || undefined)}
                 </p>
               </div>
               {complaint.user && (

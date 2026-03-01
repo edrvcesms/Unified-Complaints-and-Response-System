@@ -3,7 +3,7 @@ import type { LoginRequestData, LoginResponseData } from "../../types/auth/login
 import { handleApiError } from "../../utils/apiErrorHandler";
 import { useAuthStore } from "../../store/authStore";
 
-export const loginBarangayAccount = async (
+export const loginAccount = async (
   data: LoginRequestData
 ): Promise<LoginResponseData> => {
   try {
@@ -13,7 +13,9 @@ export const loginBarangayAccount = async (
     store.setAccessToken(response.access_token);
     store.mapDataFromBackend(response);
 
-    if (!store.isAuthenticated) {
+    const updatedStore = useAuthStore.getState();
+    
+    if (!updatedStore.isAuthenticated) {
       store.clearAuthLocal();
       throw new Error("Unauthorized: Invalid user role. Access denied.");
     }
@@ -26,6 +28,7 @@ export const loginBarangayAccount = async (
     if (error.message?.includes("Unauthorized")) {
       throw error;
     }
+    console.error("Login error:", error);
     throw handleApiError(error);
   }
 };
@@ -33,8 +36,7 @@ export const loginBarangayAccount = async (
 export const logoutBarangayAccount = async (): Promise<void> => {
   try {
     await authApi.post<void>("/logout", {});
-    useAuthStore.getState().clearAuth?.();
-  } catch (error) {
-    throw handleApiError(error);
+  } catch (error: any) {
+    console.warn("Logout API call failed (this is OK, clearing local auth):", error.message);
   }
 };

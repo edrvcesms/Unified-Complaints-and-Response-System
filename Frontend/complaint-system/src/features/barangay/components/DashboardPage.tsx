@@ -20,7 +20,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
     total: complaints.length,
     submitted: complaints.filter(c => c.status === "submitted").length,
     underReview: complaints.filter(c => c.status === "under_review").length,
-    forwarded: complaints.filter(c => c.status === "forwarded_to_lgu").length,
+    forwarded: complaints.filter(c => c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department").length,
     resolved: complaints.filter(c => c.status === "resolved").length,
   }), [complaints]);
 
@@ -33,7 +33,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
     if (!weeklyStats) return [];
 
-    console.log("📊 Weekly Stats from backend:", weeklyStats);
 
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const today = new Date();
@@ -53,7 +52,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
       };
     });
 
-    console.log("📈 Transformed chart data:", JSON.stringify(data, null, 2));
     return data;
   }, [weeklyStats]);
 
@@ -144,12 +142,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}
                         ${c.status === "under_review" ? "bg-blue-100 text-blue-800" : ""}
-                        ${c.status === "forwarded_to_lgu" ? "bg-orange-100 text-orange-800" : ""}
+                        ${c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? "bg-orange-100 text-orange-800" : ""}
                         ${c.status === "resolved" ? "bg-green-100 text-green-800" : ""}
                       `}>
                         {c.status === "submitted" ? t('dashboard.statuses.submitted') :
                          c.status === "under_review" ? t('dashboard.statuses.underReview') : 
-                         c.status === "forwarded_to_lgu" ? t('dashboard.statuses.forwarded') :
+                         c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? t('dashboard.statuses.unresolved') :
                          c.status === "resolved" ? t('dashboard.statuses.resolved') :
                          c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                       </span>

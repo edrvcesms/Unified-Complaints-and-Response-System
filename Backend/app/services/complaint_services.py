@@ -207,12 +207,10 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
 
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
         
-        # Invalidate all related caches
         await delete_cache(f"user_complaints:{user_id}")
         await delete_cache("all_complaints")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{updated_complaint.barangay_id}")
         
-        # Invalidate barangay incidents cache (incident will be created/updated by celery task)
         if updated_complaint.barangay_id:
             await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
             await delete_cache(f"barangay_{updated_complaint.barangay_id}_complaints")
@@ -258,11 +256,14 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
+        department_account_id = first_complaint.department_account_id if first_complaint else None
 
         await delete_cache("all_complaints")
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        if department_account_id:
+            await delete_cache(f"department_incidents:{department_account_id}")
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
             await delete_cache(f"barangay_{barangay_id}_complaints")
@@ -317,11 +318,16 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
+        department_account_id = first_complaint.department_account_id if first_complaint else None
 
         await delete_cache("all_complaints")
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        
+        if department_account_id:
+            await delete_cache(f"department_incidents:{department_account_id}")
+        
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
             await delete_cache(f"barangay_{barangay_id}_complaints")

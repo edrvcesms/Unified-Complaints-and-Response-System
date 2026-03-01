@@ -10,6 +10,7 @@ from app.dependencies.db_dependency import get_async_db
 from app.core.security import verify_token
 from app.constants.roles import UserRole
 from app.models.barangay_account import BarangayAccount
+from app.models.department_account import DepartmentAccount
 from app.utils.logger import logger
 
 bearer = HTTPBearer()
@@ -39,6 +40,12 @@ async def get_current_user(
         result = await db.execute(select(User).options(selectinload(User.barangay_account).selectinload(BarangayAccount.barangay)).where(User.id == user_id))
         user = result.scalars().first()
         logger.info(f"Fetched user with barangay data: {user}, Barangay: {user.barangay_account.barangay_id if user.barangay_account else 'N/A'}")
+        return user
+    
+    if user.role == UserRole.DEPARTMENT_STAFF:
+        result = await db.execute(select(User).options(selectinload(User.department_account)).where(User.id == user_id))
+        user = result.scalars().first()
+        logger.info(f"Fetched user with department data: {user}, Department Account ID: {user.department_account.id if user.department_account else 'N/A'}")
         return user
 
     return user

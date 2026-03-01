@@ -6,9 +6,10 @@ import type { Complaint } from "../../../types/complaints/complaint";
 interface ComplaintCardProps {
   complaint: Complaint;
   onClick: (id: number) => void;
+  userRole?: string;
 }
 
-export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick }) => {
+export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick, userRole }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const descriptionLength = complaint.description?.length || 0;
   const shouldShowViewMore = descriptionLength > 150;
@@ -41,7 +42,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
           </p>
         </div>
         <div className="shrink-0">
-          <StatusBadge status={complaint.status} />
+          <StatusBadge status={complaint.status} userRole={userRole} />
         </div>
       </div>
       <div className="mb-3">

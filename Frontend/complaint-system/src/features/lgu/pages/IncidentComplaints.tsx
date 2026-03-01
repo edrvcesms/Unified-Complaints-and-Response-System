@@ -4,10 +4,12 @@ import { ArrowLeft } from "lucide-react";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { SkeletonComplaintCard } from "../../barangay/components/Skeletons";
 import { ComplaintCard } from "../../barangay/components/ComplaintCard";
+import { useAuthStore } from "../../../store/authStore";
 
 export const LguIncidentComplaints: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
+  const userRole = useAuthStore(state => state.userRole);
 
   const { incident, isLoading: incidentLoading } = useIncidentDetails(Number(incidentId));
   const {
@@ -80,6 +82,7 @@ export const LguIncidentComplaints: React.FC = () => {
                 key={complaint.id} 
                 complaint={complaint} 
                 onClick={handleComplaintClick}
+                userRole={userRole || undefined}
               />
             ))}
           </div>

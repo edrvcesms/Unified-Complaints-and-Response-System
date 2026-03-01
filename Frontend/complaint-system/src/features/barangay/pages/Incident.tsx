@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { IncidentsTable } from "../components/IncidentsTable";
-import { SearchInput } from "../components/SearchInputs";
+import { SearchInput } from "../../general";
 import { StatusFilterDropdown, SortDropdown, DateFilter } from "../components/Filters";
 
 export const IncidentPage: React.FC = () => {

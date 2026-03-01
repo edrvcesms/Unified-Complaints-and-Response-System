@@ -1,7 +1,7 @@
 import { useAllForwardedIncidents } from "../../../hooks/useIncidents";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
-import { SearchInput } from "../../barangay/components/SearchInputs";
+import { SearchInput } from "../../general";
 import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { useTranslation } from "react-i18next";
 import { ErrorMessage, PageHeader } from "../../general";

@@ -24,6 +24,7 @@
       "submitted": "Submitted",
       "underReview": "Under Review",
       "forwarded": "Forwarded",
+      "unresolved": "Unresolved",
       "resolved": "Resolved"
     }
   },

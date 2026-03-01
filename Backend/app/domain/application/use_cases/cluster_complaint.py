@@ -183,6 +183,10 @@ class ClusterComplaintUseCase:
 
             logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
 
+        # Initialize default values for new incidents
+        existing_status = "submitted"
+        message = "A new incident has been created for your complaint."
+
         if is_match:
             # Check existing complaint statuses before merging
             statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)

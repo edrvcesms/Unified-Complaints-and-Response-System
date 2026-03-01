@@ -62,8 +62,10 @@ export const handleApiError = (error: unknown): ApiError => {
     const data = axiosError.response.data as any;
 
     // Extract custom backend message if available
+    // FastAPI uses 'detail', other backends may use 'message', 'error', or 'errors'
     let customMessage: string | undefined;
-    if (data?.message) customMessage = data.message;
+    if (data?.detail) customMessage = data.detail;
+    else if (data?.message) customMessage = data.message;
     else if (data?.error) customMessage = typeof data.error === "string" ? data.error : data.error.message;
     else if (data?.errors && Array.isArray(data.errors)) customMessage = data.errors[0]?.message || data.errors[0];
 

@@ -31,11 +31,11 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   const { isAuthenticated, userRole, hasInvalidRole } = useUserRole();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/officials-login" replace />;
   }
 
   if (hasInvalidRole) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/officials-login" replace />;
   }
 
   if (userRole && !allowedRoles.includes(userRole)) {
@@ -48,7 +48,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     if (userRole === 'department_staff') {
       return <Navigate to="/department/dashboard" replace />;
     }
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/officials-login" replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;
@@ -60,7 +60,7 @@ export const BarangayProtectedRoute: React.FC<{ children?: React.ReactNode }> = 
   return (
     <ProtectedRoute
       isAllowed={isAuthenticated}
-      redirectPath="/login"
+      redirectPath="/officials-login"
     >
       {children}
     </ProtectedRoute>

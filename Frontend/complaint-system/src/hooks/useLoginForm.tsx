@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSubmitForm } from "./useSubmitForm";
+import { useMutation } from "@tanstack/react-query";
 import type { LoginFormErrors, LoginRequestData } from "../types/auth/login";
-import { authInstance } from "../services/axios/apiServices";
-import { useBarangayStore } from "../store/authStore";
+import { loginAccount } from "../services/authentication/auth";
 import { validateEmail, validatePassword } from "../utils/validators";
 
 export const useLoginForm = () => {
@@ -13,26 +12,16 @@ export const useLoginForm = () => {
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-
-  const { mutate, isPending } = useSubmitForm<LoginRequestData>({
-    endpoint: "/officials-login",
-    method: "post",
-    axiosInstance: authInstance,
-    validators: [validateEmail, validatePassword],
-
-    onSuccess: (data) => {
-      console.log("Login successful:", data);
-      useBarangayStore.getState().setAccessToken(data.access_token);
-      useBarangayStore.getState().mapDataFromBackend(data);
-      console.log("Updated store with account data:", useBarangayStore.getState().barangayAccountData);
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: LoginRequestData) => loginAccount(data),
+    onSuccess: () => {
+      console.log("Login successful");
       navigate("/dashboard");
     },
-
-    onError: ({ general, errors: fieldErrors }) => {
-      console.error("Login error:", general, fieldErrors);
+    onError: (error: any) => {
+      console.error("Login error:", error);
       setErrors({
-        general,
-        ...fieldErrors,
+        general: error.message || "Login failed. Please try again.",
       });
     },
   });
@@ -48,8 +37,20 @@ export const useLoginForm = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-    mutate(formData);
 
+    const validationErrors: LoginFormErrors = {};
+    const emailError = validateEmail(formData);
+    const passwordError = validatePassword(formData);
+    
+    if (emailError) Object.assign(validationErrors, emailError);
+    if (passwordError) Object.assign(validationErrors, passwordError);
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    mutate(formData);
   };
 
   const handleForgotPassword = () => navigate("/forgot-password");

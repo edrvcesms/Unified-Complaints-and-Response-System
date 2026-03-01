@@ -37,7 +37,7 @@ class User(Base):
 
     report = relationship("Report", back_populates="user")
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
-    department_account = relationship("DepartmentAccount", back_populates="user")
+    department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)
     complaint = relationship("Complaint", back_populates="user")
     attachment = relationship("Attachment", back_populates="uploader")
     response = relationship("Response", back_populates="responder")

@@ -16,7 +16,7 @@ const processQueue = (error?: any) => {
   failedQueue = [];
 };
 
-const SKIP_REFRESH_URLS = ["/login", "/refresh-token", "/logout"];
+const SKIP_REFRESH_URLS = ["/login", "/officials-login", "/refresh-token", "/logout"];
 
 const shouldSkipRefresh = (url?: string): boolean => {
   if (!url) return false;

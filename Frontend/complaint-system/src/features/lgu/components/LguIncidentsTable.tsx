@@ -6,6 +6,7 @@ import { Pagination } from "../../barangay/components/Pagination";
 import { SkeletonRow } from "../../barangay/components/Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { getSeverityColor, getStatusColor, formatStatus } from "../../../utils/incidentHelpers";
+import { useAuthStore } from "../../../store/authStore";
 
 interface LguIncidentTableRowProps {
   incident: Incident;
@@ -13,6 +14,7 @@ interface LguIncidentTableRowProps {
 
 const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) => {
   const navigate = useNavigate();
+  const userRole = useAuthStore(state => state.userRole);
 
   const handleView = () => {
     navigate(`/lgu/incidents/${incident.id}`);
@@ -40,8 +42,8 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
         </span>
       </td>
       <td className="px-4 py-3 text-center">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incidentStatus)}`}>
-          {formatStatus(incidentStatus)}
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incidentStatus, userRole || undefined)}`}>
+          {formatStatus(incidentStatus, userRole || undefined)}
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">

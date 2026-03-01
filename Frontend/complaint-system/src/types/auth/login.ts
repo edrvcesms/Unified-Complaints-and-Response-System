@@ -1,4 +1,5 @@
 import type { BarangayAccount } from "../barangay/barangayAccount";
+import type { UserRole } from "./userRole";
 
 export interface LoginRequestData {
   role: string;
@@ -16,6 +17,7 @@ export interface LoginResponseData {
   access_token: string;
   refresh_token?: string | null;
   message?: string;
+  role: UserRole;
   barangayAccountData?: {
     id: number;
     barangay_name: string;

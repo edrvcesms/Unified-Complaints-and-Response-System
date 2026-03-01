@@ -51,7 +51,7 @@ export const IncidentComplaints: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-        <div className="mb-4 sm:mb-6">\n          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+        <div className="mb-4 sm:mb-6"><h2 className="text-base sm:text-lg font-semibold text-gray-900">
             All Complaints ({incident.complaint_count})
           </h2>
           <p className="text-sm text-gray-600 mt-1">

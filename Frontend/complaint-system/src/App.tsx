@@ -82,7 +82,7 @@ function App() {
 
           {/* Auth Routes (Login) */}
           <Route element={<AuthRoutes />}>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/officials-login" element={<LoginPage />} />
           </Route>
 
           {/* 404 Not Found */}

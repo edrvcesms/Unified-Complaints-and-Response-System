@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import type { UserRole } from "../types/auth/userRole";
 import { refreshToken } from "../services/authentication/token";
-import { logoutBarangayAccount } from "../services/authentication/barangayAuth";
+import { logoutBarangayAccount } from "../services/authentication/auth";
 import type { DepartmentAccount } from "../types/department/departmentAccount";
 
 interface AuthState {
@@ -40,83 +40,44 @@ export const useAuthStore = create<AuthState>((set) => ({
     setIsLoading: (loading) => set({ isLoading: loading }),
     isAuthenticated: false,
     mapDataFromBackend: (data: any) => {
+        
         let role = data.role || null;
         let barangayData = null;
         let departmentData = null;
 
         if (data.barangayAccountData) {
-            barangayData = {
-                id: data.barangayAccountData.id,
-                barangay_name: data.barangayAccountData.barangay_name,
-                barangay_address: data.barangayAccountData.barangay_address,
-                barangay_contact_number: data.barangayAccountData.barangay_contact_number,
-                barangay_email: data.barangayAccountData.barangay_email,
-                barangay_account: {
-                    id: data.barangayAccountData.barangay_account.id,
-                    user_id: data.barangayAccountData.barangay_account.user_id,
-                    barangay_id: data.barangayAccountData.barangay_account.barangay_id,
-                    user: {
-                        id: data.barangayAccountData.barangay_account.user.id,
-                        email: data.barangayAccountData.barangay_account.user.email,
-                        first_name: data.barangayAccountData.barangay_account.user.first_name,
-                        middle_name: data.barangayAccountData.barangay_account.user.middle_name,
-                        last_name: data.barangayAccountData.barangay_account.user.last_name,
-                        suffix: data.barangayAccountData.barangay_account.user.suffix,
-                        role: data.barangayAccountData.barangay_account.user.role,
-                        age: data.barangayAccountData.barangay_account.user.age,
-                        birthdate: data.barangayAccountData.barangay_account.user.birthdate,
-                        barangay: data.barangayAccountData.barangay_account.user.barangay,
-                        full_address: data.barangayAccountData.barangay_account.user.full_address,
-                        zip_code: data.barangayAccountData.barangay_account.user.zip_code,
-                        id_type: data.barangayAccountData.barangay_account.user.id_type,
-                        id_number: data.barangayAccountData.barangay_account.user.id_number,
-                        latitude: data.barangayAccountData.barangay_account.user.latitude,
-                        longitude: data.barangayAccountData.barangay_account.user.longitude,
-                        front_id: data.barangayAccountData.barangay_account.user.front_id,
-                        back_id: data.barangayAccountData.barangay_account.user.back_id,
-                        selfie_with_id: data.barangayAccountData.barangay_account.user.selfie_with_id,
-                        phone_number: data.barangayAccountData.barangay_account.user.phone_number,
-                        gender: data.barangayAccountData.barangay_account.user.gender,
-                        is_administrator: data.barangayAccountData.barangay_account.user.is_administrator,
-                        last_login: data.barangayAccountData.barangay_account.user.last_login
-                    }
-                }
-            };
+            barangayData = data.barangayAccountData;
         }
         
         if (data.departmentAccountData) {
             departmentData = data.departmentAccountData;
         }
 
+        const validRoles: UserRole[] = ['barangay_official', 'lgu_official', 'department_staff'];
+        const isValidRole = role && validRoles.includes(role);
+
         set({
             barangayAccountData: barangayData,
             departmentAccountData: departmentData,
             userRole: role,
-            isAuthenticated: true
+            isAuthenticated: isValidRole
         });
     },
     clearAuth: async () => {
         set({ isLoading: true });
         try {
             await logoutBarangayAccount();
-            set({
-                accessToken: null,
-                barangayAccountData: null,
-                departmentAccountData: null,
-                userRole: null,
-                isAuthenticated: false
-            });
         } catch (error) {
-            console.error("Error during logout:", error);
+            console.warn("Logout failed, but clearing local auth anyway:", error);
+        } finally {
             set({
                 accessToken: null,
                 barangayAccountData: null,
                 departmentAccountData: null,
                 userRole: null,
-                isAuthenticated: false
+                isAuthenticated: false,
+                isLoading: false
             });
-        } finally {
-            set({ isLoading: false });
         }
     },
     clearAuthLocal: () => {

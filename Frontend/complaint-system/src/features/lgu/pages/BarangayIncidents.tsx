@@ -4,7 +4,7 @@ import { useForwardedIncidents } from "../../../hooks/useIncidents";
 import { useBarangayById } from "../../../hooks/useBarangays";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
-import { SearchInput } from "../../barangay/components/SearchInputs";
+import { useTranslation } from "react-i18next";
 import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { ErrorMessage, BackButton } from "../../general";
 
@@ -15,6 +15,7 @@ export const BarangayIncidents: React.FC = () => {
 
   const { incidents, isLoading: incidentsLoading, error: incidentsError } = useForwardedIncidents(barangayIdNum);
   const { barangay, isLoading: barangayLoading } = useBarangayById(barangayIdNum);
+  const { t } = useTranslation();
 
   const {
     search,
@@ -65,14 +66,21 @@ export const BarangayIncidents: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        {/* Severity Filter */}
-        <div className="flex-1 min-w-[200px]">
-          <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
+            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Sort By</label>
+            <SortDropdown current={sortBy} onChange={handleSortChange} />
+          </div>
         </div>
-        {/* Date Range */}
-        <div className="flex-1 min-w-[140px]">
-          <DateFilter 
+
+        <div className="shrink-0 w-full lg:w-auto">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
+          <DateFilter
             dateFrom={dateFrom}
             dateTo={dateTo}
             minDate={minDate}
@@ -80,18 +88,6 @@ export const BarangayIncidents: React.FC = () => {
             onDateFromChange={handleDateFromChange}
             onDateToChange={handleDateToChange}
             onClear={handleClearDateFilter}
-          />
-        </div>
-        {/* Sort Filter */}
-        <div className="flex-1 min-w-[200px]">
-          <SortDropdown current={sortBy} onChange={handleSortChange} />
-        </div>
-
-        {/* Hidden severity score filter - logic still applies */}
-        <div className="hidden">
-          <SeverityScoreFilterDropdown 
-            current={filterSeverityScore} 
-            onChange={handleSeverityScoreFilterChange} 
           />
         </div>
       </div>

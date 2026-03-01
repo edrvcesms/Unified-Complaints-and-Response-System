@@ -19,6 +19,7 @@ class User(Base):
     role = Column(String, default="user")
     barangay = Column(String, nullable=True)
     zip_code = Column(String, nullable=True)
+    push_token = Column(String, nullable=True)
     full_address = Column(String, nullable=True)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)

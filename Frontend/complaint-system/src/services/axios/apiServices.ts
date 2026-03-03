@@ -9,9 +9,11 @@ export const barangayInstance = createApiInstance(`${BASE_URL}/barangays`, true)
 export const complaintsInstance = createApiInstance(`${BASE_URL}/complaints`, true);
 export const incidentsInstance = createApiInstance(`${BASE_URL}/incidents`, true);
 export const lguInstance = createApiInstance(`${BASE_URL}/lgu`, true);
+export const notificationInstance = createApiInstance(`${BASE_URL}/notifications`, true);
 
 export const authApi = createApiClient(authInstance);
 export const barangayApi = createApiClient(barangayInstance);
 export const complaintsApi = createApiClient(complaintsInstance);
 export const incidentsApi = createApiClient(incidentsInstance);
 export const lguApi = createApiClient(lguInstance);
+export const notificationApi = createApiClient(notificationInstance);

@@ -15,12 +15,12 @@ class SSEManager:
             self._redis = await aioredis.from_url(self.redis_url)
         return self._redis
 
-    async def send(self, user_id: str, data: Any, event: str = "message"):
+    async def send(self, user_id: str | int, data: Any, event: str = "message"):
         """
         Send a notification to a specific user.
 
         Args:
-            user_id: The target user's ID.
+            user_id: The target user's ID (string or int).
             event:   A string label for the event type. The React Native
                      client uses this to route to the right listener.
             data:    Any JSON-serializable dict.
@@ -61,7 +61,7 @@ class SSEManager:
         """
         redis = await self.get_redis()
         payload = json.dumps({"event": event, "data": data})
-        await redis.publish(f"sse:{user_id}", payload)
+        await redis.publish(f"sse:{str(user_id)}", payload)
 
     async def broadcast(self, data: Any, event: str = "message"):
         """
@@ -96,7 +96,7 @@ class SSEManager:
         payload = json.dumps({"event": event, "data": data})
         await redis.publish("sse:broadcast", payload)
 
-    def stream(self, user_id: str):
+    def stream(self, user_id: str | int):
         """
         Returns a StreamingResponse for the given user.
         Use this directly as the return value of your endpoint.
@@ -136,8 +136,9 @@ class SSEManager:
         async def event_generator():
             redis = await self.get_redis()
             pubsub = redis.pubsub()
+            user_id_str = str(user_id)
 
-            await pubsub.subscribe(f"sse:{user_id}", "sse:broadcast")
+            await pubsub.subscribe(f"sse:{user_id_str}", "sse:broadcast")
 
             try:
                 while True:
@@ -155,7 +156,7 @@ class SSEManager:
             except asyncio.CancelledError:
                 pass
             finally:
-                await pubsub.unsubscribe(f"sse:{user_id}", "sse:broadcast")
+                await pubsub.unsubscribe(f"sse:{user_id_str}", "sse:broadcast")
                 await pubsub.close()
 
         return StreamingResponse(

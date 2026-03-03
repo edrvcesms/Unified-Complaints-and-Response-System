@@ -16,6 +16,7 @@ class ComplaintBaseModel(BaseModel):
     description: str
     location_details: Optional[str] = None
     barangay_id: int
+    barangay_account_id: Optional[int] = None
     category_id: int
 
 class ComplaintCreateData(ComplaintBaseModel):

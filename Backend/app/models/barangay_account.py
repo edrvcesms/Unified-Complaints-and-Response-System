@@ -15,3 +15,4 @@ class BarangayAccount(Base):
     user = relationship("User", back_populates="barangay_account")
     barangay = relationship("Barangay", back_populates="barangay_account")
     report = relationship("Report", back_populates="barangay_account")
+    complaint = relationship("Complaint", back_populates="barangay_account")

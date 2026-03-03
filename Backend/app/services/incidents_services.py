@@ -2,6 +2,8 @@ from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.department_account import DepartmentAccount
+from app.services.notification_services import create_notification
 from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
@@ -9,8 +11,10 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.utils.logger import logger
 from app.utils.caching import delete_cache, set_cache, get_cache
+from app.schemas.notification_schema import NotificationCreateData
+from app.services.sse_manager import sse_manager
+from app.models.user import User
 from sqlalchemy.orm import selectinload
 
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
@@ -147,6 +151,45 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
+                sse_manager.send(
+                    user_id=str(complaint.user_id),
+                    event="complaint_forwarded_to_lgu",
+                    data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the local government unit for further processing."}
+                )
+                logger.info(f"Sent SSE notification to user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
+                new_notification = NotificationCreateData(
+                    title="Complaint Forwarded to LGU",
+                    user_id=complaint.user_id,
+                    message=f"Your complaint with ID {complaint.id} has been forwarded to the local government unit for further processing.",
+                    complaint_id=complaint.id,
+                    channel="sse",
+                    notification_type="complaint_update",
+                )
+                await create_notification(new_notification, db)
+        
+        
+        result = await db.execute(
+            select(User).where(User.role == "lgu_official")
+        )
+        lgu_officials = result.scalars().all()
+        for official in lgu_officials:
+            sse_manager.send(
+                user_id=str(official.id),
+                event="new_incident_forwarded_to_lgu",
+                data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to the LGU."}    
+            )
+            logger.info(f"Sent SSE notification to LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
+            new_notification = NotificationCreateData(
+                title="New Incident Forwarded to LGU",
+                user_id=official.id,
+                message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
+                complaint_id=None,
+                channel="sse",
+                notification_type="new_incident_forwarded_to_lgu",
+            )
+            await create_notification(new_notification, db)
+            logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
+            
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "All complaints under this incident have been forwarded to LGU"}
@@ -201,7 +244,48 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
+                sse_manager.send(
+                    user_id=str(complaint.user_id),
+                    event="complaint_forwarded_to_department",
+                    data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the relevant department for further processing."}
+                )
+                logger.info(f"Sent SSE notification to user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
+                new_notification = NotificationCreateData(
+                    title="Complaint Forwarded to Department",
+                    user_id=complaint.user_id,
+                    message=f"Your complaint with ID {complaint.id} has been forwarded to the relevant department for further processing.",
+                    complaint_id=complaint.id,
+                    channel="sse",
+                    notification_type="complaint_update",
+                )
+                await create_notification(new_notification, db)
+                logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
                 
+        result = await db.execute(
+            select(IncidentModel)
+            .options(
+                selectinload(IncidentModel.department_account).selectinload(DepartmentAccount.user)
+            ).where(IncidentModel.id == incident_id)
+        )
+        incident = result.scalars().first()
+        if incident and incident.department_account and incident.department_account.user:
+            sse_manager.send(
+                user_id=str(incident.department_account.user.id),
+                event="new_incident_forwarded_to_department",
+                data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to your department."}
+            )
+            logger.info(f"Sent SSE notification to department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")
+            new_notification = NotificationCreateData(
+                title="New Incident Forwarded to Department",
+                user_id=incident.department_account.user.id,
+                message=f"A new incident with ID {incident.id} has been forwarded to your department.",
+                complaint_id=None,
+                channel="sse",
+                notification_type="new_incident_forwarded_to_department",
+            )
+            await create_notification(new_notification, db)
+            logger.info(f"Created notification for department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")
+            
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "All complaints under this incident have been forwarded to the department"}

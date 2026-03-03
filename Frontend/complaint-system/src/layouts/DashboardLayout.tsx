@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import { HamburgerIcon } from "../features/barangay/components/Icons";
+import { useNotifications } from "../hooks/useNotifications";
 
 interface DashboardLayoutProps {
   SidebarComponent: React.ComponentType<{ isOpen: boolean; onClose: () => void }>;
@@ -8,6 +9,29 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarComponent }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleNotification = useCallback((notification: any) => {
+    console.log('Received notification:', notification);
+    
+    switch (notification.event) {
+      case 'new_complaint':
+        console.log('New complaint received:', notification.data);
+        break;
+      case 'complaint_update':
+        console.log('Complaint updated:', notification.data);
+        break;
+      case 'system_alert':
+        console.log('System alert:', notification.data);
+        break;
+      default:
+        console.log('Other notification:', notification);
+    }
+  }, []); 
+  
+  useNotifications({
+    events: ['*'],
+    onNotification: handleNotification
+  });
 
   return (
     <div

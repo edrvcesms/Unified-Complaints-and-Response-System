@@ -11,6 +11,7 @@ class Complaint(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False)
+    barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
     title = Column(String, nullable=False)
@@ -24,6 +25,7 @@ class Complaint(Base):
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")
+    barangay_account = relationship("BarangayAccount", back_populates="complaint")
     department_account = relationship("DepartmentAccount", back_populates="complaint")
     category = relationship("Category", back_populates="complaint")
     images = relationship("ComplaintImage", back_populates="complaint")

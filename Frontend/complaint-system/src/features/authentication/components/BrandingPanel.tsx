@@ -9,11 +9,9 @@ export const BrandingPanel: React.FC = () => {
     className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
     style={{ background: "linear-gradient(160deg, #003087 0%, #0055b3 60%, #0077cc 100%)" }}
   >
-    <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-10 bg-white" />
-    <div className="absolute -bottom-32 -right-16 w-80 h-80 rounded-full opacity-10 bg-white" />
 
     <div className="relative z-10 flex flex-col items-center text-center px-12 space-y-6">
-      <div className="w-36 h-36 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white">
+      <div className="w-56 h-56 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white">
         <img
           src={StaMariaLogo}
           alt="Bayan ng Santa Maria, Laguna Seal"

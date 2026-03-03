@@ -257,6 +257,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             )
             await create_notification(notification_data, db)
             logger.info(f"Notification created for user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
+            await delete_cache(f"user_notifications:{updated_complaint.barangay_account.user_id}")
         else:
             logger.info(f"No barangay account found for complaint ID: {updated_complaint.id}, skipping notification")
             
@@ -345,6 +346,7 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
                     is_read=False
                 )
                 await create_notification(new_notification, db)
+                await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")
         
 
@@ -437,6 +439,7 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
                     is_read=False
                 )
                 await create_notification(new_notification, db)
+                await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint resolved ID: {complaint.id}")
 
         return JSONResponse(

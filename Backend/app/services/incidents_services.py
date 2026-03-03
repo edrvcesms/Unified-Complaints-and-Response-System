@@ -166,6 +166,8 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                     notification_type="complaint_update",
                 )
                 await create_notification(new_notification, db)
+                await delete_cache(f"user_notifications:{complaint.user_id}")
+                logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
         
         
         result = await db.execute(
@@ -188,6 +190,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                 notification_type="new_incident_forwarded_to_lgu",
             )
             await create_notification(new_notification, db)
+            await delete_cache(f"user_notifications:{official.id}")
             logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
             
         return JSONResponse(
@@ -259,6 +262,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                     notification_type="complaint_update",
                 )
                 await create_notification(new_notification, db)
+                await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
                 
         result = await db.execute(
@@ -284,6 +288,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                 notification_type="new_incident_forwarded_to_department",
             )
             await create_notification(new_notification, db)
+            await delete_cache(f"user_notifications:{incident.department_account.user.id}")
             logger.info(f"Created notification for department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")
             
         return JSONResponse(

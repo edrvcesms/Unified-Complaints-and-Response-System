@@ -17,6 +17,7 @@ async def clear_user_cache():
         
         # Clear user complaints cache
         await delete_cache(f"user_complaints:{user_id}")
+        await delete_cache(f"user_notifications:{user_id}")
     
     print(f"✅ Cleared user caches for users 1-100")
     
@@ -60,6 +61,7 @@ async def clear_user_cache():
     print(f"✅ Cleared global caches")
     
     print("\n✅ All cache entries cleared!")
+    
 
 if __name__ == "__main__":
     asyncio.run(clear_user_cache())

@@ -6,6 +6,12 @@ import { useUserRole } from "../hooks/useUserRole";
 import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
 import { ConfirmationModal } from "../features/general/ConfirmationModal";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
+import { useNotifications as useNotificationData } from "../hooks/useNotification";
+import { useNotifications as useSSENotifications } from "../hooks/useNotifications";
+import { useToast } from "../hooks/useToast";
+import { ToastContainer } from "../components/Toast";
+import type { Notification } from "../types/notifications/notification";
+import { queryClient } from "../main";
 
 
 interface NavbarProps {
@@ -36,9 +42,57 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState<boolean>(false);
 
   const confirmationModal = useConfirmationModal();
+  const { notifications, isLoading, markAsRead, markAllAsRead, refetch } = useNotificationData();
+  const { toasts, showToast } = useToast();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
+
+  useSSENotifications({
+    events: ['*'],
+    onNotification: (notification) => {
+      console.log('SSE Notification received:', notification);
+      
+      showToast({
+        title: notification.data?.title || 'New Notification',
+        message: notification.data?.message || 'You have a new notification',
+        type: 'info',
+        duration: 5000,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
+
+  const formatTime = (date: Date | string) => {
+    const now = new Date();
+    const notifDate = new Date(date);
+    const diffMs = now.getTime() - notifDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    
+    return notifDate.toLocaleDateString();
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate to complaint if complaint_id exists
+    if (notification.complaint_id) {
+      setNotificationDropdownOpen(false);
+      navigate(`/complaints/${notification.complaint_id}`);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -73,6 +127,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     navigate("/profile");
   };
 
+  const handleBellClick = () => {
+    setNotificationDropdownOpen((prev) => !prev);
+    refetch();
+  };
+
   const handleLogout = () => {
     setDropdownOpen(false);
     confirmationModal.openModal({
@@ -86,7 +145,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
   return (
     <>
-      <header className="w-full bg-[#003087] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
+      <ToastContainer toasts={toasts} />
+      <header className="w-full bg-gradient-to-br from-[#003087] via-[#0055b3] to-[#0077cc] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
       <nav
         className="px-4 sm:px-6 lg:pr-8 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"
@@ -116,59 +176,82 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
           <div className="relative" ref={notificationDropdownRef}>
             <button
               type="button"
-              onClick={() => setNotificationDropdownOpen((prev) => !prev)}
+              onClick={handleBellClick}
               aria-haspopup="true"
               aria-expanded={notificationDropdownOpen}
               aria-label="Notifications"
               className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-blue-600 transition duration-200 cursor-pointer"
             >
               <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
-              {/* Notification badge (for future use) */}
-              {/* <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" /> */}
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {notificationDropdownOpen && (
               <div
                 role="menu"
                 aria-label="Notifications menu"
-                className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl
+                className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl
                   border border-gray-100 overflow-hidden z-50"
                 style={{ animation: "fadeSlideDown 0.15s ease-out" }}
               >
-                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllAsRead()}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium transition"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
 
                 <div className="max-h-96 overflow-y-auto">
-                  {/* Empty state - for future implementation */}
-                  <div className="px-5 py-8 text-center">
-                    <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-sm text-gray-500">No notifications yet</p>
-                    <p className="text-xs text-gray-400 mt-1">You'll see updates here when they arrive</p>
-                  </div>
-
-                  {/* Notification items will go here */}
-                  {/* Example notification item:
-                  <button
-                    className="w-full px-5 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100"
-                  >
-                    <div className="flex gap-3">
-                      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-800 font-medium">New complaint received</p>
-                        <p className="text-xs text-gray-500 mt-0.5">A new complaint has been filed in your area</p>
-                        <p className="text-xs text-gray-400 mt-1">2 minutes ago</p>
-                      </div>
+                  {isLoading ? (
+                    <div className="px-5 py-8 text-center">
+                      <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                      <p className="text-sm text-gray-500">Loading notifications...</p>
                     </div>
-                  </button>
-                  */}
+                  ) : !notifications || notifications.length === 0 ? (
+                    <div className="px-5 py-8 text-center">
+                      <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                      <p className="text-sm text-gray-500">No notifications yet</p>
+                      <p className="text-xs text-gray-400 mt-1">You'll see updates here when they arrive</p>
+                    </div>
+                  ) : (
+                    <>
+                      {notifications.map((notification) => (
+                        <button
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`w-full px-5 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100
+                            ${notification.is_read ? 'bg-white' : 'bg-blue-50'}`}
+                        >
+                          <div className="flex gap-3">
+                            {!notification.is_read && (
+                              <div className="shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium ${notification.is_read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {formatTime(notification.sent_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </>
+                  )}
                 </div>
-
-                {/* <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
-                  <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                    View all notifications
-                  </button>
-                </div> */}
               </div>
             )}
           </div>

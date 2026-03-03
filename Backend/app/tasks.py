@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from app.services.sse_manager import sse_manager
 import os
 from app.models.notification import Notification
 from app.models.complaint import Complaint
@@ -314,3 +315,40 @@ def cluster_complaint_task(self, complaint_data: dict):
         "existing_incident_status": result.existing_incident_status,
         "message": result.message,
     }
+
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def send_notifications_task(self, user_id: int, title: str, message: str, complaint_id: int = None, notification_type: str = "info"):
+    try:
+        sse_manager.send(
+            user_id=user_id,
+            data = {
+                "title": title,
+                "message": message,
+                "sent_at": datetime.utcnow().isoformat(),
+            },
+            event="notification",
+        )
+        logger.info(f"Sent notification to user_id={user_id} with title='{title}' and message='{message}'")
+        
+        notification = Notification(
+            user_id=user_id,
+            complaint_id=complaint_id,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            channel="sse",
+            is_read=False,
+            sent_at=datetime.utcnow()
+        )
+        asyncio.run(_save_notification_to_db(notification))
+    
+    except Exception as e:
+        logger.error(f"Failed to send notification to user_id={user_id}: {str(e)}")
+        raise self.retry(exc=e)
+    
+async def _save_notification_to_db(notification: Notification):
+    async with AsyncSessionLocal() as db:
+        db.add(notification)
+        await db.commit()
+        logger.info(f"Saved notification to database for user_id={notification.user_id} with title='{notification.title}'")

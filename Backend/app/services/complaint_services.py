@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
-from app.tasks import cluster_complaint_task
+from app.tasks import cluster_complaint_task, send_notifications_task
 from app.models.notification import Notification
 from .sse_manager import sse_manager
 from .notification_services import create_notification
@@ -232,39 +232,13 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.info(f"barangay_account_id: {updated_complaint.barangay_account.id if updated_complaint.barangay_account else None}")
         
         if updated_complaint.barangay_account and updated_complaint.barangay_account.user_id:
-            await sse_manager.send(
-                user_id=str(updated_complaint.barangay_account.user_id),
-                event="new_complaint",
-                data={
-                    "complaint_id": updated_complaint.id,
-                    "title": updated_complaint.title,
-                    "description": updated_complaint.description,
-                    "location_details": updated_complaint.location_details,
-                    "barangay_id": updated_complaint.barangay_id,
-                    "category_id": updated_complaint.category_id,
-                    "status": updated_complaint.status,
-                    "created_at": updated_complaint.created_at.isoformat(),
-                }
-            )
-            logger.info(f"SSE event sent for new complaint ID: {updated_complaint.id}")
-        
-        logger.info(f"Barangay account user ID for complaint ID {updated_complaint.id}: {updated_complaint.barangay_account.user_id if updated_complaint.barangay_account else 'None'}")
-        
-        if updated_complaint.barangay_account and updated_complaint.barangay_account.user_id:
-            notification_data = NotificationCreateData(
-                title="New Complaint Submitted",
+            send_notifications_task.delay(
                 user_id=updated_complaint.barangay_account.user_id,
+                title="New Complaint Submitted",
                 message=f"New complaint submitted: {updated_complaint.title}",
                 complaint_id=updated_complaint.id,
-                channel="sse",
-                notification_type="new_complaint",
-                is_read=False
+                notification_type="new_complaint"
             )
-            await create_notification(notification_data, db)
-            logger.info(f"Notification created for user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
-            await delete_cache(f"user_notifications:{updated_complaint.barangay_account.user_id}")
-        else:
-            logger.info(f"No barangay account found for complaint ID: {updated_complaint.id}, skipping notification")
             
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
@@ -326,32 +300,13 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                await sse_manager.send(
-                    user_id=str(complaint.user_id),
-                    event="complaint_under_review",
-                    data={
-                        "complaint_id": complaint.id,
-                        "title": complaint.title,
-                        "description": complaint.description,
-                        "location_details": complaint.location_details,
-                        "barangay_id": complaint.barangay_id,
-                        "category_id": complaint.category_id,
-                        "status": ComplaintStatus.UNDER_REVIEW.value,
-                        "created_at": complaint.created_at.isoformat(),
-                    }
-                )
-                logger.info(f"SSE event sent for complaint under review ID: {complaint.id}")
-                
-                new_notification = NotificationCreateData(
-                    title="Complaint Under Review",
+                send_notifications_task.delay(
                     user_id=complaint.user_id,
+                    title="Complaint Under Review",
                     message=f"Your complaint '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
-                    channel="sse",
-                    notification_type="complaint_under_review",
-                    is_read=False
+                    notification_type="complaint_under_review"
                 )
-                await create_notification(new_notification, db)
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")
         
@@ -419,32 +374,13 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                await sse_manager.send(
-                    user_id=str(complaint.user_id),
-                    event="complaint_resolved",
-                    data={
-                        "complaint_id": complaint.id,
-                        "title": complaint.title,
-                        "description": complaint.description,
-                        "location_details": complaint.location_details,
-                        "barangay_id": complaint.barangay_id,
-                        "category_id": complaint.category_id,
-                        "status": ComplaintStatus.RESOLVED.value,
-                        "created_at": complaint.created_at.isoformat(),
-                        "resolved_at": complaint.resolved_at.isoformat() if complaint.resolved_at else None,
-                    }
-                )
-                logger.info(f"SSE event sent for complaint resolved ID: {complaint.id}")
-                new_notification = NotificationCreateData(
-                    title="Complaint Resolved",
+                send_notifications_task.delay(
                     user_id=complaint.user_id,
+                    title="Complaint Resolved",
                     message=f"Your complaint '{complaint.title}' has been resolved",
                     complaint_id=complaint.id,
-                    channel="sse",
-                    notification_type="complaint_resolved",
-                    is_read=False
+                    notification_type="complaint_resolved"
                 )
-                await create_notification(new_notification, db)
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint resolved ID: {complaint.id}")
 

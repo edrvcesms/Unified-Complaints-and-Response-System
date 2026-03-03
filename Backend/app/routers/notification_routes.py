@@ -52,6 +52,6 @@ async def notifications_stream(current_user: User = Depends(get_current_user), d
     Example usage in an endpoint:
         @router.get("/notifications/stream")
         async def notifications_stream(current_user = Depends(get_current_user)):
-            return sse_manager.stream(current_user.id)
+            return await sse_manager.stream(current_user.id)
     """
-    return sse_manager.stream(current_user.id)
+    return await sse_manager.stream(current_user.id)

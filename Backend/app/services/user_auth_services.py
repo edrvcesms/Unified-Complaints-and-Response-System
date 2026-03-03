@@ -20,6 +20,7 @@ from app.schemas.barangay_schema import BarangayWithUserData
 from app.schemas.department_schema import DepartmentWithUserData
 from app.services.department_services import get_department_account
 from app.services.barangay_services import get_barangay_account
+from app.services.sse_manager import sse_manager
 
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
@@ -351,6 +352,8 @@ async def logout_user(request: Request):
                 "message": "Logout successful"
             }
         )
+        sse_manager.disconnect()
+        logger.info("SSE connection closed for user during logout.")
         response.delete_cookie(key="refresh_token")
         return response
     

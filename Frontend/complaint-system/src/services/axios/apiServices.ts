@@ -10,6 +10,7 @@ export const complaintsInstance = createApiInstance(`${BASE_URL}/complaints`, tr
 export const incidentsInstance = createApiInstance(`${BASE_URL}/incidents`, true);
 export const lguInstance = createApiInstance(`${BASE_URL}/lgu`, true);
 export const notificationInstance = createApiInstance(`${BASE_URL}/notifications`, true);
+export const departmentInstance = createApiInstance(`${BASE_URL}/departments`, true);
 
 export const authApi = createApiClient(authInstance);
 export const barangayApi = createApiClient(barangayInstance);
@@ -17,3 +18,4 @@ export const complaintsApi = createApiClient(complaintsInstance);
 export const incidentsApi = createApiClient(incidentsInstance);
 export const lguApi = createApiClient(lguInstance);
 export const notificationApi = createApiClient(notificationInstance);
+export const departmentApi = createApiClient(departmentInstance);

@@ -1,45 +1,85 @@
-import React from "react";
-
-/**
- * Department Incidents Page
- * 
- * Displays incidents assigned to the department.
- * This is a placeholder that can be expanded with department-specific features.
- */
+import { useAssignedIncidents } from "../../../hooks/useDepartment";
+import { useComplaintsFilter } from "../../../hooks/useFilter";
+import { DepartmentIncidentsTable } from "../components/DepartmentIncidentsTable";
+import { SearchInput } from "../../general";
+import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
+import { ErrorMessage, PageHeader } from "../../general";
 
 export const DepartmentIncidents: React.FC = () => {
+  const { incidents, isLoading, error: isError } = useAssignedIncidents();
+
+  const {
+    search,
+    filterStatus,
+    sortBy,
+    dateFrom,
+    dateTo,
+    minDate,
+    maxDate,
+    currentPage,
+    paginated,
+    totalPages,
+    handleSearch,
+    handleFilterChange,
+    handleSortChange,
+    handleDateFromChange,
+    handleDateToChange,
+    handleClearDateFilter,
+    setCurrentPage,
+  } = useComplaintsFilter(incidents || []);
+
+  if (isError) {
+    return <ErrorMessage message="Failed to load assigned incidents. Please refresh." />;
+  }
+
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="border-b border-gray-200 pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Assigned Incidents
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Review and manage incidents assigned to your department
-        </p>
+      <PageHeader 
+        title="Assigned Incidents"
+        description="Review and manage incidents assigned to your department"
+      />
+
+      {/* Search */}
+      <div>
+        <SearchInput value={search} onChange={handleSearch} />
       </div>
 
-      {/* Placeholder Content */}
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Severity Level</label>
+            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Sort By</label>
+            <SortDropdown current={sortBy} onChange={handleSortChange} />
+          </div>
+        </div>
+
+        <div className="shrink-0 w-full lg:w-auto">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
+          <DateFilter
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            minDate={minDate}
+            maxDate={maxDate}
+            onDateFromChange={handleDateFromChange}
+            onDateToChange={handleDateToChange}
+            onClear={handleClearDateFilter}
           />
-        </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Assigned Incidents</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Incident management features for your department will be available here.
-        </p>
+        </div>
       </div>
+
+      <DepartmentIncidentsTable
+        incidents={paginated}
+        isLoading={isLoading}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };
+
+export default DepartmentIncidents;

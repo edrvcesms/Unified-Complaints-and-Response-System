@@ -54,6 +54,9 @@ export const useResolveIncident = (incidentId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
     }
   });
   return mutation;
@@ -66,6 +69,9 @@ export const useReviewIncident = (incidentId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
     }
   });
   return mutation;

@@ -151,7 +151,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                sse_manager.send(
+                await sse_manager.send(
                     user_id=str(complaint.user_id),
                     event="complaint_forwarded_to_lgu",
                     data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the local government unit for further processing."}
@@ -175,7 +175,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         )
         lgu_officials = result.scalars().all()
         for official in lgu_officials:
-            sse_manager.send(
+            await sse_manager.send(
                 user_id=str(official.id),
                 event="new_incident_forwarded_to_lgu",
                 data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to the LGU."}    
@@ -240,6 +240,8 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         await delete_cache(f"barangay_{barangay_id}_complaints")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
         await delete_cache(f"department_incidents:{department_account_id}")
+        await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
+        await delete_cache("all_forwarded_incidents")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -247,7 +249,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                sse_manager.send(
+                await sse_manager.send(
                     user_id=str(complaint.user_id),
                     event="complaint_forwarded_to_department",
                     data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the relevant department for further processing."}
@@ -273,7 +275,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         )
         incident = result.scalars().first()
         if incident and incident.department_account and incident.department_account.user:
-            sse_manager.send(
+            await sse_manager.send(
                 user_id=str(incident.department_account.user.id),
                 event="new_incident_forwarded_to_department",
                 data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to your department."}

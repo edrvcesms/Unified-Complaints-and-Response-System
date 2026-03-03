@@ -22,8 +22,7 @@ import { LguIncidentComplaints } from "./features/lgu/pages/IncidentComplaints"
 import { LguComplaintDetails } from "./features/lgu/pages/ComplaintDetails"
 import { BarangayList } from "./features/lgu/pages/BarangayList"
 import { BarangayIncidents } from "./features/lgu/pages/BarangayIncidents"
-import { DepartmentDashboard } from "./features/department/pages/Dashboard"
-// import { DepartmentIncidents } from "./features/department/pages/Incidents"
+import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 
 function App() {
 
@@ -75,8 +74,10 @@ function App() {
           <Route element={<DepartmentRoute />}>
             <Route path="/department/*" element={<DepartmentDashboardLayout />}>
               <Route path="dashboard" element={<DepartmentDashboard />} />
-              {/* <Route path="incidents" element={<DepartmentIncidents />} /> */}
-              {/* Additional department routes can be added here */}
+              <Route path="incidents" element={<DepartmentIncidents />} />
+              <Route path="incidents/:incidentId" element={<DepartmentIncidentDetails />} />
+              <Route path="incidents/:incidentId/complaints" element={<DepartmentIncidentComplaints />} />
+              <Route path="incidents/complaints/:id" element={<DepartmentComplaintDetails />} />
             </Route>
           </Route>
 

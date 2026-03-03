@@ -206,7 +206,8 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 selectinload(Complaint.barangay),
                 selectinload(Complaint.category),
                 selectinload(Complaint.attachment),
-                selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user)
+                selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user),
+                selectinload(Complaint.incident_links)
             )
             .where(Complaint.id == new_complaint.id)
         )
@@ -221,6 +222,12 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         if updated_complaint.barangay_id:
             await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
             await delete_cache(f"barangay_{updated_complaint.barangay_id}_complaints")
+            
+        if updated_complaint.incident_links:
+            for link in updated_complaint.incident_links:
+                logger.info(f"Clearing caches for linked incident ID: {link.incident_id}")
+                await delete_cache(f"incident:{link.incident_id}")
+                await delete_cache(f"incident_complaints:{link.incident_id}")
             
         logger.info(f"barangay_account_id: {updated_complaint.barangay_account.id if updated_complaint.barangay_account else None}")
         
@@ -240,8 +247,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 }
             )
             logger.info(f"SSE event sent for new complaint ID: {updated_complaint.id}")
-        else:
-            logger.info(f"No barangay account found for complaint ID: {updated_complaint.id}, skipping SSE notification")
         
         logger.info(f"Barangay account user ID for complaint ID {updated_complaint.id}: {updated_complaint.barangay_account.user_id if updated_complaint.barangay_account else 'None'}")
         
@@ -308,6 +313,7 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        await delete_cache(f"weekly_forwarded_incidents_stats:{department_account_id}")
         if department_account_id:
             await delete_cache(f"department_incidents:{department_account_id}")
         if barangay_id:
@@ -320,7 +326,7 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                sse_manager.send(
+                await sse_manager.send(
                     user_id=str(complaint.user_id),
                     event="complaint_under_review",
                     data={
@@ -413,7 +419,7 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
             complaint = result.scalars().first()
             if complaint:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
-                sse_manager.send(
+                await sse_manager.send(
                     user_id=str(complaint.user_id),
                     event="complaint_resolved",
                     data={

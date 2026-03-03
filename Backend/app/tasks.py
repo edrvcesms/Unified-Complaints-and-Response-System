@@ -8,6 +8,7 @@ from fastapi_mail import FastMail, MessageSchema
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary
+from app.utils.caching import delete_cache
 from app.core.email_config import conf
 from sqlalchemy import select
 from app.utils.logger import logger
@@ -27,17 +28,38 @@ nest_asyncio.apply()
 load_dotenv()
 from app.core.config import settings
 
+# Lazy-loaded singletons to avoid heavy initialization on import
+_gemini_verifier = None
+_embedding_service = None
+_vector_repository = None
+_severity_calculator = None
 
-_gemini_verifier = GeminiIncidentVerifier(api_key=settings.GEMINI_API_KEY)
+def get_gemini_verifier():
+    global _gemini_verifier
+    if _gemini_verifier is None:
+        _gemini_verifier = GeminiIncidentVerifier(api_key=settings.GEMINI_API_KEY)
+    return _gemini_verifier
 
-_embedding_service = SentenceTransformerEmbeddingService()
+def get_embedding_service():
+    global _embedding_service
+    if _embedding_service is None:
+        _embedding_service = SentenceTransformerEmbeddingService()
+    return _embedding_service
 
-_vector_repository = PineconeVectorRepository(
-    api_key=os.environ["PINECONE_API_KEY"],
-    environment=os.environ.get("PINECONE_ENVIRONMENT", "us-east-1"),
-)
+def get_vector_repository():
+    global _vector_repository
+    if _vector_repository is None:
+        _vector_repository = PineconeVectorRepository(
+            api_key=os.environ["PINECONE_API_KEY"],
+            environment=os.environ.get("PINECONE_ENVIRONMENT", "us-east-1"),
+        )
+    return _vector_repository
 
-_severity_calculator = WeightedSeverityCalculator()
+def get_severity_calculator():
+    global _severity_calculator
+    if _severity_calculator is None:
+        _severity_calculator = WeightedSeverityCalculator()
+    return _severity_calculator
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_email_task(self, subject: str, recipient: str, body: str):
@@ -159,7 +181,7 @@ def recalculate_severity_task(self, incident_id: int) -> dict:
             velocity_detector = DetectVelocitySpikeUseCase(incident_repo)
             use_case = RecalculateSeverityUseCase(
                 incident_repository=incident_repo,
-                severity_calculator=_severity_calculator,
+                severity_calculator=get_severity_calculator(),
                 velocity_detector=velocity_detector,
             )
 
@@ -193,10 +215,10 @@ def cluster_complaint_task(self, complaint_data: dict):
         async with AsyncSessionLocal() as db:
             incident_repo = IncidentRepository(db)
             use_case = ClusterComplaintUseCase(
-                embedding_service=_embedding_service,
-                vector_repository=_vector_repository,
+                embedding_service=get_embedding_service(),
+                vector_repository=get_vector_repository(),
                 incident_repository=incident_repo,
-                incident_verifier=_gemini_verifier
+                incident_verifier=get_gemini_verifier()
             )
             logger.info(f"[cluster_complaint_task] Executing clustering use case for complaint_id={cluster_data.complaint_id}")
 
@@ -257,6 +279,19 @@ def cluster_complaint_task(self, complaint_data: dict):
             return result
 
     result = asyncio.run(_run())
+    
+    asyncio.run(delete_cache(f"complaint:{cluster_data.complaint_id}"))
+    asyncio.run(delete_cache(f"incident_complaints:{result.incident_id}"))
+    asyncio.run(delete_cache(f"incident:{result.incident_id}"))
+    asyncio.run(delete_cache(f"barangay_{cluster_data.barangay_id}_complaints"))
+    asyncio.run(delete_cache(f"barangay_incidents:{cluster_data.barangay_id}"))
+    asyncio.run(delete_cache(f"user_complaints:{cluster_data.user_id}"))
+    asyncio.run(delete_cache(f"user_notifications:{cluster_data.user_id}"))
+    asyncio.run(delete_cache("all_complaints"))
+    asyncio.run(delete_cache("all_forwarded_incidents"))
+    asyncio.run(delete_cache(f"weekly_complaint_stats_by_barangay:{cluster_data.barangay_id}"))
+    asyncio.run(delete_cache(f"forwarded_barangay_incidents:{cluster_data.barangay_id}"))
+    asyncio.run(delete_cache(f"forwarded_department_incidents:{cluster_data.barangay_id}"))
 
     recalculate_severity_task.apply_async(
         args=[result.incident_id],
@@ -269,6 +304,7 @@ def cluster_complaint_task(self, complaint_data: dict):
             f"Existing status: {result.existing_incident_status}. "
             f"Message: {result.message}"
         )
+
 
     return {
         "incident_id": result.incident_id,

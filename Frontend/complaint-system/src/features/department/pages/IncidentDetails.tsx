@@ -1,104 +1,117 @@
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useIncidentDetails } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, Send } from "lucide-react";
+import { useIncidentDetails, useResolveIncident, useReviewIncident } from "../../../hooks/useIncidents";
+import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useState } from "react";
-import { useAllDepartments } from "../../../hooks/useDepartment";
-import { DepartmentSelectionModal } from "../components/DepartmentSelectionModal";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { delegateIncidentToDepartment } from "../../../services/delegation/incidentDelegation";
-import { useToast } from "../../../hooks/useToast";
-import { ToastContainer } from "../../../components/Toast";
-import { queryClient } from "../../../main";
+import { SuccessModal } from "../../general/SuccessModal";
+import { ErrorModal } from "../../general/ErrorModal";
 
-export const LguIncidentDetails: React.FC = () => {
-  const { t } = useTranslation();
+export const DepartmentIncidentDetails: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
-  const { departments, isLoading: isDepartmentsLoading } = useAllDepartments();
-  const { toasts, showToast } = useToast();
-  const confirmationModal = useConfirmationModal();
   
-  const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<{ id: number; name: string } | null>(null);
-  const [isAssigning, setIsAssigning] = useState(false);
+  const resolveIncidentMutation = useResolveIncident(Number(incidentId));
+  const reviewIncidentMutation = useReviewIncident(Number(incidentId));
+
+  const confirmationModal = useConfirmationModal();
+  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
+  // Handle successful resolve
+  useEffect(() => {
+    if (resolveIncidentMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been resolved successfully.',
+      });
+    }
+  }, [resolveIncidentMutation.isSuccess]);
+
+  // Handle successful review
+  useEffect(() => {
+    if (reviewIncidentMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been marked for review successfully.',
+      });
+    }
+  }, [reviewIncidentMutation.isSuccess]);
+
+  // Handle resolve error
+  useEffect(() => {
+    if (resolveIncidentMutation.isError) {
+      confirmationModal.closeModal();
+      const error = resolveIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [resolveIncidentMutation.isError]);
+
+  // Handle review error
+  useEffect(() => {
+    if (reviewIncidentMutation.isError) {
+      confirmationModal.closeModal();
+      const error = reviewIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [reviewIncidentMutation.isError]);
 
   const handleViewAllComplaints = () => {
-    navigate(`/lgu/incidents/${incidentId}/complaints`);
+    navigate(`/department/incidents/${incidentId}/complaints`);
   };
 
-  const handleOpenDepartmentModal = () => {
-    setIsDepartmentModalOpen(true);
+  const handleResolve = () => {
+    confirmationModal.openModal({
+      title: "Resolve Incident",
+      message: "Are you sure you want to resolve this incident? This action will mark the incident as resolved.",
+      confirmText: "Resolve",
+      confirmColor: "green",
+      onConfirm: async () => {
+        await resolveIncidentMutation.mutateAsync();
+      },
+    });
   };
 
-  const handleDepartmentSelect = (departmentAccountId: number) => {
-    const department = departments?.find(d => d.department_account?.id === departmentAccountId);
-    if (department) {
-      setSelectedDepartment({
-        id: departmentAccountId,
-        name: department.department_name,
-      });
-      setIsDepartmentModalOpen(false);
-      
-      // Open confirmation modal
-      confirmationModal.openModal({
-        title: 'Confirm Assignment',
-        message: `Are you sure you want to assign this incident to ${department.department_name}?`,
-        confirmText: 'Confirm',
-        confirmColor: 'blue',
-        onConfirm: async () => {
-          await handleConfirmAssignment(departmentAccountId);
-        },
-      });
-    }
+  const handleReview = () => {
+    confirmationModal.openModal({
+      title: "Mark for Review",
+      message: "Are you sure you want to mark this incident for review?",
+      confirmText: "Confirm",
+      confirmColor: "yellow",
+      onConfirm: async () => {
+        await reviewIncidentMutation.mutateAsync();
+      },
+    });
   };
-
-  const handleConfirmAssignment = async (departmentAccountId: number) => {
-    setIsAssigning(true);
-    try {
-      await delegateIncidentToDepartment(Number(incidentId), departmentAccountId);
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["incidentDetails", Number(incidentId)] });
-      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
-      
-      showToast({
-        type: 'success',
-        message: 'Incident successfully assigned to department',
-      });
-      
-      confirmationModal.closeModal();
-      
-      // Navigate back to incidents list after a short delay
-      setTimeout(() => {
-        navigate("/lgu/incidents");
-      }, 1500);
-      
-    } catch (error) {
-      console.error("Error assigning incident:", error);
-      showToast({
-        type: 'error',
-        message: 'Failed to assign incident. Please try again.',
-      });
-      confirmationModal.closeModal();
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
-  const isForwardedIncident = incident?.complaint_clusters?.some(
-    cluster => cluster.complaint.status === "forwarded_to_lgu"
-  );
 
   if (isLoading) {
-    return (
-        <LoadingIndicator />
-    );
+    return <LoadingIndicator />;
   }
 
   if (error || !incident) {
@@ -113,11 +126,11 @@ export const LguIncidentDetails: React.FC = () => {
   return (
     <div className="space-y-6">
       <button
-        onClick={() => navigate("/lgu/incidents")}
+        onClick={() => navigate("/department/incidents")}
         className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
-        {t('incidents.details.backToIncidents')}
+        Back to Incidents
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -172,7 +185,7 @@ export const LguIncidentDetails: React.FC = () => {
                   <Users className="text-green-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.totalComplaints')}</p>
+                  <p className="text-xs text-gray-500">Total Complaints</p>
                   <p className="text-sm font-semibold text-gray-900 truncate">
                     {incident.complaint_count}
                   </p>
@@ -182,7 +195,7 @@ export const LguIncidentDetails: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
               {incident.description}
             </p>
@@ -192,11 +205,11 @@ export const LguIncidentDetails: React.FC = () => {
         <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t('incidents.details.additionalDetails')}
+              Additional Details
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.firstReported')}</p>
+                <p className="text-xs text-gray-500 mb-1">First Reported</p>
                 <p className="text-sm font-medium text-gray-900">
                   {new Date(incident.first_reported_at).toLocaleDateString("en-PH", {
                     year: "numeric",
@@ -214,7 +227,7 @@ export const LguIncidentDetails: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.lastReported')}</p>
+                <p className="text-xs text-gray-500 mb-1">Last Reported</p>
                 <p className="text-sm font-medium text-gray-900">
                   {new Date(incident.last_reported_at).toLocaleDateString("en-PH", {
                     year: "numeric",
@@ -236,50 +249,40 @@ export const LguIncidentDetails: React.FC = () => {
             <div className="border-t pt-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                  {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
+                  Related Complaints ({incident.complaint_count})
                 </h3>
                 <button
                   onClick={handleViewAllComplaints}
                   className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
-                  {t('incidents.details.viewAllComplaints')}
+                  View All Complaints
                 </button>
               </div>
               <p className="text-sm text-gray-600">
                 View all the related complaints in this incident.
               </p>
             </div>
-            
-            {isForwardedIncident && (
-              <div className="border-t pt-6 mt-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-                  Assignment Actions
-                </h3>
-                <button
-                  onClick={handleOpenDepartmentModal}
-                  disabled={isDepartmentsLoading || isAssigning}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send size={16} />
-                  Assign to Designated Department
-                </button>
-                <p className="text-sm text-gray-600 mt-2">
-                  Delegate this incident to a specific department for handling.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>
-      
-      <DepartmentSelectionModal
-        isOpen={isDepartmentModalOpen}
-        departments={departments || []}
-        onSelect={handleDepartmentSelect}
-        onCancel={() => setIsDepartmentModalOpen(false)}
-        isLoading={isAssigning}
-      />
-      
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+        <button
+          onClick={handleReview}
+          disabled={reviewIncidentMutation.isPending}
+          className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
+        </button>
+        <button
+          onClick={handleResolve}
+          disabled={resolveIncidentMutation.isPending}
+          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
+        </button>
+      </div>
+
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         title={confirmationModal.title}
@@ -288,10 +291,27 @@ export const LguIncidentDetails: React.FC = () => {
         confirmColor={confirmationModal.confirmColor}
         onConfirm={confirmationModal.confirm}
         onCancel={confirmationModal.closeModal}
-        isLoading={confirmationModal.isLoading || isAssigning}
+        isLoading={confirmationModal.isLoading}
       />
-      
-      <ToastContainer toasts={toasts} />
+
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        title={successModal.title}
+        message={successModal.message}
+        onClose={() => {
+          navigate(`/department/incidents`);
+          setSuccessModal({ isOpen: false, title: '', message: '' });
+        }}
+      />
+
+      <ErrorModal
+        isOpen={errorModal.isOpen}
+        title={errorModal.title}
+        message={errorModal.message}
+        onClose={() => setErrorModal({ isOpen: false, title: '', message: '' })}
+      />
     </div>
   );
 };
+
+export default DepartmentIncidentDetails;

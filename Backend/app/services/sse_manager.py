@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import Any
+from typing import Any, Dict, Set
 from fastapi.responses import StreamingResponse
 import redis.asyncio as aioredis
 
@@ -10,154 +10,121 @@ class SSEManager:
         self.redis_url = redis_url
         self._redis: aioredis.Redis | None = None
 
-    async def get_redis(self) -> aioredis.Redis:
+        # user_id -> set of asyncio.Queue (connections)
+        self._connections: Dict[str, Set[asyncio.Queue]] = {}
+
+        # background redis listener task
+        self._listener_task: asyncio.Task | None = None
+        self._pubsub = None
+
+        self._lock = asyncio.Lock()
+
+    async def connect_redis(self):
         if not self._redis:
             self._redis = await aioredis.from_url(self.redis_url)
-        return self._redis
+
+        if not self._listener_task:
+            self._listener_task = asyncio.create_task(self._redis_listener())
+
+    async def _redis_listener(self):
+        """
+        ONE Redis pubsub listener per worker.
+        Fans out messages to in-memory connections.
+        """
+        redis = self._redis
+        self._pubsub = redis.pubsub()
+
+        await self._pubsub.subscribe("sse:user", "sse:broadcast")
+
+        async for message in self._pubsub.listen():
+            if message["type"] != "message":
+                continue
+
+            payload = json.loads(message["data"])
+            target = payload.get("target")
+            event = payload.get("event", "message")
+            data = payload.get("data", {})
+
+            formatted = f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+            if target == "broadcast":
+                await self._fan_out_all(formatted)
+            else:
+                await self._fan_out_user(str(target), formatted)
+
+    async def _fan_out_user(self, user_id: str, message: str):
+        async with self._lock:
+            queues = self._connections.get(user_id, set()).copy()
+
+        for queue in queues:
+            await self._safe_put(queue, message)
+
+    async def _fan_out_all(self, message: str):
+        async with self._lock:
+            all_queues = [
+                queue
+                for queues in self._connections.values()
+                for queue in queues
+            ]
+
+        for queue in all_queues:
+            await self._safe_put(queue, message)
+
+    async def _safe_put(self, queue: asyncio.Queue, message: str):
+        try:
+            queue.put_nowait(message)
+        except asyncio.QueueFull:
+            # Drop slow clients instead of blocking
+            pass
 
     async def send(self, user_id: str | int, data: Any, event: str = "message"):
-        """
-        Send a notification to a specific user.
+        await self.connect_redis()
 
-        Args:
-            user_id: The target user's ID (string or int).
-            event:   A string label for the event type. The React Native
-                     client uses this to route to the right listener.
-            data:    Any JSON-serializable dict.
+        payload = json.dumps({
+            "target": str(user_id),
+            "event": event,
+            "data": data,
+        })
 
-        Examples:
-            # Order update
-            await sse_manager.send(
-                user_id="user_123",
-                event="order_update",
-                data={
-                    "order_id": "ORD-001",
-                    "status": "shipped",
-                    "message": "Your order is on the way!"
-                }
-            )
-
-            # Chat message
-            await sse_manager.send(
-                user_id="user_123",
-                event="new_message",
-                data={
-                    "from": "user_456",
-                    "message": "Hey, are you there?",
-                    "timestamp": "2024-01-01T12:00:00Z"
-                }
-            )
-
-            # General notification
-            await sse_manager.send(
-                user_id="user_123",
-                event="notification",
-                data={
-                    "title": "Payment Received",
-                    "body": "You received $50.00",
-                    "type": "success"
-                }
-            )
-        """
-        redis = await self.get_redis()
-        payload = json.dumps({"event": event, "data": data})
-        await redis.publish(f"sse:{str(user_id)}", payload)
+        await self._redis.publish("sse:user", payload)
 
     async def broadcast(self, data: Any, event: str = "message"):
-        """
-        Send a notification to ALL connected users.
+        await self.connect_redis()
 
-        Args:
-            event: A string label for the event type.
-            data:  Any JSON-serializable dict.
+        payload = json.dumps({
+            "target": "broadcast",
+            "event": event,
+            "data": data,
+        })
 
-        Examples:
-            # System maintenance alert
-            await sse_manager.broadcast(
-                event="system_alert",
-                data={
-                    "title": "Scheduled Maintenance",
-                    "message": "We'll be down for maintenance at 2AM UTC.",
-                    "duration_minutes": 30
-                }
-            )
+        await self._redis.publish("sse:broadcast", payload)
 
-            # App-wide announcement
-            await sse_manager.broadcast(
-                event="announcement",
-                data={
-                    "title": "New Feature!",
-                    "message": "Dark mode is now available.",
-                    "url": "/settings/appearance"
-                }
-            )
-        """
-        redis = await self.get_redis()
-        payload = json.dumps({"event": event, "data": data})
-        await redis.publish("sse:broadcast", payload)
+    async def stream(self, user_id: str | int):
+        await self.connect_redis()
 
-    def stream(self, user_id: str | int):
-        """
-        Returns a StreamingResponse for the given user.
-        Use this directly as the return value of your endpoint.
+        user_id = str(user_id)
+        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
 
-        The client will receive two types of events:
+        async with self._lock:
+            if user_id not in self._connections:
+                self._connections[user_id] = set()
+            self._connections[user_id].add(queue)
 
-        1. User-specific events (sent via sse_manager.send):
-            {
-                "event": "order_update",
-                "data": {
-                    "order_id": "ORD-001",
-                    "status": "shipped"
-                }
-            }
-
-        2. Broadcast events (sent via sse_manager.broadcast):
-            {
-                "event": "announcement",
-                "data": {
-                    "title": "New Feature!",
-                    "message": "Dark mode is now available."
-                }
-            }
-
-        Raw SSE wire format the client receives:
-            event: order_update
-            data: {"order_id": "ORD-001", "status": "shipped"}
-
-            event: announcement
-            data: {"title": "New Feature!", "message": "Dark mode is now available."}
-
-        Example usage in an endpoint:
-            @router.get("/notifications/stream")
-            async def notifications_stream(current_user = Depends(get_current_user)):
-                return sse_manager.stream(current_user.id)
-        """
         async def event_generator():
-            redis = await self.get_redis()
-            pubsub = redis.pubsub()
-            user_id_str = str(user_id)
-
-            await pubsub.subscribe(f"sse:{user_id_str}", "sse:broadcast")
-
             try:
                 while True:
-                    message = await pubsub.get_message(
-                        ignore_subscribe_messages=True, timeout=30
-                    )
-                    if message and message["type"] == "message":
-                        payload = json.loads(message["data"])
-                        event = payload.get("event", "message")
-                        data = json.dumps(payload.get("data", {}))
-                        yield f"event: {event}\ndata: {data}\n\n"
-                    else:
+                    try:
+                        message = await asyncio.wait_for(queue.get(), timeout=30)
+                        yield message
+                    except asyncio.TimeoutError:
                         yield ": keepalive\n\n"
-                        await asyncio.sleep(1)
             except asyncio.CancelledError:
                 pass
             finally:
-                await pubsub.unsubscribe(f"sse:{user_id_str}", "sse:broadcast")
-                await pubsub.close()
+                async with self._lock:
+                    self._connections[user_id].remove(queue)
+                    if not self._connections[user_id]:
+                        del self._connections[user_id]
 
         return StreamingResponse(
             event_generator(),
@@ -168,6 +135,17 @@ class SSEManager:
                 "X-Accel-Buffering": "no",
             },
         )
+
+    async def disconnect(self):
+        if self._listener_task:
+            self._listener_task.cancel()
+
+        if self._pubsub:
+            await self._pubsub.close()
+
+        if self._redis:
+            await self._redis.close()
+            self._redis = None
 
 
 sse_manager = SSEManager(redis_url="redis://localhost:6379")

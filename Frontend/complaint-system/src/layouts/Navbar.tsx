@@ -90,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     // Navigate to complaint if complaint_id exists
     if (notification.complaint_id) {
       setNotificationDropdownOpen(false);
-      navigate(`/complaints/${notification.complaint_id}`);
+      navigate(`/dashboard/incidents/complaints/${notification.complaint_id}`);
     }
   };
 

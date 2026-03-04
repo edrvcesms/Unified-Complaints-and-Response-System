@@ -320,17 +320,7 @@ def cluster_complaint_task(self, complaint_data: dict):
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_notifications_task(self, user_id: int, title: str, message: str, complaint_id: int = None, notification_type: str = "info"):
     try:
-        sse_manager.send(
-            user_id=user_id,
-            data = {
-                "title": title,
-                "message": message,
-                "sent_at": datetime.utcnow().isoformat(),
-            },
-            event="notification",
-        )
-        logger.info(f"Sent notification to user_id={user_id} with title='{title}' and message='{message}'")
-        
+        # Save to database FIRST before sending SSE
         notification = Notification(
             user_id=user_id,
             complaint_id=complaint_id,
@@ -342,6 +332,19 @@ def send_notifications_task(self, user_id: int, title: str, message: str, compla
             sent_at=datetime.utcnow()
         )
         asyncio.run(_save_notification_to_db(notification))
+        logger.info(f"Saved notification to database for user_id={user_id} with title='{title}'")
+        
+        # Then send SSE event
+        asyncio.run(sse_manager.send(
+            user_id=user_id,
+            data = {
+                "title": title,
+                "message": message,
+                "sent_at": datetime.utcnow().isoformat(),
+            },
+            event="notification",
+        ))
+        logger.info(f"Sent SSE notification to user_id={user_id}")
     
     except Exception as e:
         logger.error(f"Failed to send notification to user_id={user_id}: {str(e)}")
@@ -351,4 +354,5 @@ async def _save_notification_to_db(notification: Notification):
     async with AsyncSessionLocal() as db:
         db.add(notification)
         await db.commit()
+        await delete_cache(f"user_notifications:{notification.user_id}")
         logger.info(f"Saved notification to database for user_id={notification.user_id} with title='{notification.title}'")

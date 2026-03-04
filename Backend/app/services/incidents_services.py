@@ -154,8 +154,9 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                 await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
-                    event="complaint_forwarded_to_lgu",
-                    data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the LGU for further processing."},
+                    title="Complaint Forwarded to LGU",
+                    message="Your complaint has been forwarded to the LGU for further processing.",
+                    complaint_id=complaint.id,
                     notification_type="complaint_update"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
@@ -167,10 +168,12 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         )
         lgu_officials = result.scalars().all()
         for official in lgu_officials:
-            await sse_manager.send(
-                user_id=str(official.id),
-                event="new_incident_forwarded_to_lgu",
-                data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to the LGU."}
+            send_notifications_task.delay(
+                user_id=official.id,
+                title="New Incident Forwarded to LGU",
+                message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
+                complaint_id=None,
+                notification_type="incident_update"
             )
             await delete_cache(f"user_notifications:{official.id}")
             logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
@@ -233,8 +236,9 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                 await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
-                    event="complaint_forwarded_to_department",
-                    data={"complaint_id": complaint.id, "message": "Your complaint has been forwarded to the department for further processing."},
+                    title="Complaint Forwarded to Department",
+                    message="Your complaint has been forwarded to the department for further processing.",
+                    complaint_id=complaint.id,
                     notification_type="complaint_update"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
@@ -250,8 +254,9 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         if incident and incident.department_account and incident.department_account.user:
             send_notifications_task.delay(
                 user_id=incident.department_account.user.id,
-                event="new_incident_forwarded_to_department",
-                data={"incident_id": incident.id, "message": f"A new incident with ID {incident.id} has been forwarded to your department."},
+                title="New Incident Assigned",
+                message=f"A new incident with ID {incident.id} has been forwarded to your department.",
+                complaint_id=None,
                 notification_type="incident_update"
             )
             await delete_cache(f"user_notifications:{incident.department_account.user.id}")

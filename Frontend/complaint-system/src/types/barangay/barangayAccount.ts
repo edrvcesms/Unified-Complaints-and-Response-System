@@ -20,5 +20,6 @@ export interface BarangayAccount {
   id: number;
   user_id: number;
   barangay_id: number;
-  user: UserData
+  user?: UserData;
+  barangay?: BarangayData;
 }

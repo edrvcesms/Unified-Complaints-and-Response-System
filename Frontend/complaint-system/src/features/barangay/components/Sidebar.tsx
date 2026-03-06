@@ -1,5 +1,5 @@
 import { Sidebar as GenericSidebar } from "../../general";
-import { DashboardIcon, ComplaintsIcon } from "./Icons";
+import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon } from "./Icons";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
   { path: "/dashboard/incidents", label: "Manage Incidents", icon: <ComplaintsIcon /> },
+  { path: "/dashboard/announcements", label: "Announcements", icon: <AnnouncementsIcon /> },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => (

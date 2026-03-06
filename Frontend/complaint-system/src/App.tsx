@@ -15,6 +15,7 @@ import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
 import { ComplaintDetails } from "./features/barangay/pages/ComplaintDetails"
+import { AnnouncementsPage } from "./features/barangay/pages/Announcements"
 import { LguDashboard } from "./features/lgu/pages/Dashboard"
 import { LguIncidents } from "./features/lgu/pages/Incidents"
 import { LguIncidentDetails } from "./features/lgu/pages/IncidentDetails"
@@ -22,6 +23,7 @@ import { LguIncidentComplaints } from "./features/lgu/pages/IncidentComplaints"
 import { LguComplaintDetails } from "./features/lgu/pages/ComplaintDetails"
 import { BarangayList } from "./features/lgu/pages/BarangayList"
 import { BarangayIncidents } from "./features/lgu/pages/BarangayIncidents"
+import { LguAnnouncements } from "./features/lgu/pages/Announcements"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 
 function App() {
@@ -53,6 +55,7 @@ function App() {
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
             </Route>
           </Route>
 
@@ -66,6 +69,7 @@ function App() {
               <Route path="incidents/:incidentId" element={<LguIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<LguIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<LguComplaintDetails />} />
+              <Route path="announcements" element={<LguAnnouncements />} />
               {/* Additional LGU routes can be added here */}
             </Route>
           </Route>

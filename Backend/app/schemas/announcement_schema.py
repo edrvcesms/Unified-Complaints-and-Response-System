@@ -15,6 +15,8 @@ class AnnouncementOut(AnnouncementBase):
     uploader_id: int
     uploader: UserData
     barangay_account: BarangayAccountWithDetails | None
+    created_at: datetime
+    updated_at: datetime | None
   
     
     class Config:

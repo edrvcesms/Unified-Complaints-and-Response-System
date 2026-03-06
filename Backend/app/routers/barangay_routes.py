@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.services.barangay_services import get_all_barangays, get_barangay_by_id, get_barangay_account
+from app.services.barangay_services import get_all_barangays, get_barangay_by_id, get_barangay_account, mark_barangay_incidents_viewed
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.auth_dependency import get_current_user
@@ -20,9 +20,14 @@ async def barangay_profile(request: Request, db: AsyncSession = Depends(get_asyn
 @router.get("/all", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def list_barangays(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_all_barangays(db)
+    return await get_all_barangays(db, current_user.id)
 
 @router.get("/{barangay_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def retrieve_barangay(request: Request, barangay_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_barangay_by_id(barangay_id, db)
+
+@router.post("/{barangay_id}/mark-viewed", status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")
+async def mark_incidents_viewed(request: Request, barangay_id: int, current_user: User = Depends(get_current_user)):
+    return await mark_barangay_incidents_viewed(current_user.id, barangay_id)

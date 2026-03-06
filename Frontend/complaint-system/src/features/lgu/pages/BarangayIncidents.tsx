@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { MapPin } from "lucide-react";
 import { useForwardedIncidents } from "../../../hooks/useIncidents";
-import { useBarangayById } from "../../../hooks/useBarangays";
+import { useBarangayById, useMarkBarangayViewed } from "../../../hooks/useBarangays";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { useTranslation } from "react-i18next";
@@ -15,7 +16,16 @@ export const BarangayIncidents: React.FC = () => {
 
   const { incidents, isLoading: incidentsLoading, error: incidentsError } = useForwardedIncidents(barangayIdNum);
   const { barangay, isLoading: barangayLoading } = useBarangayById(barangayIdNum);
+  const markViewedMutation = useMarkBarangayViewed();
   const { t } = useTranslation();
+
+  // Mark incidents as viewed when page loads
+  useEffect(() => {
+    if (barangayIdNum && !isNaN(barangayIdNum)) {
+      markViewedMutation.mutate(barangayIdNum);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barangayIdNum]);
 
   const {
     search,

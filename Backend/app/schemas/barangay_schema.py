@@ -39,6 +39,8 @@ class BarangayAccountWithDetails(BaseModel):
 class BarangayWithUserData(BarangayModel):
     id: int
     barangay_account: BarangayAccountOut
+    forwarded_incident_count: int = 0
+    new_forwarded_incident_count: int = 0
     
     class Config:
         from_attributes = True

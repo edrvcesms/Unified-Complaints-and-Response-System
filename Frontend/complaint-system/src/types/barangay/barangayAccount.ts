@@ -7,6 +7,8 @@ export interface BarangayAccountData {
   barangay_contact_number: string;
   barangay_email: string;
   barangay_account: BarangayAccount;
+  forwarded_incident_count?: number;
+  new_forwarded_incident_count?: number;
 }
 
 export interface BarangayData {

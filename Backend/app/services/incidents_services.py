@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
 from app.models.department_account import DepartmentAccount
 from app.services.notification_services import create_notification
 from app.constants.complaint_status import ComplaintStatus
@@ -130,10 +131,14 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
         
+        # Set the forwarded_at timestamp when forwarding to LGU
         await db.execute(
             update(Complaint)   
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.FORWARDED_TO_LGU.value)
+            .values(
+                status=ComplaintStatus.FORWARDED_TO_LGU.value,
+                forwarded_at=datetime.utcnow()
+            )
         )
         await db.commit()
         
@@ -145,6 +150,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
         await delete_cache("all_forwarded_incidents")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        await delete_cache("all_barangays")  # Clear barangay cache to update incident counts
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -227,6 +233,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         await delete_cache(f"department_incidents:{department_account_id}")
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
         await delete_cache("all_forwarded_incidents")
+        await delete_cache("all_barangays")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")

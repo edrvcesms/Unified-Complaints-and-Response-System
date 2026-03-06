@@ -4,6 +4,7 @@ import { useAllBarangays } from "../../../hooks/useBarangays";
 import { BarangayCard } from "../components/BarangayCard";
 import { StatCard, ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
+import { Bell } from "lucide-react";
 
 export const BarangayList: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
@@ -18,6 +19,21 @@ export const BarangayList: React.FC = () => {
       barangay.barangay_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [barangays, searchTerm]);
+
+  const barangaysWithNewIncidents = useMemo(() => {
+    if (!barangays) return 0;
+    return barangays.filter(b => (b.new_forwarded_incident_count ?? 0) > 0).length;
+  }, [barangays]);
+
+  const totalForwardedIncidents = useMemo(() => {
+    if (!barangays) return 0;
+    return barangays.reduce((sum, b) => sum + (b.forwarded_incident_count ?? 0), 0);
+  }, [barangays]);
+
+  const totalNewIncidents = useMemo(() => {
+    if (!barangays) return 0;
+    return barangays.reduce((sum, b) => sum + (b.new_forwarded_incident_count ?? 0), 0);
+  }, [barangays]);
 
   if (error) {
     return <ErrorMessage message="Failed to load barangays. Please refresh." />;
@@ -38,7 +54,19 @@ export const BarangayList: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Barangay Incidents</h1>
           <p className="text-sm text-gray-600 mt-1">View incidents forwarded from each barangay</p>
         </div>
-        <StatCard label="Total Barangays" value={barangays?.length || 0} />
+        <div className="flex gap-3">
+          <StatCard label="Total Barangays" value={barangays?.length || 0} />
+          {barangaysWithNewIncidents > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 min-w-35">
+              <div className="flex items-center gap-2 mb-1">
+                <Bell className="w-4 h-4 text-orange-600" />
+                <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">New Reports</p>
+              </div>
+              <p className="text-2xl font-bold text-orange-900">{barangaysWithNewIncidents}</p>
+              <p className="text-xs text-orange-600 mt-0.5">{totalNewIncidents} new incident{totalNewIncidents !== 1 ? 's' : ''}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <SearchInput

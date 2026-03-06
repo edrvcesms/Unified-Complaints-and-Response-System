@@ -18,3 +18,12 @@ export const getBarangayById = async (barangayId: number): Promise<BarangayAccou
     throw error;
   }
 };
+
+export const markBarangayIncidentsViewed = async (barangayId: number): Promise<{message: string; viewed_at: string}> => {
+  try {
+    return await barangayApi.post(`/${barangayId}/mark-viewed`);
+  } catch (error) {
+    console.error("Error marking barangay incidents as viewed:", error);
+    throw error;
+  }
+};

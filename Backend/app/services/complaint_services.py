@@ -360,6 +360,7 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        await delete_cache("all_barangays")
         
         if department_account_id:
             await delete_cache(f"department_incidents:{department_account_id}")

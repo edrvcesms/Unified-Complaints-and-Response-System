@@ -4,11 +4,15 @@ from app.schemas.barangay_schema import BarangayAccountCreate, BarangayWithUserD
 from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount
 from app.models.user import User
-from sqlalchemy import select
+from app.models.complaint import Complaint
+from app.models.incident_complaint import IncidentComplaintModel
+from app.constants.complaint_status import ComplaintStatus
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.logger import logger
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
@@ -69,12 +73,14 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
-async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
+async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> List[BarangayWithUserData]:
     try:
-        cached_barangays = await get_cache("all_barangays")
-        if cached_barangays:
-            logger.info("All barangays retrieved from cache")
-            return [BarangayWithUserData.model_validate_json(barangay) for barangay in cached_barangays]
+        # Don't use cache if we need to calculate per-user new incident counts
+        if user_id is None:
+            cached_barangays = await get_cache("all_barangays")
+            if cached_barangays:
+                logger.info("All barangays retrieved from cache")
+                return [BarangayWithUserData.model_validate_json(barangay) for barangay in cached_barangays]
         
         result = await db.execute(
             select(Barangay)
@@ -85,8 +91,56 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
         )
         barangays = result.scalars().all()
         logger.info(f"Fetched all barangays: {len(barangays)} barangays found")
-        all_barangays = [BarangayWithUserData.model_validate(barangay, from_attributes=True) for barangay in barangays]
-        await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
+        
+        all_barangays = []
+        for barangay in barangays:
+            barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+            
+            # Count all forwarded incidents for this barangay
+            count_result = await db.execute(
+                select(func.count(func.distinct(IncidentComplaintModel.incident_id)))
+                .select_from(Complaint)
+                .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
+                .where(
+                    Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value,
+                    Complaint.barangay_id == barangay.id
+                )
+            )
+            barangay_data.forwarded_incident_count = count_result.scalar() or 0
+            
+            # Count new forwarded incidents (if user_id is provided)
+            if user_id:
+                # Get the last viewed timestamp for this barangay by this user
+                last_viewed_str = await get_cache(f"barangay_last_viewed:{user_id}:{barangay.id}")
+                
+                if last_viewed_str:
+                    # Parse the timestamp
+                    last_viewed = datetime.fromisoformat(last_viewed_str)
+                    
+                    # Count incidents forwarded after the last viewed timestamp
+                    new_count_result = await db.execute(
+                        select(func.count(func.distinct(IncidentComplaintModel.incident_id)))
+                        .select_from(Complaint)
+                        .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
+                        .where(
+                            Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value,
+                            Complaint.barangay_id == barangay.id,
+                            Complaint.forwarded_at > last_viewed
+                        )
+                    )
+                    barangay_data.new_forwarded_incident_count = new_count_result.scalar() or 0
+                else:
+                    # If never viewed before, all forwarded incidents are new
+                    barangay_data.new_forwarded_incident_count = barangay_data.forwarded_incident_count
+            else:
+                barangay_data.new_forwarded_incident_count = 0
+            
+            all_barangays.append(barangay_data)
+        
+        # Only cache if we're not calculating per-user data
+        if user_id is None:
+            await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
+        
         return all_barangays
    
     except HTTPException:
@@ -94,5 +148,16 @@ async def get_all_barangays(db: AsyncSession) -> List[BarangayWithUserData]:
 
     except Exception as e:
         logger.error(f"Error in get_all_barangays: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+async def mark_barangay_incidents_viewed(user_id: int, barangay_id: int):
+    """Mark that a user has viewed a barangay's incidents at this timestamp"""
+    try:
+        current_time = datetime.utcnow().isoformat()
+        await set_cache(f"barangay_last_viewed:{user_id}:{barangay_id}", current_time, expiration=2592000)  # 30 days
+        logger.info(f"Marked barangay {barangay_id} as viewed by user {user_id} at {current_time}")
+        return {"message": "Barangay incidents marked as viewed", "viewed_at": current_time}
+    except Exception as e:
+        logger.error(f"Error marking barangay as viewed: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     

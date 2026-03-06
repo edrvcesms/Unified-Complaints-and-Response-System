@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
-import { getAllBarangays, getBarangayById } from "../services/barangay/barangays";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getAllBarangays, getBarangayById, markBarangayIncidentsViewed } from "../services/barangay/barangays";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
+import { queryClient } from "../main";
 
 export const useAllBarangays = () => {
   const { data, isLoading, error } = useQuery<BarangayAccountData[]>({
     queryKey: ["barangays"],
     queryFn: getAllBarangays,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   return {
@@ -27,4 +30,13 @@ export const useBarangayById = (barangayId: number) => {
     isLoading,
     error,
   };
+};
+
+export const useMarkBarangayViewed = () => {
+  return useMutation({
+    mutationFn: (barangayId: number) => markBarangayIncidentsViewed(barangayId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["barangays"] });
+    },
+  });
 };

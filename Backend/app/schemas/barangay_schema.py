@@ -17,7 +17,28 @@ class BarangayAccountOut(BaseModel):
     user_id: int
     barangay_id: int
     user: UserData
+    
+    class Config:
+        from_attributes = True
+
+class BarangayOut(BarangayModel):
+    id: int
+    
+    class Config:
+        from_attributes = True
+
+class BarangayAccountWithDetails(BaseModel):
+    id: int
+    user_id: int
+    barangay_id: int
+    barangay: BarangayOut
+    
+    class Config:
+        from_attributes = True
 
 class BarangayWithUserData(BarangayModel):
     id: int
     barangay_account: BarangayAccountOut
+    
+    class Config:
+        from_attributes = True

@@ -8,10 +8,12 @@ class Announcement(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     uploader_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True)
     title = Column(String, nullable=False)
     content = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, default=datetime.utcnow)
 
     uploader = relationship("User", back_populates="announcements")
+    barangay_account = relationship("BarangayAccount", back_populates="announcements")
     media = relationship("AnnouncementMedia", back_populates="announcement", cascade="all, delete-orphan")

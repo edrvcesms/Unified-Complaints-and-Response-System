@@ -74,10 +74,7 @@ export const LguAnnouncements: React.FC = () => {
     if (!formData.content.trim()) {
       newErrors.content = "Content is required";
     }
-    
-    if (selectedFiles.length === 0) {
-      newErrors.files = "Please upload at least one image or video";
-    }
+
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -187,7 +184,7 @@ export const LguAnnouncements: React.FC = () => {
           {/* File Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Media Files <span className="text-red-500">*</span>
+              Media Files (Optional)
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}

@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status, File, UploadFile
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
@@ -65,16 +65,17 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
             detail=f"Error retrieving announcement: {str(e)}"
         )
 
-async def create_announcement(announcement_data: AnnouncementCreate, media_files: List[UploadFile], uploader_id: int, db: AsyncSession):
+async def create_announcement(announcement_data: AnnouncementCreate, media_files:  Optional[List[UploadFile]], uploader_id: int, db: AsyncSession):
     
     try:
-        for media in media_files:
-            if media.content_type not in allowed_media_types:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Unsupported media type: {media.content_type}"
-                )
-                
+        # Validate media files only if provided
+        if media_files:
+            for media in media_files:
+                if media.content_type not in allowed_media_types:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Unsupported media type: {media.content_type}"
+                    )
         
         user_result = await db.execute(select(User).where(User.id == uploader_id))
         user = user_result.scalar_one_or_none()
@@ -102,46 +103,49 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
             select(Announcement).where(Announcement.id == new_announcement.id).options(
                 selectinload(Announcement.uploader),
                 selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
-                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user)
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
+                selectinload(Announcement.media)
             )
         )
         new_announcement = result.scalar_one()
         
-        temp_dir = tempfile.mkdtemp(prefix="announcement_media_")
-        files_data = []
+        # Process media files only if provided
+        if media_files:
+            temp_dir = tempfile.mkdtemp(prefix="announcement_media_")
+            files_data = []
 
-        try:
-            for media in media_files:
-                temp_path = os.path.join(temp_dir, media.filename)
+            try:
+                for media in media_files:
+                    temp_path = os.path.join(temp_dir, media.filename)
 
-                with open(temp_path, "wb") as temp_file:
-                    temp_file.write(await media.read())
+                    with open(temp_path, "wb") as temp_file:
+                        temp_file.write(await media.read())
 
-                files_data.append({
-                    "filename": media.filename,
-                    "content_type": media.content_type,
-                    "temp_path": temp_path
-                })
+                    files_data.append({
+                        "filename": media.filename,
+                        "content_type": media.content_type,
+                        "temp_path": temp_path
+                    })
 
-            medias = upload_announcement_media_task.delay(
-                files_data,
-                announcement_id=new_announcement.id,
-                uploader_id=uploader_id
-            )
-
-            if not medias:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to enqueue media upload task"
+                medias = upload_announcement_media_task.delay(
+                    files_data,
+                    announcement_id=new_announcement.id,
+                    uploader_id=uploader_id
                 )
 
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error processing media files: {str(e)}"
-            )
+                if not medias:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to enqueue media upload task"
+                    )
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error processing media files: {str(e)}"
+                )
             
       
         return AnnouncementOut.model_validate(new_announcement)

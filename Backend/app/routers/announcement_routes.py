@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request, Form
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.db_dependency import get_async_db
 from app.dependencies.auth_dependency import get_current_user
@@ -23,7 +23,7 @@ async def read_announcement(request: Request, announcement_id: int, db: AsyncSes
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def upload_announcement(request: Request,announcement_data: str = Form(...), media_files: List[UploadFile] = File(default=[]), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+async def upload_announcement(request: Request,announcement_data: str = Form(...), media_files: Optional[List[UploadFile]] = File(default=[]), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
   
     if current_user.role not in ["lgu_official", "barangay_official"]:
         raise HTTPException(

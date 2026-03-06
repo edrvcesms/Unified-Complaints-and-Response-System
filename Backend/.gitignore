@@ -6,3 +6,6 @@ alembic/
 alembic.ini
 script.sql
 .vscode/
+load_test_k6.js
+locustfile.py
+LOAD_TESTING_GUIDE.md

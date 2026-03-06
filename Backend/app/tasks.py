@@ -5,10 +5,12 @@ import os
 from app.models.notification import Notification
 from app.models.complaint import Complaint
 from app.models.attachment import Attachment
+from app.models.announcement_media import AnnouncementMedia
+from app.models.announcements import Announcement
 from fastapi_mail import FastMail, MessageSchema
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.database.database import AsyncSessionLocal
-from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary
+from app.utils.cloudinary import upload_multiple_files_to_cloudinary
 from app.utils.caching import delete_cache
 from app.core.email_config import conf
 from sqlalchemy import select
@@ -107,7 +109,7 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
             upload_file = UploadFile(filename=f["filename"], file=file_obj, headers=headers)
             file_objs.append(upload_file)
 
-        urls = asyncio.run(upload_multiple_files_to_cloudinary(file_objs, folder="attachments"))
+        urls = asyncio.run(upload_multiple_files_to_cloudinary(file_objs, folder="ucrs/attachments"))
         logger.info(f"Uploaded {len(urls)} attachments to Cloudinary.")
 
         asyncio.run(_save_attachments_to_db(files_data, urls, complaint_id, uploader_id))
@@ -157,6 +159,7 @@ async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_
                 complaint_id=complaint_id,
                 uploaded_by=uploader_id
             )
+            
             attachments.append(attachment)
             logger.info(f"Prepared attachment for DB: {attachment.file_name}, size: {attachment.file_size} bytes, URL: {attachment.file_path}")
         db.add_all(attachments)
@@ -164,7 +167,67 @@ async def _save_attachments_to_db(files_data, urls, complaint_id: int, uploader_
         await db.commit()
         logger.info(f"Committed attachments to the database for complaint_id={complaint_id}")
 
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def upload_announcement_media_task(self, files_data, announcement_id: int, uploader_id: int):
+    file_objs = []
 
+    try:
+        for f in files_data:
+            file_obj = open(f["temp_path"], "rb")
+            headers = Headers({"content-type": f["content_type"]})
+            upload_file = UploadFile(filename=f["filename"], file=file_obj, headers=headers)
+            file_objs.append(upload_file)
+            logger.info(f"Prepared file object for announcement media: {f['filename']} with content type {f['content_type']}")
+
+        urls = asyncio.run(upload_multiple_files_to_cloudinary(file_objs, folder="ucrs/announcements"))
+        
+        logger.info(f"Uploaded {len(urls)} announcement media files to Cloudinary.")
+
+        asyncio.run(_save_announcement_media_to_db(files_data, urls, announcement_id))
+        logger.info(f"Saved announcement media metadata to database for announcement_id={announcement_id}")
+        return urls
+
+    except Exception as e:
+        logger.error(f"Failed to upload announcement media: {e}")
+
+    finally:
+        for f in file_objs:
+            try:
+                f.file.close()
+            except Exception:
+                pass
+
+        for f in files_data:
+            try:
+                if os.path.exists(f["temp_path"]):
+                    os.remove(f["temp_path"])
+                    logger.info(f"Deleted temporary file: {f['temp_path']}")
+            except Exception as e:
+                logger.warning(f"Failed to delete temp file {f['temp_path']}: {e}")
+
+        try:
+            temp_dir = os.path.dirname(files_data[0]["temp_path"])
+            if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                os.rmdir(temp_dir)
+        except Exception as e:
+            logger.warning(f"Failed to delete temp folder {temp_dir}: {e}")
+
+async def _save_announcement_media_to_db(files_data, urls, announcement_id: int):
+    media_records = []
+    async with AsyncSessionLocal() as db:
+        for f, url in zip(files_data, urls):
+            media_record = AnnouncementMedia(
+                announcement_id=announcement_id,
+                media_type=f["content_type"].split("/")[0],  # 'image' or 'video'
+                media_url=url,
+                uploaded_at=datetime.utcnow()
+            )
+            media_records.append(media_record)
+            logger.info(f"Prepared announcement media for DB: {media_record.media_url} of type {media_record.media_type}")
+        db.add_all(media_records)
+        logger.info(f"Added {len(media_records)} announcement media records to the database session for announcement_id={announcement_id}")
+        await db.commit()
+        logger.info(f"Committed announcement media records to the database for announcement_id={announcement_id}")            
 
 @celery_worker.task(
     bind=True,

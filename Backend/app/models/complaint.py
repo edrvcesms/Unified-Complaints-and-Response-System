@@ -30,7 +30,6 @@ class Complaint(Base):
     category = relationship("Category", back_populates="complaint")
     images = relationship("ComplaintImage", back_populates="complaint")
     attachment = relationship("Attachment", back_populates="complaint")
-    response = relationship("Response", back_populates="complaint")
     feedback = relationship("Feedback", back_populates="complaint")
     notifications = relationship("Notification", back_populates="complaint")
     incident_links = relationship("IncidentComplaintModel", back_populates="complaint", cascade="all, delete-orphan")

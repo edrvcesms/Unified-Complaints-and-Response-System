@@ -14,6 +14,5 @@ class DepartmentAccount(Base):
 
     user = relationship("User", back_populates="department_account")
     department = relationship("Department", back_populates="department_account")
-    report = relationship("Report", back_populates="department_account")
     complaint = relationship("Complaint", back_populates="department_account")
     incidents = relationship("IncidentModel", back_populates="department_account")

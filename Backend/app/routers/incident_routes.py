@@ -54,7 +54,7 @@ async def resolve_incident_complaints(incident_id: int, db: AsyncSession = Depen
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await resolve_complaints_by_incident(incident_id, db)
+    return await resolve_complaints_by_incident(incident_id, current_user.id, db)
 
 @router.patch("/{incident_id}/review", status_code=status.HTTP_200_OK)
 async def review_incident_complaints(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
@@ -63,7 +63,7 @@ async def review_incident_complaints(incident_id: int, db: AsyncSession = Depend
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await review_complaints_by_incident(incident_id, db)
+    return await review_complaints_by_incident(incident_id, current_user.id, db)
 
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
 async def forward_incident_lgu(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

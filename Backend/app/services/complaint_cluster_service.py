@@ -1,13 +1,7 @@
-from fastapi import HTTPException, status
-from sqlalchemy.orm import selectinload
-from app.models.complaint import Complaint
-from sqlalchemy import select
+from fastapi import status
 from app.schemas.complaint_schema import ComplaintCreateData
 from datetime import datetime
-from app.utils.logger import logger
-from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
-from app.utils.caching import set_cache, get_cache, delete_cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.repository.incident_repository import IncidentRepository
 from app.tasks import cluster_complaint_task

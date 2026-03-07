@@ -9,16 +9,24 @@ const getStatusConfig = (status: string, userRole?: string) => {
     submitted:                { label: "Submitted",              classes: "bg-gray-100 text-gray-800 border-green-200",   dot: "bg-gray-500"   },
     under_review:             { label: "Under Review",           classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
     resolved:                 { label: "Resolved",               classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
-    forwarded_to_lgu:         { label: "Forwarded to LGU",       classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
-    forwarded_to_department:  { label: "Forwarded to Department", classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+    resolved_by_department:   { label: "Resolved",               classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
+    resolved_by_barangay:     { label: "Resolved",               classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
+    reviewed_by_department:   { label: "Under Review",           classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
+    reviewed_by_barangay:     { label: "Under Review",           classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
+    forwarded_to_lgu:         { label: "Forwarded",              classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+    forwarded_to_department:  { label: "Forwarded",              classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
   };
   
   const STATUS_MAP_LGU_DEPT: Record<string, { label: string; classes: string; dot: string }> = {
     submitted:                { label: "Submitted",    classes: "bg-gray-100 text-gray-800 border-green-200",   dot: "bg-gray-500"   },
     under_review:             { label: "Under Review", classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
     resolved:                 { label: "Resolved",     classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
-    forwarded_to_lgu:         { label: "Unresolved",   classes: "bg-yellow-100 text-yellow-800 border-yellow-200", dot: "bg-yellow-500" },
-    forwarded_to_department:  { label: "Unresolved",   classes: "bg-yellow-100 text-yellow-800 border-yellow-200", dot: "bg-yellow-500" },
+    resolved_by_department:   { label: "Resolved",     classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
+    resolved_by_barangay:     { label: "Resolved",     classes: "bg-green-100 text-green-800 border-green-200",  dot: "bg-green-500"  },
+    reviewed_by_department:   { label: "Under Review", classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
+    reviewed_by_barangay:     { label: "Under Review", classes: "bg-blue-100 text-blue-800 border-blue-200",     dot: "bg-blue-500"   },
+    forwarded_to_lgu:         { label: "Forwarded",    classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+    forwarded_to_department:  { label: "Forwarded",    classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
   };
   
   const FALLBACK = { label: "Unknown", classes: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400" };

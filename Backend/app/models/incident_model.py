@@ -27,6 +27,8 @@ class IncidentModel(Base):
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
+    latitude = Column(String(50), nullable=True)
+    longitude = Column(String(50), nullable=True)
 
     status = Column(String(20), nullable=False, default="ACTIVE", index=True)
     complaint_count = Column(Integer, nullable=False, default=1)

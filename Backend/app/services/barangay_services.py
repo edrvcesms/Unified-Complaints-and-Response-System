@@ -75,7 +75,6 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
 
 async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> List[BarangayWithUserData]:
     try:
-        # Don't use cache if we need to calculate per-user new incident counts
         if user_id is None:
             cached_barangays = await get_cache("all_barangays")
             if cached_barangays:
@@ -96,7 +95,6 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
         for barangay in barangays:
             barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
             
-            # Count all forwarded incidents for this barangay
             count_result = await db.execute(
                 select(func.count(func.distinct(IncidentComplaintModel.incident_id)))
                 .select_from(Complaint)
@@ -108,16 +106,12 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
             )
             barangay_data.forwarded_incident_count = count_result.scalar() or 0
             
-            # Count new forwarded incidents (if user_id is provided)
             if user_id:
-                # Get the last viewed timestamp for this barangay by this user
                 last_viewed_str = await get_cache(f"barangay_last_viewed:{user_id}:{barangay.id}")
                 
                 if last_viewed_str:
-                    # Parse the timestamp
                     last_viewed = datetime.fromisoformat(last_viewed_str)
                     
-                    # Count incidents forwarded after the last viewed timestamp
                     new_count_result = await db.execute(
                         select(func.count(func.distinct(IncidentComplaintModel.incident_id)))
                         .select_from(Complaint)
@@ -130,14 +124,12 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
                     )
                     barangay_data.new_forwarded_incident_count = new_count_result.scalar() or 0
                 else:
-                    # If never viewed before, all forwarded incidents are new
                     barangay_data.new_forwarded_incident_count = barangay_data.forwarded_incident_count
             else:
                 barangay_data.new_forwarded_incident_count = 0
             
             all_barangays.append(barangay_data)
         
-        # Only cache if we're not calculating per-user data
         if user_id is None:
             await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
         

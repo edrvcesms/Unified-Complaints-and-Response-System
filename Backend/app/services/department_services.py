@@ -66,8 +66,8 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
                 IncidentModel.department_account_id == department_account_id,
                 IncidentComplaintModel.complaint.has(Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
-                    ComplaintStatus.UNDER_REVIEW.value,
-                    ComplaintStatus.RESOLVED.value
+                    ComplaintStatus.REVIEWED_BY_DEPARTMENT.value,
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
                 ]))
             )
             .options(
@@ -105,8 +105,8 @@ async def forwarded_dept_incident_by_barangay(department_account_id: int, barang
                 IncidentModel.barangay_id == barangay_id,
                 IncidentComplaintModel.complaint.has(Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
-                    ComplaintStatus.UNDER_REVIEW.value,
-                    ComplaintStatus.RESOLVED.value
+                    ComplaintStatus.REVIEWED_BY_DEPARTMENT.value,
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
                 ]))
             )
             .options(
@@ -152,7 +152,7 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
                 IncidentModel.department_account_id == department_account_id,
                 Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
-                    ComplaintStatus.RESOLVED.value
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
                 ])
             )
             .group_by(func.date(Complaint.created_at), Complaint.status)
@@ -168,7 +168,7 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
             
             if stat.status == ComplaintStatus.FORWARDED_TO_DEPARTMENT.value:
                 daily_counts[date_str]["forwarded"] = stat.count
-            elif stat.status == ComplaintStatus.RESOLVED.value:
+            elif stat.status == ComplaintStatus.RESOLVED_BY_DEPARTMENT.value:
                 daily_counts[date_str]["resolved"] = stat.count
         
         return {"daily_counts": daily_counts}

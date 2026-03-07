@@ -49,10 +49,12 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
       i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department'
     ).length,
     underReview: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department'
     ).length,
     resolved: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department'
     ).length,
   }), [incidents]);
 
@@ -212,19 +214,29 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
                     </td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' || 
-                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || 
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' 
-                          ? "bg-yellow-100 text-yellow-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' 
+                          ? "bg-orange-100 text-orange-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || 
+                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || 
+                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' 
                           ? "bg-blue-100 text-blue-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' 
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || 
+                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || 
+                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' 
                           ? "bg-green-100 text-green-800" : ""}
                       `}>
                         {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || 
                          incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' 
-                          ? "PENDING" 
-                          : incident.complaint_clusters[0]?.complaint?.status?.replace("_", " ").toUpperCase() || "N/A"}
+                          ? "FORWARDED" : 
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || 
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' 
+                          ? "RESOLVED" :
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || 
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' 
+                          ? "UNDER REVIEW" :
+                         incident.complaint_clusters[0]?.complaint?.status?.replace("_", " ").toUpperCase() || "N/A"}
                       </span>
                     </td>
                   </tr>

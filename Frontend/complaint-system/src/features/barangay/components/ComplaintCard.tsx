@@ -32,7 +32,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
     >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-3">
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 text-sm break-words">
+          <h4 className="font-semibold text-gray-900 text-sm overflow-wrap-anywhere">
             #{complaint.id} - {complaint.title}
           </h4>
           <p className="text-xs text-gray-500 mt-1">

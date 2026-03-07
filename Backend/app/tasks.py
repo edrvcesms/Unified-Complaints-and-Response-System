@@ -344,18 +344,25 @@ def cluster_complaint_task(self, complaint_data: dict):
 
     result = asyncio.run(_run())
     
-    asyncio.run(delete_cache(f"complaint:{cluster_data.complaint_id}"))
-    asyncio.run(delete_cache(f"incident_complaints:{result.incident_id}"))
-    asyncio.run(delete_cache(f"incident:{result.incident_id}"))
-    asyncio.run(delete_cache(f"barangay_{cluster_data.barangay_id}_complaints"))
-    asyncio.run(delete_cache(f"barangay_incidents:{cluster_data.barangay_id}"))
-    asyncio.run(delete_cache(f"user_complaints:{cluster_data.user_id}"))
-    asyncio.run(delete_cache(f"user_notifications:{cluster_data.user_id}"))
-    asyncio.run(delete_cache("all_complaints"))
-    asyncio.run(delete_cache("all_forwarded_incidents"))
-    asyncio.run(delete_cache(f"weekly_complaint_stats_by_barangay:{cluster_data.barangay_id}"))
-    asyncio.run(delete_cache(f"forwarded_barangay_incidents:{cluster_data.barangay_id}"))
-    asyncio.run(delete_cache(f"forwarded_department_incidents:{cluster_data.barangay_id}"))
+    async def _cleanup_cache():
+        cache_keys = [
+            f"complaint:{cluster_data.complaint_id}",
+            f"incident_complaints:{result.incident_id}",
+            f"incident:{result.incident_id}",
+            f"barangay_{cluster_data.barangay_id}_complaints",
+            f"barangay_incidents:{cluster_data.barangay_id}",
+            f"user_complaints:{cluster_data.user_id}",
+            f"user_notifications:{cluster_data.user_id}",
+            "all_complaints",
+            "all_forwarded_incidents",
+            f"weekly_complaint_stats_by_barangay:{cluster_data.barangay_id}",
+            f"forwarded_barangay_incidents:{cluster_data.barangay_id}",
+            f"forwarded_department_incidents:{cluster_data.barangay_id}",
+        ]
+        for key in cache_keys:
+            await delete_cache(key)
+    
+    asyncio.run(_cleanup_cache())
 
     recalculate_severity_task.apply_async(
         args=[result.incident_id],
@@ -383,7 +390,6 @@ def cluster_complaint_task(self, complaint_data: dict):
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_notifications_task(self, user_id: int, title: str, message: str, complaint_id: int = None, notification_type: str = "info"):
     try:
-        # Save to database FIRST before sending SSE
         notification = Notification(
             user_id=user_id,
             complaint_id=complaint_id,

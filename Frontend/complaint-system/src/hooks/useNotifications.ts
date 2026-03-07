@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import { notificationService, type NotificationHandler } from '../services/notifications/notificationService';
 import { useAuthStore } from '../store/authStore';
 
@@ -47,14 +47,21 @@ interface UseNotificationsOptions {
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
   const { events = ['*'], onNotification, autoConnect = true } = options;
   const { isAuthenticated, accessToken } = useAuthStore();
+  
+  // Use ref to store the latest handler without causing re-renders
+  const handlerRef = useRef(onNotification);
+  handlerRef.current = onNotification;
+
+  // Memoize events array to prevent unnecessary re-renders
+  const memoizedEvents = useMemo(() => events, [JSON.stringify(events)]);
 
   const handleNotification = useCallback<NotificationHandler>(
     (notification) => {
-      if (onNotification) {
-        onNotification(notification);
+      if (handlerRef.current) {
+        handlerRef.current(notification);
       }
     },
-    [onNotification]
+    [] // No dependencies - uses ref
   );
 
   useEffect(() => {
@@ -62,24 +69,28 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       return;
     }
 
-    events.forEach(event => {
+    // Register handlers
+    memoizedEvents.forEach(event => {
       notificationService.on(event, handleNotification);
     });
 
+    // Connect only once
     if (autoConnect) {
       notificationService.connect();
     }
 
     return () => {
-      events.forEach(event => {
+      // Cleanup handlers
+      memoizedEvents.forEach(event => {
         notificationService.off(event, handleNotification);
       });
       
+      // Only disconnect if no handlers remain
       if (notificationService['handlers'].size === 0) {
         notificationService.disconnect();
       }
     };
-  }, [isAuthenticated, accessToken, events, handleNotification, autoConnect]);
+  }, [isAuthenticated, accessToken, memoizedEvents, handleNotification, autoConnect]);
 
   return {
     connect: () => notificationService.connect(),

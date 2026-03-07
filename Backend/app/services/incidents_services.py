@@ -33,7 +33,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
                 IncidentComplaintModel.incident_id == IncidentModel.id,
                 Complaint.status.in_([
                     ComplaintStatus.SUBMITTED.value,
-                    ComplaintStatus.UNDER_REVIEW.value
+                    ComplaintStatus.REVIEWED_BY_BARANGAY.value
                 ])
             )
             .exists()

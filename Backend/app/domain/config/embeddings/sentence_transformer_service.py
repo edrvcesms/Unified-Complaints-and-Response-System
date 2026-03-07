@@ -9,8 +9,11 @@ import asyncio
 import logging
 from functools import lru_cache
 from typing import List
+import psutil
+import os
 
 from sentence_transformers import SentenceTransformer
+import torch
 
 from app.domain.interfaces.i_embedding_service import IEmbeddingService
 
@@ -22,8 +25,33 @@ EMBEDDING_DIM = 1024
 
 @lru_cache(maxsize=1)
 def _load_model() -> SentenceTransformer:
-    logger.info(f"Loading embedding model: {MODEL_NAME}")
-    return SentenceTransformer(MODEL_NAME)
+    # Detect GPU availability
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    # Track memory before loading model
+    process = psutil.Process(os.getpid())
+    cpu_memory_before = process.memory_info().rss / 1024**2  # MB
+    
+    logger.info(f"Loading embedding model: {MODEL_NAME} on device: {device}")
+    logger.info(f"CPU Memory before loading model: {cpu_memory_before:.2f} MB")
+    
+    model = SentenceTransformer(MODEL_NAME, device=device)
+    
+    # Track memory after loading model
+    cpu_memory_after = process.memory_info().rss / 1024**2  # MB
+    cpu_memory_used = cpu_memory_after - cpu_memory_before
+    
+    if device == 'cuda':
+        gpu_memory_used = torch.cuda.memory_allocated(0) / 1024**2  # MB
+        logger.info(f"✓ Model loaded on GPU: {torch.cuda.get_device_name(0)}")
+        logger.info(f"✓ GPU Memory used by model: {gpu_memory_used:.2f} MB")
+        logger.info(f"✓ CPU Memory used by model: {cpu_memory_used:.2f} MB")
+        logger.info(f"✓ Memory saved by using GPU: ~{gpu_memory_used - cpu_memory_used:.2f} MB moved from CPU to GPU")
+    else:
+        logger.info("GPU not available, using CPU")
+        logger.info(f"CPU Memory used by model: {cpu_memory_used:.2f} MB")
+    
+    return model
 
 
 class SentenceTransformerEmbeddingService(IEmbeddingService):

@@ -7,7 +7,6 @@ import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
 import { ConfirmationModal } from "../features/general/ConfirmationModal";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
 import { useNotifications as useNotificationData } from "../hooks/useNotification";
-import { useNotifications as useSSENotifications } from "../hooks/useNotifications";
 import { useToast } from "../hooks/useToast";
 import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
@@ -48,21 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
 
-  useSSENotifications({
-    events: ['*'],
-    onNotification: (notification) => {
-      console.log('SSE Notification received:', notification);
-      
-      showToast({
-        title: notification.data?.title || 'New Notification',
-        message: notification.data?.message || 'You have a new notification',
-        type: 'info',
-        duration: 5000,
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
+  // SSE notifications already handled in DashboardLayout
+  // Just show toast and refetch when query is invalidated by DashboardLayout
 
   const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
 

@@ -14,3 +14,4 @@ class CategoryConfigModel(Base):
     base_severity_weight = Column(Float, nullable=False, default=2.0)  # 1.0–5.0
     time_window_hours = Column(Float, nullable=False, default=24.0)
     similarity_threshold = Column(Float, nullable=False, default=0.65)  # tunable per category
+    category_radius_km = Column(Float, nullable=True, default=5.0)  # new field for geographic clustering radius

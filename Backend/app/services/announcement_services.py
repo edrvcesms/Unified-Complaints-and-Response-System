@@ -1,10 +1,9 @@
-from fastapi import HTTPException, status, File, UploadFile
+from fastapi import HTTPException, status, UploadFile
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from app.models.barangay_account import BarangayAccount
-from app.schemas.barangay_schema import BarangayAccountOut
 from app.models.announcements import Announcement
 import tempfile
 from app.schemas.announcement_schema import AnnouncementCreate, AnnouncementOut
@@ -68,7 +67,6 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
 async def create_announcement(announcement_data: AnnouncementCreate, media_files:  Optional[List[UploadFile]], uploader_id: int, db: AsyncSession):
     
     try:
-        # Validate media files only if provided
         if media_files:
             for media in media_files:
                 if media.content_type not in allowed_media_types:
@@ -109,7 +107,6 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
         )
         new_announcement = result.scalar_one()
         
-        # Process media files only if provided
         if media_files:
             temp_dir = tempfile.mkdtemp(prefix="announcement_media_")
             files_data = []

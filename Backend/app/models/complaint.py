@@ -22,6 +22,8 @@ class Complaint(Base):
     resolved_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
+    latitude = Column(String, nullable=True)
+    longitude = Column(String, nullable=True)
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")

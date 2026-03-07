@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
-from app.schemas.notification_schema import NotificationCreateData
+from app.constants.roles import UserRole
+from app.models.user import User
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
@@ -18,8 +19,6 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
 from app.tasks import cluster_complaint_task, send_notifications_task
-from app.models.notification import Notification
-from .sse_manager import sse_manager
 from .notification_services import create_notification
 
 
@@ -123,9 +122,9 @@ async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSess
         
         stats = {
             "total_submitted": sum(1 for c in complaints if c.status == ComplaintStatus.SUBMITTED.value),
-            "total_resolved": sum(1 for c in complaints if c.status == ComplaintStatus.RESOLVED.value),
+            "total_resolved": sum(1 for c in complaints if c.status == ComplaintStatus.RESOLVED_BY_BARANGAY.value),
             "total_forwarded": sum(1 for c in complaints if c.status == ComplaintStatus.FORWARDED_TO_LGU.value),
-            "total_under_review": sum(1 for c in complaints if c.status == ComplaintStatus.UNDER_REVIEW.value),
+            "total_under_review": sum(1 for c in complaints if c.status == ComplaintStatus.REVIEWED_BY_BARANGAY.value),
             "daily_counts": {}
         }
         
@@ -139,11 +138,11 @@ async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSess
             if day not in stats["daily_counts"]:
                 stats["daily_counts"][day] = {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
             stats["daily_counts"][day]["submitted"] += 1
-            if complaint.status == ComplaintStatus.RESOLVED.value:
+            if complaint.status == ComplaintStatus.RESOLVED_BY_BARANGAY.value:
                 stats["daily_counts"][day]["resolved"] += 1
-            elif complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value:
+            elif complaint.status in [ComplaintStatus.FORWARDED_TO_LGU.value, ComplaintStatus.FORWARDED_TO_DEPARTMENT.value]:
                 stats["daily_counts"][day]["forwarded"] += 1
-            elif complaint.status == ComplaintStatus.UNDER_REVIEW.value:
+            elif complaint.status == ComplaintStatus.REVIEWED_BY_BARANGAY.value:
                 stats["daily_counts"][day]["under_review"] += 1
         
         await set_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}", stats, expiration=3600)
@@ -251,7 +250,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
     
-async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
+async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -264,8 +263,10 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
 
         complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
         complaints = complaints.scalars().all()
+        result = await db.execute(select(User).where(User.id == reviewer_id))
+        reviewer = result.scalars().first()
         for complaint in complaints:
-            if complaint.status == ComplaintStatus.UNDER_REVIEW:
+            if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_DEPARTMENT.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="This incident is already under review"
@@ -274,7 +275,7 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.UNDER_REVIEW.value)
+            .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value)
         )
 
         await db.commit()
@@ -324,13 +325,15 @@ async def review_complaints_by_incident(incident_id: int, db: AsyncSession):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
+async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
         )
         complaint_ids = result.scalars().all()
+        result = await db.execute(select(User).where(User.id == resolver_id))
+        resolver = result.scalars().first()
 
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
@@ -338,7 +341,7 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
         complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
         complaints = complaints.scalars().all()
         for complaint in complaints:
-            if complaint.status == ComplaintStatus.RESOLVED:
+            if complaint.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This incident is already resolved"
@@ -347,7 +350,7 @@ async def resolve_complaints_by_incident(incident_id: int, db: AsyncSession):
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.RESOLVED.value, resolved_at=datetime.utcnow())
+            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value, resolved_at=datetime.utcnow())
         )
 
         await db.commit()

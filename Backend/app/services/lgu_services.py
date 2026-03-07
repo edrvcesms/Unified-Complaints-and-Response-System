@@ -108,7 +108,8 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
                 func.date(Complaint.created_at) >= week_ago,
                 Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_LGU.value,
-                    ComplaintStatus.RESOLVED.value
+                    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
                 ])
             )
             .group_by(func.date(Complaint.created_at), Complaint.status)
@@ -124,7 +125,9 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
             
             if stat.status == ComplaintStatus.FORWARDED_TO_LGU.value:
                 daily_counts[date_str]["forwarded"] = stat.count
-            elif stat.status == ComplaintStatus.RESOLVED.value:
+            elif stat.status == ComplaintStatus.RESOLVED_BY_BARANGAY.value:
+                daily_counts[date_str]["resolved"] = stat.count
+            elif stat.status == ComplaintStatus.RESOLVED_BY_DEPARTMENT.value:
                 daily_counts[date_str]["resolved"] = stat.count
         
         return {"daily_counts": daily_counts}

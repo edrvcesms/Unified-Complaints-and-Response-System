@@ -49,10 +49,14 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
       i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department'
     ).length,
     underReview: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay'
     ).length,
     resolved: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' ||
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay'
     ).length,
   }), [incidents]);
 
@@ -152,11 +156,15 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
                     <td className="px-5 py-3 text-gray-600 text-sm hidden lg:table-cell">{formatCategoryName(incident.category?.category_name)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "bg-yellow-100 text-yellow-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' ? "bg-blue-100 text-blue-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' ? "bg-green-100 text-green-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "bg-orange-100 text-orange-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "bg-blue-100 text-blue-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' ? "bg-green-100 text-green-800" : ""}
                       `}>
-                        {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "UNRESOLVED" : incident.complaint_clusters[0]?.complaint?.status?.replace("_", " ").toUpperCase() || "N/A"}
+                        {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "FORWARDED" : 
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' ? "RESOLVED" :
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "UNDER REVIEW" :
+                         incident.complaint_clusters[0]?.complaint?.status?.replace("_", " ").toUpperCase() || "N/A"}
                       </span>
                     </td>
                   </tr>

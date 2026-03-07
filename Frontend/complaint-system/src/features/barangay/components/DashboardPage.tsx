@@ -19,9 +19,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
   const stats: ComplaintStats = useMemo(() => ({
     total: complaints.length,
     submitted: complaints.filter(c => c.status === "submitted").length,
-    underReview: complaints.filter(c => c.status === "under_review").length,
+    underReview: complaints.filter(c => c.status === "under_review" || c.status === "reviewed_by_barangay").length,
     forwarded: complaints.filter(c => c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department").length,
-    resolved: complaints.filter(c => c.status === "resolved").length,
+    resolved: complaints.filter(c => c.status === "resolved" || c.status === "resolved_by_barangay").length,
   }), [complaints]);
 
   const recent = [...complaints]
@@ -70,7 +70,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             <StatCard label={t('dashboard.totalComplaints')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
             <StatCard label={t('dashboard.submitted')} value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
             <StatCard label={t('dashboard.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label={t('dashboard.forwardedToLgu')} value={stats.forwarded || 0} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
+            <StatCard label="Forwarded" value={stats.forwarded || 0} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
             <StatCard label={t('dashboard.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
           </>
         )}
@@ -91,7 +91,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
             <Bar dataKey="submitted" name={t('dashboard.submitted')} fill="#eab308" radius={[4, 4, 0, 0]} />
             <Bar dataKey="under_review" name={t('dashboard.underReview')} fill="#6366f1" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="forwarded" name={t('dashboard.forwardedToLgu')} fill="#f97316" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="forwarded" name={t('dashboard.forwarded')} fill="#f97316" radius={[4, 4, 0, 0]} />
             <Bar dataKey="resolved" name={t('dashboard.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -135,20 +135,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-mono text-xs text-gray-500">#{c.id}</td>
                     <td className="px-5 py-3 text-gray-900 font-medium text-sm">
-                      <div className="truncate max-w-[200px] sm:max-w-xs">{c.title}</div>
+                      <div className="truncate max-w-xs sm:max-w-sm">{c.title}</div>
                     </td>
                     <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">{formatCategoryName(c.category?.category_name)}</td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}
-                        ${c.status === "under_review" ? "bg-blue-100 text-blue-800" : ""}
+                        ${c.status === "under_review" || c.status === "reviewed_by_department" || c.status === "reviewed_by_barangay" ? "bg-blue-100 text-blue-800" : ""}
                         ${c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? "bg-orange-100 text-orange-800" : ""}
-                        ${c.status === "resolved" ? "bg-green-100 text-green-800" : ""}
+                        ${c.status === "resolved" || c.status === "resolved_by_department" || c.status === "resolved_by_barangay" ? "bg-green-100 text-green-800" : ""}
                       `}>
                         {c.status === "submitted" ? t('dashboard.statuses.submitted') :
-                         c.status === "under_review" ? t('dashboard.statuses.underReview') : 
-                         c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? t('dashboard.statuses.unresolved') :
-                         c.status === "resolved" ? t('dashboard.statuses.resolved') :
+                         c.status === "under_review" || c.status === "reviewed_by_department" || c.status === "reviewed_by_barangay" ? t('dashboard.statuses.underReview') : 
+                         c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? "Forwarded" :
+                         c.status === "resolved" || c.status === "resolved_by_department" || c.status === "resolved_by_barangay" ? t('dashboard.statuses.resolved') :
                          c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                       </span>
                     </td>

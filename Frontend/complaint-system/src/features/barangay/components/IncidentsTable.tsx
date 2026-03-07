@@ -28,8 +28,12 @@ const getSeverityColor = (severity: string) => {
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "resolved":
+    case "resolved_by_department":
+    case "resolved_by_barangay":
       return "bg-green-100 text-green-800";
     case "under_review":
+    case "reviewed_by_department":
+    case "reviewed_by_barangay":
       return "bg-blue-100 text-blue-800";
     case "submitted":
       return "bg-yellow-100 text-yellow-800";
@@ -44,6 +48,20 @@ const getStatusColor = (status: string) => {
 
 const formatStatus = (status: string) => {
   if (!status) return "N/A";
+  const lowerStatus = status.toLowerCase();
+  
+  if (lowerStatus === 'forwarded_to_lgu' || lowerStatus === 'forwarded_to_department') {
+    return "FORWARDED";
+  }
+  
+  if (lowerStatus === 'resolved_by_department' || lowerStatus === 'resolved_by_barangay') {
+    return "RESOLVED";
+  }
+  
+  if (lowerStatus === 'reviewed_by_department' || lowerStatus === 'reviewed_by_barangay') {
+    return "UNDER REVIEW";
+  }
+  
   return status.replace("_", " ").toUpperCase();
 };
 
@@ -63,7 +81,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       </td>
 
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        <div className="truncate max-w-[150px] sm:max-w-xs md:max-w-sm mx-auto" title={incident.title}>
+        <div className="truncate max-w-xs sm:max-w-sm md:max-w-md mx-auto" title={incident.title}>
           {incident.title}
         </div>
       </td>

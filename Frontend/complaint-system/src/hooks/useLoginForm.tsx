@@ -38,19 +38,26 @@ export const useLoginForm = () => {
     e.preventDefault();
     setErrors({});
 
-    const validationErrors: LoginFormErrors = {};
-    const emailError = validateEmail(formData);
-    const passwordError = validatePassword(formData);
-    
-    if (emailError) Object.assign(validationErrors, emailError);
-    if (passwordError) Object.assign(validationErrors, passwordError);
+    try {
+      const validationErrors: LoginFormErrors = {};
+      const emailError = validateEmail(formData);
+      const passwordError = validatePassword(formData);
+      
+      if (emailError) Object.assign(validationErrors, emailError);
+      if (passwordError) Object.assign(validationErrors, passwordError);
 
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
+      mutate(formData);
+    } catch (error) {
+      console.error("Validation error:", error);
+      setErrors({
+        general: "An error occurred. Please try again.",
+      });
     }
-
-    mutate(formData);
   };
 
   const handleForgotPassword = () => navigate("/forgot-password");

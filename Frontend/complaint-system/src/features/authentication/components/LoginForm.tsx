@@ -48,6 +48,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           value={formData.email}
           onChange={onChange}
           placeholder={t('auth.usernamePlaceholder')}
+          maxLength={255}
           aria-describedby={errors.email ? "email-error" : undefined}
           aria-invalid={!!errors.email}
           className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400

@@ -46,6 +46,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       value={value}
       onChange={onChange}
       placeholder={t('auth.passwordPlaceholder')}
+      maxLength={128}
       aria-describedby={hasError ? `${id}-error` : undefined}
       aria-invalid={hasError}
       className={`w-full px-4 py-2.5 pr-11 rounded-lg border text-sm text-gray-800 placeholder-gray-400

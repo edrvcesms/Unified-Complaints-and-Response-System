@@ -64,10 +64,27 @@ export const handleApiError = (error: unknown): ApiError => {
     // Extract custom backend message if available
     // FastAPI uses 'detail', other backends may use 'message', 'error', or 'errors'
     let customMessage: string | undefined;
-    if (data?.detail) customMessage = data.detail;
+    if (data?.detail) {
+      // FastAPI Pydantic validation errors - array of error objects
+      if (Array.isArray(data.detail)) {
+        const firstError = data.detail[0];
+        if (firstError?.msg) {
+          customMessage = firstError.msg;
+        } else if (typeof firstError === 'string') {
+          customMessage = firstError;
+        } else {
+          customMessage = "Validation error. Please check your input.";
+        }
+      } else {
+        customMessage = data.detail;
+      }
+    }
     else if (data?.message) customMessage = data.message;
     else if (data?.error) customMessage = typeof data.error === "string" ? data.error : data.error.message;
-    else if (data?.errors && Array.isArray(data.errors)) customMessage = data.errors[0]?.message || data.errors[0];
+    else if (data?.errors && Array.isArray(data.errors)) {
+      const firstError = data.errors[0];
+      customMessage = firstError?.message || firstError?.msg || (typeof firstError === 'string' ? firstError : undefined);
+    }
 
     return {
       message: customMessage || statusMessages[status] || "Something went wrong.",

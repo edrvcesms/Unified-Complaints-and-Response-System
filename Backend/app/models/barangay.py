@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Float, Integer, String, DateTime
 from datetime import datetime
 from sqlalchemy.orm import relationship
 
@@ -11,6 +11,8 @@ class Barangay(Base):
     barangay_address = Column(String, nullable=False)
     barangay_contact_number = Column(String, nullable=True)
     barangay_email = Column(String, unique=True, index=True, nullable=False)
+    centroid_latitude = Column(Float, nullable=True)
+    centroid_longitude = Column(Float, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True)
     

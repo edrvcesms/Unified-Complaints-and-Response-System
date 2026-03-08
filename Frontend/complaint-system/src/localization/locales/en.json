@@ -75,7 +75,7 @@
     "departmentLoginInstruction": "Sign in with your official department credentials.",
     "lguLoginInstruction": "Sign in with your official LGU credentials.",
     "signinInstruction": "Sign in with your official credentials to access the system.",
-    "usernameOrEmail": "Username or Email",
+    "usernameOrEmail": "Email Address",
     "usernamePlaceholder": "e.g. user.official@sta-maria.gov.ph",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",

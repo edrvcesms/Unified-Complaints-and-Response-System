@@ -4,6 +4,7 @@ import { PageHeader } from "../../general";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { Upload, X, FileImage, FileVideo } from "lucide-react";
+import { validateTitle, validateDescription } from "../../../utils/validators";
 
 interface FormData {
   title: string;
@@ -67,14 +68,15 @@ export const LguAnnouncements: React.FC = () => {
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
     
-    if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
+    const titleError = validateTitle(formData.title, "Title");
+    if (titleError) {
+      newErrors.title = titleError;
     }
     
-    if (!formData.content.trim()) {
-      newErrors.content = "Content is required";
+    const contentError = validateDescription(formData.content, "Content", true);
+    if (contentError) {
+      newErrors.content = contentError;
     }
-
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -145,6 +147,7 @@ export const LguAnnouncements: React.FC = () => {
               value={formData.title}
               onChange={handleChange}
               placeholder="Enter announcement title"
+              maxLength={200}
               className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
                 focus:outline-none focus:ring-2 transition
                 ${errors.title
@@ -169,6 +172,7 @@ export const LguAnnouncements: React.FC = () => {
               onChange={handleChange}
               placeholder="Enter announcement content"
               rows={6}
+              maxLength={5000}
               className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
                 focus:outline-none focus:ring-2 transition resize-none
                 ${errors.content

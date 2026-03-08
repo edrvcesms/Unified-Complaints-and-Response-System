@@ -25,6 +25,8 @@ class IncidentEntity:
     time_window_hours: float             # category-specific merge window
     first_reported_at: datetime
     last_reported_at: datetime
+    latitude: Optional[float] = None     # seeded from first complaint
+    longitude: Optional[float] = None    # seeded from first complaint
 
     def increment_complaint_count(self) -> None:
         self.complaint_count += 1

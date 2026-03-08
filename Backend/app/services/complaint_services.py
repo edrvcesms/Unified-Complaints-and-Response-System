@@ -155,6 +155,8 @@ async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSess
         logger.error(f"Error in get_weekly_complaint_stats_by_barangay: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
+
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
 
     try:
@@ -165,6 +167,8 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             title=complaint_data.title,
             description=complaint_data.description,
             location_details=complaint_data.location_details,
+            latitude=complaint_data.latitude,
+            longitude=complaint_data.longitude,
             barangay_id=complaint_data.barangay_id,
             barangay_account_id=complaint_data.barangay_account_id,
             category_id=complaint_data.category_id,
@@ -179,7 +183,8 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
 
         incident_repo = IncidentRepository(db)
         category_config = await incident_repo.get_category_config(complaint_data.category_id)
-        
+        logger.info(f"Step 2 complete — category config retrieved for category_id={complaint_data.category_id}")
+        logger.info(f"Category Config: {category_config}")
 
         input_dto = ClusterComplaintInput(
             complaint_id=new_complaint.id,
@@ -191,6 +196,9 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             category_time_window_hours=category_config["time_window_hours"],
             category_base_severity_weight=category_config["base_severity_weight"],
             similarity_threshold=category_config["similarity_threshold"],
+            category_radius_km=category_config["category_radius_km"],  # spatial radius
+            latitude=complaint_data.latitude,                           # complaint location
+            longitude=complaint_data.longitude,                         # complaint location
             created_at=datetime.utcnow(),
         )
         
@@ -248,7 +256,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         await db.rollback()
         logger.error(f"Error in submit_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
     
 async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db: AsyncSession):
     try:

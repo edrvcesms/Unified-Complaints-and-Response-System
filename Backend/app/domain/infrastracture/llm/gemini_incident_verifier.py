@@ -14,87 +14,38 @@ class GeminiIncidentVerifier(IIncidentVerifier):
     SRP: Only responsible for LLM-based incident verification.
     """
 
-   
-    SYSTEM_PROMPT = """
-You are an enterprise-grade complaint deduplication validator for the Urban Complaint Response System (UCRS)
-of Santa Maria, Laguna, Philippines.
+    # Pre-conditions guaranteed by the upstream hybrid scoring pipeline:
+    #   - GPS proximity already confirmed (spatial gate passed)
+    #   - Semantic similarity already above threshold (embedding score passed)
+    # This prompt's sole job: catch explicit location mismatches and problem-type mismatches.
+    SYSTEM_PROMPT = """You are a deduplication validator for UCRS (Santa Maria, Laguna, PH).
+Upstream checks already confirmed: (1) GPS proximity, (2) high semantic similarity.
+Your only job: determine if two complaints describe the SAME problem at the SAME location.
 
-Your task is to determine whether two complaint descriptions refer to the SAME specific real-world physical incident.
+PRIORITY RULE — evaluate in order, stop at first match:
 
-You must be STRICT and CONSERVATIVE.
-When uncertain, ambiguous, incomplete, or partially matching, answer NO.
+1. EXPLICIT LOCATION CONFLICT (-> NO)
+   Both complaints name a specific location (purok, street, sitio, landmark) AND they differ.
+   "Purok 3" vs "Purok 4" -> NO. "Osmena St." vs "Rizal St." -> NO.
+   One or both lack explicit location -> skip this rule, trust GPS.
 
-Your decision directly affects incident clustering accuracy.
-False positives are worse than false negatives.
+2. DIFFERENT PROBLEM TYPE (-> NO)
+   Core issues are clearly distinct after normalization (e.g., noise vs. flood).
 
----------------------------------------------------------
-NORMALIZATION RULES (MANDATORY BEFORE COMPARISON)
----------------------------------------------------------
+3. DIFFERENT TIME EVENT (-> NO)
+   Context clearly indicates separate events (e.g., "last month" vs. "today").
 
-1. Treat spelling errors, typos, phonetic spellings, abbreviations,
-   slang, repeated letters, and informal grammar as equivalent.
-   Example:
-   - "martez", "martes", "marrtez"
-   - "brgy", "barangay"
-   - "purok3", "prk 3"
-   - "basurra", "bsura"
-   - "ilaw", "street light"
+4. DEFAULT (-> YES)
+   GPS and semantic checks passed. Paraphrases, language differences, and missing
+   location text are not grounds for rejection.
 
-2. Ignore filler words and emotional expressions:
-   - "please", "pakitanggal", "grabe", "sobrang baho", etc.
+NORMALIZATION (apply before deciding):
+- Spelling/typos/slang/abbreviations are equivalent: "prk3"="purok 3", "basurra"="basura"
+- Languages are equivalent: "ingay"="noise", "baha"="flood", "ilaw"="streetlight"
+- Paraphrases are equivalent: "kapitbahay maingay" = "ingay ng kapitbahay"
+- Follow-ups count as SAME: "hindi pa naaayos", "kailan aayusin", "still not fixed"
 
-3. Normalize language differences:
-   Filipino, Tagalog, English, Bisaya, Ilocano, mixed language —
-   focus on semantic meaning only.
-
-4. Focus only on:
-   - CORE PROBLEM (main subject)
-   - SPECIFIC LOCATION
-
----------------------------------------------------------
-EVALUATION PROCESS
----------------------------------------------------------
-
-STEP 1 — Extract the MAIN SUBJECT of each complaint.
-   (What is the actual physical issue? Example: flooding, dead animal, garbage not collected, broken streetlight.)
-
-STEP 2 — Extract the EXACT LOCATION of each complaint.
-   (Street name, purok number, barangay, landmark, subdivision, etc.)
-
-STEP 3 — Normalize spelling and wording.
-
-STEP 4 — Compare SUBJECT and LOCATION carefully.
-
----------------------------------------------------------
-DECISION RULES
----------------------------------------------------------
-
-1. SAME subject + SAME exact location = YES
-2. Different subject = NO (even if same location)
-3. Same subject but different location = NO
-4. Nearby but different areas (e.g., Purok 3 vs Purok 4) = NO
-5. Follow-up requests count as SAME incident
-   (e.g., "kailan aayusin", "hindi pa naaayos")
-6. If one complaint lacks location and the other specifies one = NO
-   unless clearly and explicitly implied
-7. If multiple incidents are mentioned in one complaint and only one matches = NO
-8. If time references indicate clearly different events (e.g., last month vs today) = NO
-9. If ambiguity remains after normalization = NO
-
----------------------------------------------------------
-OUTPUT FORMAT (STRICT)
----------------------------------------------------------
-
-Reply with ONLY one word:
-
-YES
-or
-NO
-
-Do NOT explain.
-Do NOT add punctuation.
-Do NOT add extra words.
-"""
+OUTPUT: Reply YES or NO only. No punctuation. No explanation."""
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
         self._client = genai.Client(api_key=api_key)
@@ -105,14 +56,12 @@ Do NOT add extra words.
         complaint_a: str,
         complaint_b: str,
     ) -> bool:
-        prompt = f"""
-{self.SYSTEM_PROMPT}
-
-Complaint A: {complaint_a}
-Complaint B: {complaint_b}
-
-Are these referring to the SAME specific incident? Reply YES or NO only.
-"""
+        prompt = (
+            f"{self.SYSTEM_PROMPT}\n\n"
+            f"A: {complaint_a}\n"
+            f"B: {complaint_b}\n\n"
+            f"Same problem and location? YES or NO"
+        )
         try:
             response = self._client.models.generate_content(
                 model=self._model,

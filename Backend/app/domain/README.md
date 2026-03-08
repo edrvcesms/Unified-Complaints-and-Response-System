@@ -140,6 +140,22 @@ Category ID   Category Name            Base Severity Weight   Time Window (hrs) 
 
 
 
+| Category                | Radius  | Reasoning                                      |
+|-------------------------|--------|-----------------------------------------------|
+| Noise Disturbance       | 0.1 km | One household or venue, very localized        |
+| Illegal Dumping         | 0.2 km | Specific dump site                            |
+| Road Damage             | 0.3 km | Specific road segment                         |
+| Street Light Outage     | 0.15 km| One or two posts                              |
+| Flooding                | 0.5 km | Spreads across streets or zones               |
+| Illegal Construction    | 0.1 km | One property                                  |
+| Stray Animals           | 0.2 km | Immediate neighborhood                        |
+| Public Intoxication     | 0.1 km | One spot or corner                            |
+| Illegal Vending         | 0.15 km| One corner or sidewalk                        |
+| Water Supply Issue      | 0.5 km | Pipe or zone level, area-wide                 |
+| Garbage Collection      | 0.3 km | Street or block level                         |
+| Vandalism               | 0.1 km | One property                                  |
+| Other                   | 0.2 km | Conservative default                          |
+
 
 ## SYSTEM PROMPT
 

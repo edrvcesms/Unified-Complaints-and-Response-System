@@ -159,12 +159,14 @@ class ClusterComplaintUseCase:
                     incident.latitude, incident.longitude,
                 )
                 if distance_km > data.category_radius_km:
+                      # Soft penalty — too far but let semantic decide
+                     # Handles cases where reporter is physically far from the incident
+                   # (e.g. filing from a different barangay about the same event)
                     logger.info(
                         f"DISQUALIFIED incident_id={incident.id}: "
                         f"distance={distance_km:.4f} km > radius={data.category_radius_km:.2f} km"
                     )
-                    continue  # hard disqualify — do not score this candidate at all
-
+                    spatial_score = 0.0
                 spatial_score = 1.0 - (distance_km / data.category_radius_km)
 
             # --- Semantic score with retry (guards against Pinecone eventual consistency) ---

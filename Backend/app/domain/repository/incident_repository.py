@@ -112,6 +112,7 @@ class IncidentRepository(IIncidentRepository):
             "base_severity_weight": config.base_severity_weight,
             "time_window_hours": config.time_window_hours,
             "similarity_threshold": config.similarity_threshold,
+            "category_radius_km": config.category_radius_km,
         }
 
     def _to_entity(self, model: IncidentModel) -> IncidentEntity:
@@ -121,6 +122,8 @@ class IncidentRepository(IIncidentRepository):
             description=model.description,
             barangay_id=model.barangay_id,
             category_id=model.category_id,
+            latitude=model.latitude,   # missing
+            longitude=model.longitude,
          
             status=model.status,
             complaint_count=model.complaint_count,
@@ -137,6 +140,8 @@ class IncidentRepository(IIncidentRepository):
             description=entity.description,
             barangay_id=entity.barangay_id,
             category_id=entity.category_id,
+            latitude=entity.latitude,   # missing
+            longitude=entity.longitude,
            
             status=entity.status,
             complaint_count=entity.complaint_count,

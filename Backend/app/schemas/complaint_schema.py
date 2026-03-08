@@ -14,6 +14,8 @@ from .attachment_schema import AttachmentBaseModel
 class ComplaintBaseModel(BaseModel):
     title: str
     description: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     location_details: Optional[str] = None
     barangay_id: int
     barangay_account_id: Optional[int] = None

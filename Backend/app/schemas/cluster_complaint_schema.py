@@ -13,4 +13,7 @@ class ClusterComplaintSchema(BaseModel):
     category_time_window_hours: int
     category_base_severity_weight: float
     similarity_threshold: float
+    category_radius_km: float        # ← add
+    latitude: float | None = None    # ← add
+    longitude: float | None = None   # ← add
     created_at: datetime

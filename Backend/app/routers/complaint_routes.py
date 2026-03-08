@@ -37,7 +37,7 @@ async def get_complaint(request: Request, complaint_id: int, db: AsyncSession = 
     
 @router.post("/submit-complaint", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
-async def create_complaint(request: Request, data: str = Form(...), attachments: List[UploadFile] = File(default=None), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def create_complaint(request: Request, data: str = Form(...), attachments: List[UploadFile] = File(default=[]), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     complaint_data = ComplaintCreateData.parse_raw(data)
     complaint = await submit_complaint(complaint_data, current_user.id, db)
     if attachments:

@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, Float, ForeignKey, Integer
+from sqlalchemy import Column, Float, ForeignKey, Integer, Boolean
 
 
 class CategoryConfigModel(Base):
@@ -15,3 +15,4 @@ class CategoryConfigModel(Base):
     time_window_hours = Column(Float, nullable=False, default=24.0)
     similarity_threshold = Column(Float, nullable=False, default=0.65)  # tunable per category
     category_radius_km = Column(Float, nullable=True, default=5.0)  # new field for geographic clustering radius
+    requires_proximity = Column(Boolean, nullable=True, default=False)  # new field to toggle spatial scoring

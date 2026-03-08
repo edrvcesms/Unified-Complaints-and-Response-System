@@ -301,15 +301,27 @@ class ClusterComplaintUseCase:
             )
 
             # Step 4a — Upsert merged complaint vector with resolved incident_id
-            await self._vector_repo.upsert(
-                complaint_id=data.complaint_id,
-                embedding=embedding,
-                barangay_id=data.barangay_id,
-                category_id=data.category_id,
-                incident_id=incident.id,
-                status="ACTIVE",
-                created_at_unix=created_at_unix,
-            )
+            try:
+                await self._vector_repo.upsert(
+                    complaint_id=data.complaint_id,
+                    embedding=embedding,
+                    barangay_id=data.barangay_id,
+                    category_id=data.category_id,
+                    incident_id=incident.id,
+                    status="ACTIVE",
+                    created_at_unix=created_at_unix,
+                )
+                
+                logger.info(
+                    f"Upserted vector for merged complaint_id={data.complaint_id} "
+                    f"linked to incident_id={incident.id}"
+                )
+                
+            except Exception as e:
+                logger.error(
+                    f"Failed to upsert vector for complaint_id={data.complaint_id} "
+                    f"after merging into incident_id={incident.id}: {str(e)}"
+                )
 
         else:
             # Step 4b — Create new incident AND upsert seed vector immediately.

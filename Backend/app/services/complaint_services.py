@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
+from app.models.incident_model import IncidentModel
 from app.models.barangay_account import BarangayAccount
 from sqlalchemy import select, update
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData

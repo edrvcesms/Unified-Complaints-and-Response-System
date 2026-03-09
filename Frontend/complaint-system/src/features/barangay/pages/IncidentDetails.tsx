@@ -28,6 +28,7 @@ export const IncidentDetails: React.FC = () => {
     title: '',
     message: '',
   });
+  
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: '',

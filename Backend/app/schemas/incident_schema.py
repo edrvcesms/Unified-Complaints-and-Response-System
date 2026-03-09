@@ -31,6 +31,8 @@ class IncidentData(IncidentBaseModel):
     category: Optional[CategoryModel] = None
     barangay: Optional[BarangayModel] = None
     complaint_clusters: List[IncidentComplaintClusterModel] = []
+    has_new_complaints: Optional[bool] = False
+    new_complaint_count: Optional[int] = 0
     
     class Config:
         from_attributes = True

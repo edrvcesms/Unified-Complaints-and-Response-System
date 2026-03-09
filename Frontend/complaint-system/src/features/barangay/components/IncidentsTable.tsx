@@ -74,6 +74,8 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
     navigate(`/dashboard/incidents/${incident.id}`);
   };
 
+  const hasNewComplaints = incident.has_new_complaints || (incident.new_complaint_count ?? 0) > 0;
+
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">
@@ -81,8 +83,15 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       </td>
 
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        <div className="truncate max-w-xs sm:max-w-sm md:max-w-md mx-auto" title={incident.title}>
-          {incident.title}
+        <div className="flex items-center justify-center gap-2">
+          <div className="truncate max-w-xs sm:max-w-sm md:max-w-md" title={incident.title}>
+            {incident.title}
+          </div>
+          {hasNewComplaints && incident.new_complaint_count && incident.new_complaint_count > 0 && (
+            <div className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white rounded-full shrink-0" title={`${incident.new_complaint_count} new complaint${incident.new_complaint_count > 1 ? 's' : ''}`}>
+              <span className="text-xs font-bold">{incident.new_complaint_count}</span>
+            </div>
+          )}
         </div>
       </td>
 

@@ -315,3 +315,58 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
     except Exception as e:
         logger.error(f"Error in get_incidents_forwarded_to_department: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
+    """Mark an incident as viewed, resetting new complaint indicators"""
+    try:
+        result = await db.execute(
+            select(IncidentModel)
+            .where(IncidentModel.id == incident_id)
+            .options(
+                selectinload(IncidentModel.category),
+                selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                    .selectinload(Complaint.attachment),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                    .selectinload(Complaint.user)
+            )
+        )
+        incident = result.scalars().first()
+        
+        if not incident:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Incident {incident_id} not found"
+            )
+        
+        # Reset new complaint indicators
+        incident.has_new_complaints = False
+        incident.new_complaint_count = 0
+        incident.last_viewed_at = datetime.utcnow()
+        
+        await db.commit()
+        await db.refresh(incident)
+        
+        # Clear all related caches
+        await delete_cache(f"incident:{incident_id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache(f"barangay_incidents:{incident.barangay_id}")
+        await delete_cache(f"forwarded_barangay_incidents:{incident.barangay_id}")
+        await delete_cache("all_forwarded_incidents")
+        
+        if incident.department_account_id:
+            await delete_cache(f"department_incidents:{incident.department_account_id}")
+            await delete_cache(f"forwarded_department_incidents:{incident.department_account_id}")
+        
+        logger.info(f"Incident {incident_id} marked as viewed")
+        return IncidentData.model_validate(incident, from_attributes=True)
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error in mark_incident_as_viewed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

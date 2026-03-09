@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.incidents_services import assign_incident_to_department, get_incidents_by_barangay, get_incident_by_id
+from app.services.incidents_services import assign_incident_to_department, get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed
 from app.dependencies.auth_dependency import get_current_user
 from app.services.complaint_services import get_complaints_by_incident, resolve_complaints_by_incident, review_complaints_by_incident
 from app.services.incidents_services import forward_incident_to_lgu, assign_incident_to_department, get_incidents_forwarded_to_department
@@ -82,3 +82,12 @@ async def assign_incident_department(incident_id: int, department_account_id: in
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
     return await assign_incident_to_department(incident_id, department_account_id, db)
+
+@router.post("/{incident_id}/mark-viewed", status_code=status.HTTP_200_OK)
+async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+    
+    return await mark_incident_as_viewed(incident_id, db)

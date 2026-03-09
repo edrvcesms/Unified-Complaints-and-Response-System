@@ -18,4 +18,6 @@ export interface Incident {
   category: Category;
   barangay: BarangayData;
   complaint_clusters: ComplaintCluster[];
+  has_new_complaints?: boolean;
+  new_complaint_count?: number;
 }

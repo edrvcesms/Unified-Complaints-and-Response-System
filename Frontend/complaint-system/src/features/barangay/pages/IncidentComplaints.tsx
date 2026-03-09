@@ -1,9 +1,13 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { useIncidentDetails, useIncidentComplaints, useMarkIncidentAsViewed } from "../../../hooks/useIncidents";
 import { ArrowLeft } from "lucide-react";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { SkeletonComplaintCard } from "../components/Skeletons";
 import { ComplaintCard } from "../components/ComplaintCard";
+import { Pagination } from "../components/Pagination";
+
+const ITEMS_PER_PAGE = 9;
 
 export const IncidentComplaints: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -15,6 +19,29 @@ export const IncidentComplaints: React.FC = () => {
     isLoading: complaintsLoading,
     error: complaintsError,
   } = useIncidentComplaints(Number(incidentId), true);
+  
+  const markAsViewed = useMarkIncidentAsViewed();
+  const hasMarkedAsViewed = useRef(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Calculate pagination
+  const totalPages = useMemo(() => {
+    return complaints ? Math.ceil(complaints.length / ITEMS_PER_PAGE) : 0;
+  }, [complaints]);
+
+  const paginatedComplaints = useMemo(() => {
+    if (!complaints) return [];
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const end = start + ITEMS_PER_PAGE;
+    return complaints.slice(start, end);
+  }, [complaints, currentPage]);
+
+  useEffect(() => {
+    if (!hasMarkedAsViewed.current && incident && (incident.has_new_complaints || (incident.new_complaint_count && incident.new_complaint_count > 0))) {
+      markAsViewed.mutate(Number(incidentId));
+      hasMarkedAsViewed.current = true;
+    }
+  }, [incident]);
 
   const handleComplaintClick = (complaintId: number) => {
     navigate(`/dashboard/incidents/complaints/${complaintId}`);
@@ -73,15 +100,29 @@ export const IncidentComplaints: React.FC = () => {
             Failed to load complaints. Please try again.
           </div>
         ) : complaints && complaints.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {complaints.map((complaint) => (
-              <ComplaintCard 
-                key={complaint.id} 
-                complaint={complaint} 
-                onClick={handleComplaintClick}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedComplaints.map((complaint) => (
+                <ComplaintCard 
+                  key={complaint.id} 
+                  complaint={complaint} 
+                  onClick={handleComplaintClick}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+            <p className="text-xs text-gray-500 text-right mt-2">
+              Showing {paginatedComplaints.length} of {complaints.length} complaints
+            </p>
+          </>
         ) : (
           <p className="text-sm text-gray-500 text-center py-12">
             No complaints found for this incident.

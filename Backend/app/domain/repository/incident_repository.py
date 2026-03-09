@@ -58,6 +58,9 @@ class IncidentRepository(IIncidentRepository):
         model.severity_level = incident.severity_level.value
         model.last_reported_at = incident.last_reported_at
         model.status = incident.status
+        model.has_new_complaints = incident.has_new_complaints
+        model.new_complaint_count = incident.new_complaint_count
+        model.last_viewed_at = incident.last_viewed_at
 
         await self._db.flush()
         await self._db.refresh(model)
@@ -132,6 +135,9 @@ class IncidentRepository(IIncidentRepository):
             time_window_hours=model.time_window_hours,
             first_reported_at=model.first_reported_at,
             last_reported_at=model.last_reported_at,
+            has_new_complaints=model.has_new_complaints,
+            new_complaint_count=model.new_complaint_count,
+            last_viewed_at=model.last_viewed_at,
         )
 
     def _to_model(self, entity: IncidentEntity) -> IncidentModel:
@@ -150,6 +156,9 @@ class IncidentRepository(IIncidentRepository):
             time_window_hours=entity.time_window_hours,
             first_reported_at=entity.first_reported_at,
             last_reported_at=entity.last_reported_at,
+            has_new_complaints=entity.has_new_complaints,
+            new_complaint_count=entity.new_complaint_count,
+            last_viewed_at=entity.last_viewed_at,
         )
         
         

@@ -24,6 +24,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
     switch (notification.event) {
       case 'new_complaint':
         console.log('New complaint received:', notification.data);
+        queryClient.invalidateQueries({ queryKey: ['incidents'] });
         showToast({
           type: 'info',
           title: 'New Complaint',

@@ -42,6 +42,11 @@ class IncidentModel(Base):
 
     first_reported_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     last_reported_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # New complaint tracking
+    has_new_complaints = Column(Boolean, nullable=False, default=False)
+    new_complaint_count = Column(Integer, nullable=False, default=0)
+    last_viewed_at = Column(DateTime, nullable=True)
 
     # Relationships
     complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")

@@ -1,4 +1,4 @@
-import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, reviewIncident } from "../services/incidents/incidents";
+import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, reviewIncident, markIncidentAsViewed } from "../services/incidents/incidents";
 import { delegateIncidentToLgu } from "../services/delegation/incidentDelegation";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -114,4 +114,14 @@ export const useAllForwardedIncidents = () => {
     isLoading,
     error,
   };
+};
+
+export const useMarkIncidentAsViewed = () => {
+  const mutation = useMutation({
+    mutationFn: (incidentId: number) => markIncidentAsViewed(incidentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+    }
+  });
+  return mutation;
 };

@@ -4,12 +4,14 @@ import { useAllBarangays } from "../../../hooks/useBarangays";
 import { BarangayCard } from "../components/BarangayCard";
 import { StatCard, ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { Bell } from "lucide-react";
+import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
 
 export const BarangayList: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
 
   const filteredBarangays = useMemo(() => {
     if (!barangays) return [];
@@ -19,6 +21,19 @@ export const BarangayList: React.FC = () => {
       barangay.barangay_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [barangays, searchTerm]);
+
+  const totalPages = Math.ceil((filteredBarangays?.length || 0) / itemsPerPage);
+  
+  const paginatedBarangays = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredBarangays.slice(startIndex, endIndex);
+  }, [filteredBarangays, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when search term changes
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const barangaysWithNewIncidents = useMemo(() => {
     if (!barangays) return 0;
@@ -76,8 +91,8 @@ export const BarangayList: React.FC = () => {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBarangays && filteredBarangays.length > 0 ? (
-          filteredBarangays.map((barangay) => (
+        {paginatedBarangays && paginatedBarangays.length > 0 ? (
+          paginatedBarangays.map((barangay) => (
             <BarangayCard 
               key={barangay.id}
               barangay={barangay}
@@ -90,6 +105,40 @@ export const BarangayList: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-700">
+            Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+            <span className="font-semibold text-gray-900">
+              {Math.min(currentPage * itemsPerPage, filteredBarangays.length)}
+            </span>{' '}
+            of <span className="font-semibold text-gray-900">{filteredBarangays.length}</span> barangays
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm font-medium text-blue-900">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

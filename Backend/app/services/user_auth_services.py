@@ -352,7 +352,7 @@ async def logout_user(request: Request):
                 "message": "Logout successful"
             }
         )
-        sse_manager.disconnect()
+        await sse_manager.disconnect()
         logger.info("SSE connection closed for user during logout.")
         response.delete_cookie(key="refresh_token")
         return response

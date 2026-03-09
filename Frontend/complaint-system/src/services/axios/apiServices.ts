@@ -12,6 +12,7 @@ export const lguInstance = createApiInstance(`${BASE_URL}/lgu`, true);
 export const notificationInstance = createApiInstance(`${BASE_URL}/notifications`, true);
 export const departmentInstance = createApiInstance(`${BASE_URL}/departments`, true);
 export const announcementInstance = createApiInstance(`${BASE_URL}/announcements`, true);
+export const reportInstance = createApiInstance(`${BASE_URL}/reports`, true);
 
 export const authApi = createApiClient(authInstance);
 export const barangayApi = createApiClient(barangayInstance);
@@ -21,3 +22,4 @@ export const lguApi = createApiClient(lguInstance);
 export const notificationApi = createApiClient(notificationInstance);
 export const departmentApi = createApiClient(departmentInstance);
 export const announcementApi = createApiClient(announcementInstance);
+export const reportApi = createApiClient(reportInstance);

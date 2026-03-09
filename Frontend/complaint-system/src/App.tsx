@@ -24,6 +24,9 @@ import { LguComplaintDetails } from "./features/lgu/pages/ComplaintDetails"
 import { BarangayList } from "./features/lgu/pages/BarangayList"
 import { BarangayIncidents } from "./features/lgu/pages/BarangayIncidents"
 import { LguAnnouncements } from "./features/lgu/pages/Announcements"
+import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayReports"
+import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
+import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 
 function App() {
@@ -69,6 +72,9 @@ function App() {
               <Route path="incidents/:incidentId" element={<LguIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<LguIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<LguComplaintDetails />} />
+              <Route path="monthly-reports" element={<MonthlyBarangayReports />} />
+              <Route path="monthly-reports/:barangayId" element={<MonthlyReportDetails />} />
+              <Route path="monthly-reports/:barangayId/category/:categoryName" element={<CategoryIncidents />} />
               <Route path="announcements" element={<LguAnnouncements />} />
               {/* Additional LGU routes can be added here */}
             </Route>

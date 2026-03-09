@@ -48,6 +48,11 @@ async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUs
 
 async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
+        cached_barangay = await get_cache(f"barangay_by_id:{barangay_id}")
+        if cached_barangay:
+            logger.info(f"Barangay ID {barangay_id} retrieved from cache")
+            return BarangayWithUserData.model_validate_json(cached_barangay)
+        
         result = await db.execute(
             select(Barangay)
             .options(
@@ -62,7 +67,8 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
         
         barangay_with_user_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
-        await set_cache(f"barangay_profile:{barangay.id}", barangay_with_user_data.model_dump_json(), expiration=3600)
+        await set_cache(f"barangay_by_id:{barangay.id}", barangay_with_user_data.model_dump_json(), expiration=3600)
+        logger.info(f"Barangay ID {barangay_id} retrieved from database and cached")
         return barangay_with_user_data
     
     except HTTPException:
@@ -75,39 +81,44 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
 
 async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> List[BarangayWithUserData]:
     try:
-        if user_id is None:
-            cached_barangays = await get_cache("all_barangays")
-            if cached_barangays:
-                logger.info("All barangays retrieved from cache")
-                return [BarangayWithUserData.model_validate_json(barangay) for barangay in cached_barangays]
+        cached_barangays = await get_cache("all_barangays")
         
-        result = await db.execute(
-            select(Barangay)
-            .options(
-                selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+        if cached_barangays:
+            logger.info("All barangays retrieved from cache")
+            all_barangays = [BarangayWithUserData.model_validate_json(barangay) for barangay in cached_barangays]
+        else:
+            result = await db.execute(
+                select(Barangay)
+                .options(
+                    selectinload(Barangay.barangay_account).selectinload(BarangayAccount.user)
+                )
+                .where(Barangay.barangay_account.has())
             )
-            .where(Barangay.barangay_account.has())
-        )
-        barangays = result.scalars().all()
-        logger.info(f"Fetched all barangays: {len(barangays)} barangays found")
-        
-        all_barangays = []
-        for barangay in barangays:
-            barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+            barangays = result.scalars().all()
+            logger.info(f"Fetched all barangays from database: {len(barangays)} barangays found")
             
+            all_barangays = []
+            for barangay in barangays:
+                barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
+                all_barangays.append(barangay_data)
+            
+            await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
+            logger.info(f"All barangays cached: {len(all_barangays)} barangays")
+        
+        for barangay_data in all_barangays:
             count_result = await db.execute(
                 select(func.count(func.distinct(IncidentComplaintModel.incident_id)))
                 .select_from(Complaint)
                 .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
                 .where(
                     Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value,
-                    Complaint.barangay_id == barangay.id
+                    Complaint.barangay_id == barangay_data.id
                 )
             )
             barangay_data.forwarded_incident_count = count_result.scalar() or 0
             
             if user_id:
-                last_viewed_str = await get_cache(f"barangay_last_viewed:{user_id}:{barangay.id}")
+                last_viewed_str = await get_cache(f"barangay_last_viewed:{user_id}:{barangay_data.id}")
                 
                 if last_viewed_str:
                     last_viewed = datetime.fromisoformat(last_viewed_str)
@@ -118,7 +129,7 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
                         .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
                         .where(
                             Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value,
-                            Complaint.barangay_id == barangay.id,
+                            Complaint.barangay_id == barangay_data.id,
                             Complaint.forwarded_at > last_viewed
                         )
                     )
@@ -127,11 +138,6 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
                     barangay_data.new_forwarded_incident_count = barangay_data.forwarded_incident_count
             else:
                 barangay_data.new_forwarded_incident_count = 0
-            
-            all_barangays.append(barangay_data)
-        
-        if user_id is None:
-            await set_cache("all_barangays", [barangay.model_dump_json() for barangay in all_barangays], expiration=3600)
         
         return all_barangays
    
@@ -146,7 +152,7 @@ async def mark_barangay_incidents_viewed(user_id: int, barangay_id: int):
     """Mark that a user has viewed a barangay's incidents at this timestamp"""
     try:
         current_time = datetime.utcnow().isoformat()
-        await set_cache(f"barangay_last_viewed:{user_id}:{barangay_id}", current_time, expiration=2592000)  # 30 days
+        await set_cache(f"barangay_last_viewed:{user_id}:{barangay_id}", current_time, expiration=2592000)
         logger.info(f"Marked barangay {barangay_id} as viewed by user {user_id} at {current_time}")
         return {"message": "Barangay incidents marked as viewed", "viewed_at": current_time}
     except Exception as e:

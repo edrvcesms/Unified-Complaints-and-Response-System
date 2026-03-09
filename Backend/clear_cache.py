@@ -35,6 +35,11 @@ async def clear_user_cache():
         
         # Clear forwarded incidents cache (correct key from services)
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
+        
+        # Clear monthly report cache for the past 12 months
+        for month in range(1, 13):
+            for year in range(2024, 2027):  # Clear reports for 2024-2026
+                await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{month}:{year}")
     
     print(f"✅ Cleared barangay caches for barangays 1-20")
     

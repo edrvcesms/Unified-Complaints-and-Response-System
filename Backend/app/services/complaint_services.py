@@ -230,6 +230,8 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         if updated_complaint.barangay_id:
             await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
             await delete_cache(f"barangay_{updated_complaint.barangay_id}_complaints")
+            now = datetime.utcnow()
+            await delete_cache(f"monthly_report_by_barangay:{updated_complaint.barangay_id}:{now.month}:{now.year}")
             
         if updated_complaint.incident_links:
             for link in updated_complaint.incident_links:
@@ -302,6 +304,8 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
             await delete_cache(f"barangay_{barangay_id}_complaints")
+            now = datetime.utcnow()
+            await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -379,6 +383,8 @@ async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db:
         if barangay_id:
             await delete_cache(f"barangay_incidents:{barangay_id}")
             await delete_cache(f"barangay_{barangay_id}_complaints")
+            now = datetime.utcnow()
+            await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")

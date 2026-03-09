@@ -150,7 +150,9 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
         await delete_cache("all_forwarded_incidents")
         await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache("all_barangays")  # Clear barangay cache to update incident counts
+        await delete_cache("all_barangays")
+        now = datetime.utcnow()
+        await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -234,6 +236,8 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
         await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
         await delete_cache("all_forwarded_incidents")
         await delete_cache("all_barangays")
+        now = datetime.utcnow()
+        await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
@@ -342,7 +346,6 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
                 detail=f"Incident {incident_id} not found"
             )
         
-        # Reset new complaint indicators
         incident.has_new_complaints = False
         incident.new_complaint_count = 0
         incident.last_viewed_at = datetime.utcnow()
@@ -350,12 +353,13 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         await db.commit()
         await db.refresh(incident)
         
-        # Clear all related caches
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
         await delete_cache(f"barangay_incidents:{incident.barangay_id}")
         await delete_cache(f"forwarded_barangay_incidents:{incident.barangay_id}")
         await delete_cache("all_forwarded_incidents")
+        now = datetime.utcnow()
+        await delete_cache(f"monthly_report_by_barangay:{incident.barangay_id}:{now.month}:{now.year}")
         
         if incident.department_account_id:
             await delete_cache(f"department_incidents:{incident.department_account_id}")

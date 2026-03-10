@@ -36,6 +36,7 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
                     .selectinload(Complaint.user)
             )
             .distinct()
+            .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info(f"Executed query to get forwarded incidents for barangay ID: {barangay_id}")
         
@@ -76,6 +77,7 @@ async def get_all_forwarded_incidents(db: AsyncSession):
                     .selectinload(Complaint.user)
             )
             .distinct()
+            .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info("Executed query to get all forwarded incidents")
         incidents = result.scalars().all()

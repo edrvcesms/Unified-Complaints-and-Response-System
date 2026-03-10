@@ -11,6 +11,7 @@ import { useToast } from "../hooks/useToast";
 import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
 import { queryClient } from "../main";
+import { formatTimeAgo } from "../utils/dateUtils";
 
 
 interface NavbarProps {
@@ -51,22 +52,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   // Just show toast and refetch when query is invalidated by DashboardLayout
 
   const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
-
-  const formatTime = (date: Date | string) => {
-    const now = new Date();
-    const notifDate = new Date(date);
-    const diffMs = now.getTime() - notifDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    
-    return notifDate.toLocaleDateString();
-  };
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
@@ -229,7 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                                 {notification.message}
                               </p>
                               <p className="text-xs text-gray-400 mt-1">
-                                {formatTime(notification.sent_at)}
+                                {formatTimeAgo(notification.sent_at)}
                               </p>
                             </div>
                           </div>

@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import type { Attachment } from "../../../types/general/attachment";
 import { truncateFileName } from "../../../utils/fileNameFormatter";
+import { formatDateTime } from "../../../utils/dateUtils";
 
 interface AttachmentFileCardProps {
   attachment: Attachment;
@@ -119,13 +120,7 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachment }
     <div className="space-y-2">
       {renderAttachment()}
       <p className="text-xs text-gray-500">
-        Uploaded: {new Date(attachment.uploaded_at).toLocaleDateString("en-PH", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        Uploaded: {formatDateTime(attachment.uploaded_at)}
       </p>
     </div>
   );

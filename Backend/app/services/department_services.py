@@ -80,6 +80,7 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
                     .selectinload(Complaint.user)
             )
             .distinct()
+            .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info(f"Executed query to get forwarded incidents for department account ID: {department_account_id}")
         
@@ -119,6 +120,7 @@ async def forwarded_dept_incident_by_barangay(department_account_id: int, barang
                     .selectinload(Complaint.user)
             )
             .distinct()
+            .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info(f"Executed query to get forwarded incidents for department account ID: {department_account_id} and barangay ID: {barangay_id}")
         

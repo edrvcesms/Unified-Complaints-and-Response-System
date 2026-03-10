@@ -14,3 +14,4 @@ from .incident_complaint import IncidentComplaintModel
 from .category_config import CategoryConfigModel
 from .announcements import Announcement
 from .announcement_media import AnnouncementMedia
+from .app_feedback import AppFeedback

@@ -42,3 +42,4 @@ class User(Base):
     feedback = relationship("Feedback", back_populates="user")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     announcements = relationship("Announcement", back_populates="uploader", cascade="all, delete-orphan")
+    app_feedbacks = relationship("AppFeedback", back_populates="user", cascade="all, delete-orphan")

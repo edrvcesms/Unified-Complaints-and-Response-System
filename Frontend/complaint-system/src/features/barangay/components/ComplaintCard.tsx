@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Calendar, MapPin } from "lucide-react";
 import { StatusBadge } from './StatusBadge';
 import type { Complaint } from "../../../types/complaints/complaint";
+import { formatDate } from "../../../utils/dateUtils";
 
 interface ComplaintCardProps {
   complaint: Complaint;
@@ -68,7 +69,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Calendar size={14} />
-          <span className="whitespace-nowrap">{new Date(complaint.created_at).toLocaleDateString("en-PH")}</span>
+          <span className="whitespace-nowrap">{formatDate(complaint.created_at, { month: "short", day: "numeric", year: "numeric" })}</span>
         </div>
       </div>
     </div>

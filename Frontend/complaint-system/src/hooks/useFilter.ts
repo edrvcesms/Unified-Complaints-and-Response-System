@@ -3,6 +3,7 @@ import type { Incident } from "../types/complaints/incident";
 import type { StatusFilter, SeverityScoreFilter } from "../types/complaints/complaint";
 import { ITEMS_PER_PAGE } from "../types/complaints/complaint";
 import { formatCategoryName } from "../utils/categoryFormatter";
+import { utcToLocal } from "../utils/dateUtils";
 
 export type SortOption = 
   | "priority_high_to_low" 
@@ -32,7 +33,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
-  const [sortBy, setSortBy] = useState<SortOption>("none");
+  const [sortBy, setSortBy] = useState<SortOption>("date_oldest_first");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
 
@@ -42,7 +43,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
       return { minDate: "", maxDate: new Date().toISOString().split('T')[0] };
     }
 
-    const dates = complaints.map(c => new Date(c.first_reported_at).getTime());
+    const dates = complaints.map(c => utcToLocal(c.first_reported_at).getTime());
     const earliestDate = new Date(Math.min(...dates));
     const today = new Date();
 
@@ -63,13 +64,13 @@ export function useComplaintsFilter(complaints: Incident[]) {
       case "priority_low_to_high":
         return copy.sort((a, b) => getPriorityScore(a) - getPriorityScore(b));
       case "date_newest_first":
-        return copy.sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime());
+        return copy.sort((a, b) => utcToLocal(b.first_reported_at).getTime() - utcToLocal(a.first_reported_at).getTime());
       case "date_oldest_first":
-        return copy.sort((a, b) => new Date(a.first_reported_at).getTime() - new Date(b.first_reported_at).getTime());
+        return copy.sort((a, b) => utcToLocal(a.first_reported_at).getTime() - utcToLocal(b.first_reported_at).getTime());
       case "date_newest_last":
-        return copy.sort((a, b) => new Date(b.last_reported_at).getTime() - new Date(a.last_reported_at).getTime());
+        return copy.sort((a, b) => utcToLocal(b.last_reported_at).getTime() - utcToLocal(a.last_reported_at).getTime());
       case "date_oldest_last":
-        return copy.sort((a, b) => new Date(a.last_reported_at).getTime() - new Date(b.last_reported_at).getTime());
+        return copy.sort((a, b) => utcToLocal(a.last_reported_at).getTime() - utcToLocal(b.last_reported_at).getTime());
       default:
         return copy;
     }
@@ -100,7 +101,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
       const matchesDate = () => {
         if (!dateFrom && !dateTo) return true;
         
-        const incidentDate = new Date(c.first_reported_at);
+        const incidentDate = utcToLocal(c.first_reported_at);
         const fromDate = dateFrom ? new Date(dateFrom) : null;
         const toDate = dateTo ? new Date(dateTo) : null;
         

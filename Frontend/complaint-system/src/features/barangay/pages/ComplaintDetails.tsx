@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { ComplaintInfoGrid } from '../components/ComplaintInfoGrid';
 import { AttachmentButton } from '../components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
+import { formatDateTime } from "../../../utils/dateUtils";
 
 export const ComplaintDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -76,13 +77,7 @@ export const ComplaintDetails: React.FC = () => {
               <div>
                 <p className="text-xs text-gray-500 mb-1">Submitted</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {new Date(complaint.created_at).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(complaint.created_at)}
                 </p>
               </div>
               <div>

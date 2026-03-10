@@ -1,6 +1,7 @@
 import { Calendar, MapPin, User, Building2, Tag } from "lucide-react";
 import type { Complaint } from "../../../types/complaints/complaint";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { formatDate } from "../../../utils/dateUtils";
 
 interface InfoCardProps {
   icon: React.ReactNode;
@@ -61,7 +62,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
     <InfoCard
       icon={<Calendar size={20} />}
       label="Created"
-      value={new Date(complaint.created_at).toLocaleDateString("en-PH", {
+      value={formatDate(complaint.created_at, {
         year: "numeric",
         month: "short",
         day: "numeric",

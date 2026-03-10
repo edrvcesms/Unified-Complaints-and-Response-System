@@ -65,6 +65,8 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         if barangay_id is not None:
             query = query.where(Complaint.barangay_id == barangay_id)
         
+        query = query.order_by(Complaint.created_at.asc())
+        
         result = await db.execute(query)
         complaints = result.scalars().all()
         
@@ -93,6 +95,7 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
             .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
+            .order_by(Complaint.created_at.asc())
         )
         complaints = result.scalars().all()
         
@@ -428,7 +431,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
                 selectinload(Complaint.category),
             )
             .where(Complaint.user_id == user_id)
-            .order_by(Complaint.created_at.desc())
+            .order_by(Complaint.created_at.asc())
         )
         complaints = result.scalars().all()
 

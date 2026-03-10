@@ -7,6 +7,7 @@ import { SkeletonCard } from "../components/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon, ForwardedIcon } from "../components/Icons";
 import { StatCard } from "../../general";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { utcToLocal } from "../../../utils/dateUtils";
 
 interface DashboardPageProps {
   complaints: Complaint[];
@@ -25,7 +26,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
   }), [complaints]);
 
   const recent = [...complaints]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => utcToLocal(b.created_at).getTime() - utcToLocal(a.created_at).getTime())
     .slice(0, 5);
 
   const { stats: weeklyStats } = useWeeklyComplaintStats();

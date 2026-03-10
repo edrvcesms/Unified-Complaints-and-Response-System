@@ -5,6 +5,7 @@ import { useWeeklyDepartmentStats } from "../../../hooks/useDepartment";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { utcToLocal } from "../../../utils/dateUtils";
 
 interface StatCardProps {
   label: string;
@@ -59,7 +60,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
   }), [incidents]);
 
   const recent = [...incidents]
-    .sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime())
+    .sort((a, b) => utcToLocal(b.first_reported_at).getTime() - utcToLocal(a.first_reported_at).getTime())
     .slice(0, 5);
 
   const { stats: weeklyStats } = useWeeklyDepartmentStats();

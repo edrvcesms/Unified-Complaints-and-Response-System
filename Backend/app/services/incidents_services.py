@@ -55,6 +55,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
                 .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.user)
             )
+            .order_by(IncidentModel.first_reported_at.asc())
         )
 
         incidents = result.scalars().all()
@@ -305,6 +306,7 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
                     .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.user)
             )
+            .order_by(IncidentModel.first_reported_at.asc())
         )
         
         incidents = result.scalars().all()

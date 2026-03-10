@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu } from '../../../hooks/useIncidents';
 import { ConfirmationModal } from "../../general/ConfirmationModal";
@@ -256,13 +257,7 @@ export const IncidentDetails: React.FC = () => {
               <div>
                 <p className="text-xs text-gray-500 mb-1">{t('incidents.details.firstReported')}</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {new Date(incident.first_reported_at).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(incident.first_reported_at)}
                 </p>
               </div>
               <div>
@@ -274,13 +269,7 @@ export const IncidentDetails: React.FC = () => {
               <div>
                 <p className="text-xs text-gray-500 mb-1">{t('incidents.details.lastReported')}</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {new Date(incident.last_reported_at).toLocaleDateString("en-PH", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(incident.last_reported_at)}
                 </p>
               </div>
               <div>

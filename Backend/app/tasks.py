@@ -10,7 +10,7 @@ from app.models.announcements import Announcement
 from fastapi_mail import FastMail, MessageSchema
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.database.database import AsyncSessionLocal
-from app.utils.cloudinary import upload_multiple_files_to_cloudinary
+from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary, delete_multiple_from_cloudinary
 from app.utils.caching import delete_cache
 from app.core.email_config import conf
 from sqlalchemy import select
@@ -228,6 +228,44 @@ async def _save_announcement_media_to_db(files_data, urls, announcement_id: int)
         logger.info(f"Added {len(media_records)} announcement media records to the database session for announcement_id={announcement_id}")
         await db.commit()
         logger.info(f"Committed announcement media records to the database for announcement_id={announcement_id}")            
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def delete_cloudinary_media_task(self, public_ids):
+    
+    try:
+        if isinstance(public_ids, str):
+            public_ids = [public_ids]
+        
+        if not public_ids:
+            logger.warning("delete_cloudinary_media_task called with empty public_ids list")
+            return {"success": True, "deleted": 0, "failed": 0}
+        
+        logger.info(f"Starting deletion of {len(public_ids)} media file(s) from Cloudinary")
+        logger.info(f"Public IDs to delete: {public_ids}")
+        
+        results = asyncio.run(delete_multiple_from_cloudinary(public_ids))
+        
+        for pid, result in zip(public_ids, results):
+            if result:
+                logger.info(f"Successfully deleted: {pid}")
+            else:
+                logger.error(f"Failed to delete: {pid}")
+        
+        deleted_count = sum(1 for r in results if r)
+        failed_count = len(results) - deleted_count
+        
+        logger.info(f"Cloudinary deletion complete: {deleted_count} deleted, {failed_count} failed")
+        
+        return {
+            "success": failed_count == 0,
+            "deleted": deleted_count,
+            "failed": failed_count,
+            "total": len(public_ids)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to delete media from Cloudinary: {str(e)}")
+        raise self.retry(exc=e)
 
 @celery_worker.task(
     bind=True,

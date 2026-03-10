@@ -48,13 +48,74 @@ async def upload_multiple_files_to_cloudinary(files: List[UploadFile], folder: s
     return await asyncio.gather(*tasks)
 
 async def delete_from_cloudinary(public_id: str) -> bool:
+    """
+    Delete a file from Cloudinary. Tries multiple resource types if needed.
+    """
     try:
-        result = await asyncio.to_thread(sync_destroy, public_id)
-        return result.get("result") == "ok"
+        # Try to detect resource type from public_id path
+        resource_type = "image"  # Default to image
+        if "video" in public_id or any(ext in public_id.lower() for ext in ["mp4", "mov", "avi"]):
+            resource_type = "video"
+        
+        logger.info(f"Attempting to delete {public_id} as {resource_type}")
+        result = await asyncio.to_thread(sync_destroy, public_id, resource_type=resource_type)
+        
+        if result.get("result") == "ok":
+            logger.info(f"Successfully deleted {public_id}")
+            return True
+        elif result.get("result") == "not found":
+            # Try other resource types
+            logger.warning(f"File {public_id} not found as {resource_type}, trying other types")
+            for alt_type in ["video", "image", "raw"]:
+                if alt_type == resource_type:
+                    continue
+                try:
+                    result = await asyncio.to_thread(sync_destroy, public_id, resource_type=alt_type)
+                    if result.get("result") == "ok":
+                        logger.info(f"Successfully deleted {public_id} as {alt_type}")
+                        return True
+                except Exception:
+                    pass
+            logger.error(f"Could not delete {public_id} with any resource type")
+            return False
+        else:
+            logger.error(f"Unexpected result deleting {public_id}: {result}")
+            return False
     except Exception as e:
-        logger.error(f"Failed to delete file {public_id} from Cloudinary: {e}")
+        logger.error(f"Exception while deleting {public_id} from Cloudinary: {type(e).__name__}: {e}")
         return False
 
-async def delete_multiple_from_cloudinary(public_ids: List[str]) -> List[bool]:
-    tasks = [delete_from_cloudinary(pid) for pid in public_ids]
+async def delete_multiple_from_cloudinary(public_ids: List[str], max_concurrent: int = 2) -> List[bool]:
+    """Delete multiple files with rate limiting to avoid connection pool issues"""
+    semaphore = asyncio.Semaphore(max_concurrent)
+    async def limited_delete(pid):
+        async with semaphore:
+            return await delete_from_cloudinary(pid)
+    tasks = [limited_delete(pid) for pid in public_ids]
     return await asyncio.gather(*tasks)
+
+def extract_public_id_from_url(url: str) -> str:
+    """
+    Extract the public_id from a Cloudinary URL.
+    Example: https://res.cloudinary.com/demo/image/upload/v1234567890/folder/uuid_filename.jpg
+    Returns: folder/uuid_filename
+    """
+    try:
+        parts = url.split('/upload/')
+        if len(parts) < 2:
+            logger.error(f"Invalid Cloudinary URL format: {url}")
+            return ""
+        
+        path_after_upload = parts[1]
+        
+        if path_after_upload.startswith('v'):
+            path_parts = path_after_upload.split('/', 1)
+            if len(path_parts) > 1:
+                path_after_upload = path_parts[1]
+        
+        public_id = path_after_upload.rsplit('.', 1)[0]
+        
+        return public_id
+    except Exception as e:
+        logger.error(f"Failed to extract public_id from URL {url}: {e}")
+        return ""

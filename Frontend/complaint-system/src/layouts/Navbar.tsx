@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useUserRole } from "../hooks/useUserRole";
@@ -26,6 +27,7 @@ const ROLES = {
 
 
 export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { userRole, getDisplayName } = useUserRole();
 
@@ -93,11 +95,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleProfileClick = () => {
-    setDropdownOpen(false);
-    navigate("/profile");
-  };
-
   const handleBellClick = () => {
     setNotificationDropdownOpen((prev) => !prev);
     refetch();
@@ -106,9 +103,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const handleLogout = () => {
     setDropdownOpen(false);
     confirmationModal.openModal({
-      title: "Logout",
-      message: "Are you sure you want to logout?",
-      confirmText: "Logout",
+      title: t('nav.logout'),
+      message: t('nav.confirmLogout'),
+      confirmText: t('nav.logout'),
       confirmColor: "red",
       onConfirm: () => onLogout(),
     });
@@ -134,10 +131,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
           <div className="min-w-0">
             <p className="text-white font-bold text-sm sm:text-base lg:text-xl leading-tight truncate tracking-tight">
-              Sta. Maria, Laguna
+              {t('appInfo.municipality')}
             </p>
             <p className="text-blue-300 text-[10px] sm:text-xs lg:text-sm leading-tight truncate tracking-widest uppercase font-medium mt-0.5">
-              Unified Complaints and Response System
+              {t('appInfo.systemName')}
             </p>
           </div>
         </div>
@@ -150,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               onClick={handleBellClick}
               aria-haspopup="true"
               aria-expanded={notificationDropdownOpen}
-              aria-label="Notifications"
+              aria-label={t('nav.notifications')}
               className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-blue-600 transition duration-200 cursor-pointer"
             >
               <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -170,13 +167,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 style={{ animation: "fadeSlideDown 0.15s ease-out" }}
               >
                 <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-800">Notifications</p>
+                  <p className="text-sm font-semibold text-gray-800">{t('nav.notifications')}</p>
                   {unreadCount > 0 && (
                     <button
                       onClick={() => markAllAsRead()}
                       className="text-xs text-blue-600 hover:text-blue-800 font-medium transition"
                     >
-                      Mark all as read
+                      {t('nav.markAllRead')}
                     </button>
                   )}
                 </div>
@@ -185,13 +182,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                   {isLoading ? (
                     <div className="px-5 py-8 text-center">
                       <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                      <p className="text-sm text-gray-500">Loading notifications...</p>
+                      <p className="text-sm text-gray-500">{t('nav.loadingNotifications')}</p>
                     </div>
                   ) : !notifications || notifications.length === 0 ? (
                     <div className="px-5 py-8 text-center">
                       <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                      <p className="text-sm text-gray-500">No notifications yet</p>
-                      <p className="text-xs text-gray-400 mt-1">You'll see updates here when they arrive</p>
+                      <p className="text-sm text-gray-500">{t('nav.noNotifications')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('nav.noNotificationsMessage')}</p>
                     </div>
                   ) : (
                     <>
@@ -281,22 +278,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[userRole as keyof typeof ROLES] || userRole || 'User'}</p>
               </div>
 
-              <button
-                role="menuitem"
-                type="button"
-                onClick={handleProfileClick}
-                className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700
-                  hover:bg-blue-50 hover:text-blue-800 transition duration-150 text-left cursor-pointer"
-              >
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                My Profile
-              </button>
-
-              <div className="h-px bg-gray-100 mx-4" />
-
               <LanguageSwitcher />
 
               <div className="h-px bg-gray-100 mx-4" />
@@ -312,7 +293,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                {t('nav.logout')}
               </button>
             </div>
           )}

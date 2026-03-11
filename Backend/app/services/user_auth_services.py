@@ -201,7 +201,7 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
         
         if user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
             logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized role")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
 
         if user.role == UserRole.BARANGAY_OFFICIAL:
             barangay = await get_barangay_account(user.id, db)

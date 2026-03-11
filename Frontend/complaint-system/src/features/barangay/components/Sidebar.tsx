@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Sidebar as GenericSidebar } from "../../general";
 import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon } from "./Icons";
 
@@ -6,16 +7,20 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const NAV_ITEMS = [
-  { path: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
-  { path: "/dashboard/incidents", label: "Manage Incidents", icon: <ComplaintsIcon /> },
-  { path: "/dashboard/announcements", label: "Announcements", icon: <AnnouncementsIcon /> },
-];
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  
+  const NAV_ITEMS = [
+    { path: "/dashboard", label: t('sidebar.barangay.dashboard'), icon: <DashboardIcon />, end: true },
+    { path: "/dashboard/incidents", label: t('sidebar.barangay.incidents'), icon: <ComplaintsIcon /> },
+    { path: "/dashboard/announcements", label: t('sidebar.barangay.announcements'), icon: <AnnouncementsIcon /> },
+  ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => (
-  <GenericSidebar
-    isOpen={isOpen}
-    onClose={onClose}
-    navItems={NAV_ITEMS}
-  />
-);
+  return (
+    <GenericSidebar
+      isOpen={isOpen}
+      onClose={onClose}
+      navItems={NAV_ITEMS}
+    />
+  );
+};

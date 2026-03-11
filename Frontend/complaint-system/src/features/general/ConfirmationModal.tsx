@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
@@ -26,6 +28,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   onCancel,
   isLoading = false,
 }) => {
+  const { t } = useTranslation();
+  
   if (!isOpen) return null;
 
   return (
@@ -40,7 +44,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             disabled={isLoading}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cancel
+            {t('modal.cancel')}
           </button>
           <button
             type="button"
@@ -70,7 +74,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 ></path>
               </svg>
             )}
-            {isLoading ? 'Processing...' : confirmText}
+            {isLoading ? t('modal.processing') : confirmText}
           </button>
         </div>
       </div>

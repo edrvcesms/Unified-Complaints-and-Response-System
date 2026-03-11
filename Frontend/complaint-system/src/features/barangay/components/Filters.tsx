@@ -1,16 +1,7 @@
+import { useTranslation } from "react-i18next";
 import type{ StatusFilter, SeverityScoreFilter } from "../../../types/complaints/complaint";
 import { STATUS_FILTERS, SEVERITY_SCORE_FILTERS } from "../../../types/complaints/complaint";
 import type { SortOption } from "../../../hooks/useFilter";
-
-const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: "Default", value: "none" },
-  { label: "Priority: High to Low", value: "priority_high_to_low" },
-  { label: "Priority: Low to High", value: "priority_low_to_high" },
-  { label: "Date: Newest First (First Reported)", value: "date_newest_first" },
-  { label: "Date: Oldest First (First Reported)", value: "date_oldest_first" },
-  { label: "Date: Newest Last (Last Reported)", value: "date_newest_last" },
-  { label: "Date: Oldest Last (Last Reported)", value: "date_oldest_last" },
-];
 
 interface StatusFilterPillsProps {
   current: StatusFilter;
@@ -109,7 +100,20 @@ interface SortDropdownProps {
 export const SortDropdown: React.FC<SortDropdownProps> = ({
   current,
   onChange,
-}) => (
+}) => {
+  const { t } = useTranslation();
+  
+  const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+    { label: t('filters.sort.default'), value: "none" },
+    { label: t('filters.sort.priorityHighLow'), value: "priority_high_to_low" },
+    { label: t('filters.sort.priorityLowHigh'), value: "priority_low_to_high" },
+    { label: t('filters.sort.dateNewestFirst'), value: "date_newest_first" },
+    { label: t('filters.sort.dateOldestFirst'), value: "date_oldest_first" },
+    { label: t('filters.sort.dateNewestLast'), value: "date_newest_last" },
+    { label: t('filters.sort.dateOldestLast'), value: "date_oldest_last" },
+  ];
+
+  return (
   <select
     value={current}
     onChange={(e) => onChange(e.target.value as SortOption)}
@@ -130,7 +134,8 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
       </option>
     ))}
   </select>
-);
+  );
+};
 
 interface DateFilterProps {
   dateFrom: string;

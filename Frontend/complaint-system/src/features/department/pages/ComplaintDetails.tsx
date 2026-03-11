@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { useComplaintDetails } from "../../../hooks/useComplaints";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { StatusBadge } from '../../barangay/components/StatusBadge';
@@ -13,6 +14,7 @@ export const DepartmentComplaintDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
+  const { t } = useTranslation();
   
   const { complaint, isLoading, error } = useComplaintDetails(Number(id));
 
@@ -28,11 +30,11 @@ export const DepartmentComplaintDetails: React.FC = () => {
           className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           <ArrowLeft size={16} />
-          Back to Incidents
+          {t('btn.backIncidents')}
         </button>
         <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
           <AlertCircle className="inline mr-2" size={18} />
-          {error ? "Failed to load complaint details. Please try again." : "Complaint not found."}
+          {error ? t('errors.loadComplaint') : t('errors.complaintNotFound')}
         </div>
       </div>
     );
@@ -45,7 +47,7 @@ export const DepartmentComplaintDetails: React.FC = () => {
         className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
-        Back to Complaints
+        {t('btn.backComplaints')}
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

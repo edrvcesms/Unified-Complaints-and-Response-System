@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Department } from '../../../types/department/department';
 import { X } from 'lucide-react';
 
@@ -17,6 +18,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
   onCancel,
   isLoading = false,
 }) => {
+  const { t } = useTranslation();
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
 
   if (!isOpen) return null;
@@ -31,7 +33,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Select Department</h3>
+          <h3 className="text-lg font-semibold text-gray-900">{t('modal.selectDept.title')}</h3>
           <button
             onClick={onCancel}
             disabled={isLoading}
@@ -42,7 +44,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
         </div>
         
         <p className="text-sm text-gray-600 mb-4">
-          Choose a department to assign this incident to:
+          {t('modal.selectDept.description')}
         </p>
         
         <div className="space-y-2 max-h-96 overflow-y-auto mb-6">
@@ -81,7 +83,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
             disabled={isLoading}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cancel
+            {t('modal.cancel')}
           </button>
           <button
             type="button"
@@ -111,7 +113,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
                 ></path>
               </svg>
             )}
-            {isLoading ? 'Processing...' : 'Select'}
+            {isLoading ? t('modal.processing') : t('modal.select')}
           </button>
         </div>
       </div>

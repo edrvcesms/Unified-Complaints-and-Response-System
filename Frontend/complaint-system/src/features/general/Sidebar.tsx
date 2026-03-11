@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface NavItem {
   path: string;
@@ -19,9 +20,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onClose,
   navItems,
-  navigationLabel = "Navigation",
-  footerText = "Unified Complaints and Response System",
+  navigationLabel,
+  footerText,
 }) => {
+  const { t } = useTranslation();
+  
   return (
     <>
       {isOpen && (
@@ -47,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 lg:hidden">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            Menu
+            {t('sidebar.menu')}
           </span>
           <button
             onClick={onClose}
@@ -62,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="px-4 pt-5 pb-2">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            {navigationLabel}
+            {navigationLabel || t('sidebar.navigation')}
           </p>
         </div>
 
@@ -105,9 +108,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="px-4 py-4 border-t border-gray-100">
           <p className="text-[10px] text-gray-400 leading-relaxed">
-            Sta. Maria, Laguna
+            {t('sidebar.location')}
             <br />
-            <span className="font-medium">{footerText}</span>
+            <span className="font-medium">{footerText || t('appInfo.systemName')}</span>
           </p>
         </div>
       </aside>

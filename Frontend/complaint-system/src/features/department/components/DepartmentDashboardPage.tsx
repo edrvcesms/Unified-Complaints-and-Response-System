@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Incident } from "../../../types/complaints/incident";
 import { useWeeklyDepartmentStats } from "../../../hooks/useDepartment";
@@ -40,6 +41,7 @@ interface WeeklyDataPoint {
 }
 
 export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = ({ incidents, isLoading }) => {
+  const { t } = useTranslation();
 
   const stats = useMemo(() => ({
     total: incidents.length,
@@ -88,8 +90,8 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Department Dashboard</h1>
-        <p className="text-sm text-gray-600 mt-1">Overview of incidents assigned to your department</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.dept.title')}</h1>
+        <p className="text-sm text-gray-600 mt-1">{t('dashboard.dept.description')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -98,7 +100,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
         ) : (
           <>
             <StatCard 
-              label="Total Assigned" 
+              label={t('dashboard.dept.totalAssigned')} 
               value={stats.total} 
               color="text-blue-700" 
               bg="bg-blue-50" 
@@ -106,7 +108,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
               icon={<TotalIcon />} 
             />
             <StatCard 
-              label="Pending" 
+              label={t('dashboard.dept.pending')} 
               value={stats.pending} 
               color="text-yellow-700" 
               bg="bg-yellow-50" 
@@ -114,7 +116,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
               icon={<PendingIcon />} 
             />
             <StatCard 
-              label="Under Review" 
+              label={t('dashboard.dept.underReview')} 
               value={stats.underReview} 
               color="text-indigo-700" 
               bg="bg-indigo-50" 
@@ -122,7 +124,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
               icon={<ReviewIcon />} 
             />
             <StatCard 
-              label="Resolved" 
+              label={t('dashboard.dept.resolved')} 
               value={stats.resolved} 
               color="text-green-700" 
               bg="bg-green-50" 
@@ -135,8 +137,8 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-gray-700">Weekly Activity</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Incidents assigned and resolved in the last 7 days</p>
+          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.dept.weeklyTitle')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.dept.weeklyDescription')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>

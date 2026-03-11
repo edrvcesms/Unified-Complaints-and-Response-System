@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useTranslation } from 'react-i18next';
 import { 
   useMyAnnouncements, 
   useCreateAnnouncement, 
@@ -29,6 +30,7 @@ import type { Announcement } from "../../../types/general/announcement";
 const MediaThumbnail: React.FC<{ url: string; type: string }> = ({ url, type }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { t } = useTranslation();
 
   if (type.startsWith('video')) {
     return (
@@ -44,7 +46,7 @@ const MediaThumbnail: React.FC<{ url: string; type: string }> = ({ url, type }) 
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
           <div className="animate-pulse flex flex-col items-center gap-1">
             <ImageIcon className="w-6 h-6 text-gray-300" />
-            <span className="text-xs text-gray-400">Loading...</span>
+            <span className="text-xs text-gray-400">{t('common.loading')}</span>
           </div>
         </div>
       )}
@@ -52,7 +54,7 @@ const MediaThumbnail: React.FC<{ url: string; type: string }> = ({ url, type }) 
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
           <div className="flex flex-col items-center gap-1">
             <ImageOff className="w-6 h-6 text-gray-400" />
-            <span className="text-xs text-gray-400">Failed</span>
+            <span className="text-xs text-gray-400">{t('errors.mediaFailed')}</span>
           </div>
         </div>
       )}
@@ -84,6 +86,7 @@ interface FormErrors {
 }
 
 export const AnnouncementsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -121,7 +124,7 @@ export const AnnouncementsPage: React.FC = () => {
     if (invalidFiles.length > 0) {
       setErrors((prev) => ({ 
         ...prev, 
-        files: "Only JPG, PNG images and MP4, MPEG, MOV videos are allowed" 
+        files: t('errors.invalidFileType')
       }));
       return;
     }
@@ -189,16 +192,16 @@ export const AnnouncementsPage: React.FC = () => {
         });
         setSuccessModal({
           isOpen: true,
-          title: "Success!",
-          message: "Announcement updated successfully",
+          title: t('announcements.success.updated'),
+          message: t('announcements.success.updatedMessage'),
         });
         setEditingAnnouncement(null);
       } else {
         await createAnnouncementMutation.mutateAsync(formDataToSend);
         setSuccessModal({
           isOpen: true,
-          title: "Success!",
-          message: "Announcement created successfully",
+          title: t('announcements.success.created'),
+          message: t('announcements.success.createdMessage'),
         });
       }
       
@@ -209,8 +212,8 @@ export const AnnouncementsPage: React.FC = () => {
     } catch (error: any) {
       setErrorModal({
         isOpen: true,
-        title: "Error",
-        message: error?.response?.data?.detail || `Failed to ${editingAnnouncement ? 'update' : 'create'} announcement`,
+        title: t('announcements.error.title'),
+        message: error?.response?.data?.detail || t(`announcements.error.${editingAnnouncement ? 'update' : 'create'}Failed`),
       });
     }
   };
@@ -240,15 +243,15 @@ export const AnnouncementsPage: React.FC = () => {
       await deleteAnnouncementMutation.mutateAsync(id);
       setSuccessModal({
         isOpen: true,
-        title: "Success!",
-        message: "Announcement deleted successfully",
+        title: t('announcements.success.deleted'),
+        message: t('announcements.success.deletedMessage'),
       });
       setDeleteConfirm(null);
     } catch (error: any) {
       setErrorModal({
         isOpen: true,
-        title: "Error",
-        message: error?.response?.data?.detail || "Failed to delete announcement",
+        title: t('announcements.error.title'),
+        message: error?.response?.data?.detail || t('announcements.error.deleteFailed'),
       });
     }
   };
@@ -273,8 +276,8 @@ export const AnnouncementsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader 
-        title="Announcements"
-        description="Create and manage announcements for the community"
+        title={t('announcements.title')}
+        description={t('announcements.description')}
       />
 
       {/* Tabs */}
@@ -289,7 +292,7 @@ export const AnnouncementsPage: React.FC = () => {
             }`}
           >
             <Plus className="w-4 h-4" />
-            {editingAnnouncement ? "Edit Announcement" : "Create Announcement"}
+            {editingAnnouncement ? t('announcements.editTab') : t('announcements.createTab')}
           </button>
           <button
             onClick={() => {
@@ -303,7 +306,7 @@ export const AnnouncementsPage: React.FC = () => {
             }`}
           >
             <Edit className="w-4 h-4" />
-            My Announcements
+            {t('announcements.manageTab')}
             {announcements && announcements.length > 0 && (
               <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-600 rounded-full">
                 {announcements.length}
@@ -324,7 +327,7 @@ export const AnnouncementsPage: React.FC = () => {
                   onClick={handleCancelEdit}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  Cancel Edit
+                  {t('announcements.form.cancel')}
                 </button>
               </div>
             )}
@@ -333,7 +336,7 @@ export const AnnouncementsPage: React.FC = () => {
               {/* Title */}
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Title <span className="text-red-500">*</span>
+                  {t('announcements.form.title')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -341,7 +344,7 @@ export const AnnouncementsPage: React.FC = () => {
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder="Enter announcement title"
+                  placeholder={t('announcements.form.titlePlaceholder')}
                   maxLength={200}
                   className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
                     focus:outline-none focus:ring-2 transition
@@ -358,14 +361,14 @@ export const AnnouncementsPage: React.FC = () => {
               {/* Content */}
               <div>
                 <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Content <span className="text-red-500">*</span>
+                  {t('announcements.form.content')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="content"
                   name="content"
                   value={formData.content}
                   onChange={handleChange}
-                  placeholder="Enter announcement content"
+                  placeholder={t('announcements.form.contentPlaceholder')}
                   rows={6}
                   maxLength={5000}
                   className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
@@ -383,14 +386,14 @@ export const AnnouncementsPage: React.FC = () => {
               {/* File Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Media Files (Optional)
+                  {t('announcements.form.uploadMedia')}
                 </label>
                 
                 {/* Existing Media - Show when editing */}
                 {editingAnnouncement && editingAnnouncement.media.length > 0 && (
                   <div className="mb-4">
                     <p className="text-sm font-medium text-gray-700 mb-2">
-                      Current Media ({existingMediaToKeep.length})
+                      {t('announcements.form.existingMedia')} ({existingMediaToKeep.length})
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {editingAnnouncement.media
@@ -420,7 +423,7 @@ export const AnnouncementsPage: React.FC = () => {
                 >
                   <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm text-gray-600 mb-1">
-                    {editingAnnouncement ? "Click to add more images or videos" : "Click to upload images or videos"}
+                    {editingAnnouncement ? t('announcements.form.uploadDescription') : t('announcements.form.uploadDescription')}
                   </p>
                   <p className="text-xs text-gray-500">
                     Supported: JPG, PNG, MP4, MPEG, MOV
@@ -442,7 +445,7 @@ export const AnnouncementsPage: React.FC = () => {
                 {selectedFiles.length > 0 && (
                   <div className="mt-4 space-y-2">
                     <p className="text-sm font-medium text-gray-700">
-                      {editingAnnouncement ? "New Files to Add" : "Selected Files"} ({selectedFiles.length})
+                      {t('announcements.form.selectedFiles')} ({selectedFiles.length})
                     </p>
                     <div className="space-y-2">
                       {selectedFiles.map((file, index) => (
@@ -483,7 +486,7 @@ export const AnnouncementsPage: React.FC = () => {
                     onClick={handleCancelEdit}
                     className="px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancel
+                    {t('modal.cancel')}
                   </button>
                 )}
                 <button
@@ -514,8 +517,8 @@ export const AnnouncementsPage: React.FC = () => {
                     </svg>
                   )}
                   {editingAnnouncement 
-                    ? (updateAnnouncementMutation.isPending ? "Updating..." : "Update Announcement")
-                    : (createAnnouncementMutation.isPending ? "Creating..." : "Create Announcement")
+                    ? (updateAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.update'))
+                    : (createAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.submit'))
                   }
                 </button>
               </div>
@@ -594,14 +597,14 @@ export const AnnouncementsPage: React.FC = () => {
                         className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                       >
                         <Edit className="w-4 h-4" />
-                        Edit
+                        {t('announcements.list.edit')}
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(announcement.id)}
                         className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
-                        Delete
+                        {t('announcements.list.delete')}
                       </button>
                     </div>
 
@@ -609,7 +612,7 @@ export const AnnouncementsPage: React.FC = () => {
                     {deleteConfirm === announcement.id && (
                       <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-sm text-red-700 mb-3">
-                          Are you sure you want to delete this announcement? This action cannot be undone.
+                          {t('announcements.list.deleteConfirm')}
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -617,13 +620,13 @@ export const AnnouncementsPage: React.FC = () => {
                             disabled={deleteAnnouncementMutation.isPending}
                             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                           >
-                            {deleteAnnouncementMutation.isPending ? "Deleting..." : "Yes, Delete"}
+                            {deleteAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.list.confirmDelete')}
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(null)}
                             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                           >
-                            Cancel
+                            {t('announcements.list.cancelDelete')}
                           </button>
                         </div>
                       </div>
@@ -636,16 +639,16 @@ export const AnnouncementsPage: React.FC = () => {
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
                   <Edit className="w-8 h-8 text-gray-400" />
                 </div>
-                <p className="text-gray-500 mb-2">No announcements yet</p>
+                <p className="text-gray-500 mb-2">{t('announcements.list.noAnnouncements')}</p>
                 <p className="text-sm text-gray-400 mb-4">
-                  Create your first announcement to share with the community
+                  {t('announcements.list.noAnnouncementsMessage')}
                 </p>
                 <button
                   onClick={() => setActiveTab("create")}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Create Announcement
+                  {t('announcements.createTab')}
                 </button>
               </div>
             )}

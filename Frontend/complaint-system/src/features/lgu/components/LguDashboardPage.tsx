@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Incident } from "../../../types/complaints/incident";
 import { useWeeklyForwardedIncidentsStats } from "../../../hooks/useStats";
@@ -39,6 +40,7 @@ interface WeeklyDataPoint {
 }
 
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
+  const { t } = useTranslation();
 
   const stats = useMemo(() => ({
     total: incidents.length,
@@ -89,8 +91,8 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">LGU Dashboard</h1>
-        <p className="text-sm text-gray-600 mt-1">Overview of incidents forwarded from barangays</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.lgu.title')}</h1>
+        <p className="text-sm text-gray-600 mt-1">{t('dashboard.lgu.description')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -98,18 +100,18 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label="Total Forwarded" value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
-            <StatCard label="Pending" value={stats.pending} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
-            <StatCard label="Under Review" value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label="Resolved" value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label={t('dashboard.lgu.totalForwarded')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
+            <StatCard label={t('dashboard.lgu.pending')} value={stats.pending} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
+            <StatCard label={t('dashboard.lgu.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
+            <StatCard label={t('dashboard.lgu.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
           </>
         )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-gray-700">Weekly Activity</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Incidents forwarded and resolved in the last 7 days</p>
+          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
@@ -118,16 +120,16 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
             <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }} cursor={{ fill: "#f9fafb" }} />
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
-            <Bar dataKey="forwarded" name="Forwarded" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="forwarded" name={t('chart.forwarded')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="resolved" name={t('chart.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Recent Forwarded Incidents</h2>
-          <span className="text-xs text-gray-500">{incidents.length} total</span>
+          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.lgu.recentTitle')}</h2>
+          <span className="text-xs text-gray-500">{incidents.length} {t('stats.total').toLowerCase()}</span>
         </div>
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -140,11 +142,11 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ID</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Title</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">Barangay</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.id')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.title')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">{t('table.headers.barangay')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">{t('table.headers.category')}</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

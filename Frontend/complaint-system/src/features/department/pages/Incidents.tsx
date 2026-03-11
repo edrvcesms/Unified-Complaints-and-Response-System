@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useAssignedIncidents } from "../../../hooks/useDepartment";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { DepartmentIncidentsTable } from "../components/DepartmentIncidentsTable";
@@ -7,6 +8,7 @@ import { ErrorMessage, PageHeader } from "../../general";
 
 export const DepartmentIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAssignedIncidents();
+  const { t } = useTranslation();
 
   const {
     search,

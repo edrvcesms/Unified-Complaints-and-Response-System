@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import { useAllBarangays } from "../../../hooks/useBarangays";
 import { ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -8,6 +9,7 @@ import { FileText, ChevronLeft, ChevronRight } from "lucide-react";
 export const MonthlyBarangayReports: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -52,9 +54,9 @@ export const MonthlyBarangayReports: React.FC = () => {
       <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-3 mb-2">
           <FileText className="w-7 h-7 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Monthly Barangay Reports</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('page.monthlyReports.title')}</h1>
         </div>
-        <p className="text-sm text-gray-600">View monthly incident reports for each barangay</p>
+        <p className="text-sm text-gray-600">{t('page.monthlyReports.description')}</p>
       </div>
 
       <div className="flex justify-between items-center">
@@ -66,7 +68,7 @@ export const MonthlyBarangayReports: React.FC = () => {
           />
         </div>
         <div className="text-sm text-gray-600">
-          Total: <span className="font-semibold">{filteredBarangays?.length || 0}</span> barangays
+          {t('stats.total')}: <span className="font-semibold">{filteredBarangays?.length || 0}</span> {t('stats.barangays')}
         </div>
       </div>
 
@@ -76,19 +78,19 @@ export const MonthlyBarangayReports: React.FC = () => {
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Barangay Name
+                  {t('table.headers.barangayName')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Address
+                  {t('table.headers.address')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Contact
+                  {t('table.headers.contact')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Email
+                  {t('table.headers.email')}
                 </th>
                 <th scope="col" className="px-6 py-3.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Action
+                  {t('table.headers.action')}
                 </th>
               </tr>
             </thead>
@@ -100,13 +102,13 @@ export const MonthlyBarangayReports: React.FC = () => {
                       <div className="text-sm font-semibold text-gray-900">{barangay.barangay_name}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600 line-clamp-2">{barangay.barangay_address || "N/A"}</div>
+                      <div className="text-sm text-gray-600 line-clamp-2">{barangay.barangay_address || t('common.na')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{barangay.barangay_contact_number || "N/A"}</div>
+                      <div className="text-sm text-gray-600">{barangay.barangay_contact_number || t('common.na')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">{barangay.barangay_email || "N/A"}</div>
+                      <div className="text-sm text-gray-600">{barangay.barangay_email || t('common.na')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -114,7 +116,7 @@ export const MonthlyBarangayReports: React.FC = () => {
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow cursor-pointer"
                       >
                         <FileText className="w-4 h-4" />
-                        View Report
+                        {t('monthlyReports.viewReport')}
                       </button>
                     </td>
                   </tr>
@@ -122,7 +124,7 @@ export const MonthlyBarangayReports: React.FC = () => {
               ) : (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    {searchTerm ? "No barangays match your search." : "No barangays found."}
+                    {searchTerm ? t('empty.noMatch') : t('empty.noBarangays')}
                   </td>
                 </tr>
               )}
@@ -134,7 +136,7 @@ export const MonthlyBarangayReports: React.FC = () => {
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="text-sm text-gray-700">
-              Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+              {t('common.showing')} <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
               <span className="font-semibold text-gray-900">
                 {Math.min(currentPage * itemsPerPage, filteredBarangays.length)}
               </span>{' '}

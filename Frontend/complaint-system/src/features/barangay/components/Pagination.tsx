@@ -1,4 +1,6 @@
 
+import { useTranslation } from "react-i18next";
+
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -10,6 +12,8 @@ export const Pagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => {
+  const { t } = useTranslation();
+  
   const getPageNumbers = (): number[] => {
     const pages: number[] = [];
     const start = Math.max(1, currentPage - 2);
@@ -23,8 +27,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 bg-gray-50">
       <p className="text-xs text-gray-600">
-        Page <span className="font-semibold text-gray-900">{currentPage}</span> of{" "}
-        <span className="font-semibold text-gray-900">{totalPages}</span>
+        {t('pagination.pageInfo', { current: currentPage, total: totalPages })}
       </p>
       <div className="flex items-center gap-2 flex-wrap justify-center">
         <button
@@ -32,7 +35,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           disabled={currentPage === 1}
           className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          ← Prev
+          {t('pagination.prev')}
         </button>
         {getPageNumbers().map((page) => (
           <button
@@ -52,7 +55,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           disabled={currentPage === totalPages}
           className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
-          Next →
+          {t('pagination.next')}
         </button>
       </div>
     </div>

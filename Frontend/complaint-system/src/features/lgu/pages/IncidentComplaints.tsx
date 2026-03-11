@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
 import { ArrowLeft } from "lucide-react";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -10,6 +11,7 @@ export const LguIncidentComplaints: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
+  const { t } = useTranslation();
 
   const { incident, isLoading: incidentLoading } = useIncidentDetails(Number(incidentId));
   const {
@@ -29,7 +31,7 @@ export const LguIncidentComplaints: React.FC = () => {
   if (!incident) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
-        Failed to load incident details.
+        {t('errors.loadIncident')}
       </div>
     );
   }
@@ -42,10 +44,10 @@ export const LguIncidentComplaints: React.FC = () => {
           className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
         >
           <ArrowLeft size={16} />
-          Back to Incident Details
+          {t('btn.backIncident')}
         </button>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
-          Related Complaints for Incident #{incident.id}
+          {t('complaint.incidentTitle', { id: incident.id })}
         </h1>
         <p className="text-sm text-gray-600 mt-1 break-words">
           {incident.title}

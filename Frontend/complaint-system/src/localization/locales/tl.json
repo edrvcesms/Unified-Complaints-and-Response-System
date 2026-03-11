@@ -1,87 +1,379 @@
 {
+  "common": {
+    "na": "No Data",
+    "unknown": "Unknown",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait",
+    "viewMore": "View More",
+    "viewLess": "View Less",
+    "showing": "Showing"
+  },
+  "nav": {
+    "logout": "Logout",
+    "confirmLogout": "Sure ka na ba na gusto mo mag-logout?",
+    "notifications": "Notifications",
+    "markAllRead": "Mark all as read",
+    "loadingNotifications": "Loading notifications...",
+    "noNotifications": "No notifications yet",
+    "noNotificationsMessage": "Makikita mo dito ang mga updates"
+  },
+  "sidebar": {
+    "menu": "Menu",
+    "navigation": "Navigation",
+    "location": "Sta. Maria, Laguna",
+    "openBtn": "Buksan ang sidebar",
+    "barangay": {
+      "dashboard": "Dashboard",
+      "incidents": "I-manage ang mga Insidente",
+      "announcements": "Mga Announcement"
+    },
+    "lgu": {
+      "dashboard": "Dashboard",
+      "barangayIncidents": "Insidente ng Barangay",
+      "forwardedIncidents": "Mga Forwarded na Insidente",
+      "monthlyReports": "Monthly Reports ng Barangay",
+      "announcements": "Mga Announcement",
+      "navLabel": "LGU Navigation",
+      "footer": "Local Government Unit"
+    },
+    "department": {
+      "dashboard": "Dashboard",
+      "incidents": "Mga Assigned na Insidente",
+      "navLabel": "Department Navigation",
+      "footer": "Department Portal"
+    }
+  },
+  "filters": {
+    "sort": {
+      "default": "Default",
+      "priorityHighLow": "Priority: High to Low",
+      "priorityLowHigh": "Priority: Low to High",
+      "dateNewestFirst": "Date: Newest First (First Reported)",
+      "dateOldestFirst": "Date: Oldest First (First Reported)",
+      "dateNewestLast": "Date: Newest Last (Last Reported)",
+      "dateOldestLast": "Date: Oldest Last (Last Reported)"
+    }
+  },
+  "search": {
+    "placeholder": "Search using title, category, barangay, or ID...",
+    "barangayPlaceholder": "Search barangay..."
+  },
+  "modal": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "select": "Select",
+    "processing": "Processing...",
+    "selectDept": {
+      "title": "Select Department",
+      "description": "Choose a department para sa incident na ito:"
+    }
+  },
+  "pagination": {
+    "pageInfo": "Page {{current}} ng {{total}}",
+    "prev": "← Previous",
+    "next": "Next →",
+    "showing": "Showing {{start}} to {{end}} of {{total}} {{item}}"
+  },
+  "btn": {
+    "backIncidents": "Back to Incidents",
+    "backIncident": "Back to Incident Details",
+    "backComplaints": "Back to Complaints",
+    "viewIncidents": "View Incidents",
+    "open": "Open"
+  },
+  "status": {
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "resolved": "Resolved",
+    "forwarded": "Forwarded",
+    "unknown": "Unknown",
+    "pending": "Pending"
+  },
+  "stats": {
+    "total": "Total",
+    "totalBarangays": "Total Barangays",
+    "newReports": "New Reports",
+    "barangays": "barangays"
+  },
+  "file": {
+    "image": "Image",
+    "video": "Video",
+    "pdf": "PDF",
+    "default": "File",
+    "kilobytes": "KB"
+  },
+  "table": {
+    "headers": {
+      "id": "ID",
+      "title": "Title",
+      "barangayName": "Barangay Name",
+      "barangay": "Barangay",
+      "category": "Category",
+      "status": "Status",
+      "address": "Address",
+      "contact": "Contact",
+      "email": "Email",
+      "action": "Action",
+      "severity": "Severity",
+      "complaintCounts": "Bilang ng Complaints",
+      "view": "View"
+    }
+  },
+  "badge": {
+    "new": "new"
+  },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Pangkalahatang tingin sa mga reklamo sa Sta. Maria, Laguna",
-    "totalComplaints": "Kabuuang Reklamo",
-    "submitted": "Isinumite",
-    "underReview": "Tinitingnan",
-    "forwarded": "Ipinadala",
-    "resolved": "Nalutas",
-    "weeklyActivity": "Lingguhang Aktibidad",
-    "weeklySubtitle": "Reklamong isinumite vs. nalutas ngayong linggo",
-    "recentComplaints": "Mga Kamakailang Reklamo",
-    "noRecentActivities": "Walang Kamakailang Aktibidad",
-    "noRecentActivitiesMessage": "Wala pang isinumiteng reklamo.",
+    "subtitle": "Overview ng mga complaints sa Sta. Maria, Laguna",
+    "totalComplaints": "Total Complaints",
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "forwarded": "Forwarded",
+    "resolved": "Resolved",
+    "weeklyActivity": "Weekly Complaint Activity",
+    "weeklySubtitle": "Complaints submitted vs. resolved this week",
+    "recentComplaints": "Recent Complaints",
+    "noRecentActivities": "Walang Recent Activities",
+    "noRecentActivitiesMessage": "Wala pang submitted na complaints.",
     "columns": {
       "id": "ID",
-      "title": "Reklamo",
-      "category": "Kategorya",
-      "status": "Katayuan",
-      "total": "Kabuuan"
+      "title": "Title",
+      "category": "Category",
+      "status": "Status",
+      "total": "Total"
     },
     "statuses": {
-      "submitted": "Isinumite",
-      "underReview": "Tinitingnan",
-      "forwarded": "Ipinadala",
-      "unresolved": "Hindi pa Nalutas",
-      "resolved": "Nalutas"
+      "submitted": "Submitted",
+      "underReview": "Under Review",
+      "resolved": "Resolved"
+    },
+    "lgu": {
+      "title": "LGU Dashboard",
+      "description": "Overview ng incidents galing sa mga barangay",
+      "totalForwarded": "Total Forwarded",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "resolved": "Resolved",
+      "weeklyTitle": "Weekly Activity",
+      "weeklyDescription": "Incidents forwarded at resolved in the last 7 days",
+      "recentTitle": "Recent Forwarded Incidents"
+    },
+    "dept": {
+      "title": "Department Dashboard",
+      "description": "Overview ng assigned incidents sa department ninyo",
+      "totalAssigned": "Total Assigned",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "resolved": "Resolved",
+      "weeklyTitle": "Weekly Activity",
+      "weeklyDescription": "Incidents assigned at resolved in the last 7 days"
     }
+  },
+  "chart": {
+    "forwarded": "Forwarded",
+    "resolved": "Resolved"
   },
   "incidents": {
-    "manage": "Pamahalaan ang Insidente",
-    "viewInstruction": "I-click ang view icon para makita ang detalye ng insidente at mga kaugnay na reklamo.",
-    "severityLevel": "Antas ng Kalubhaan ng Reklamo:",
+    "manage": "I-manage ang mga Insidente",
+    "viewInstruction": "I-click ang view icon para makita ang details ng incident at mga related complaints.",
+    "severityLevel": "Severity Level:",
     "columns": {
-      "incidentId": "ID ng Insidente",
-      "title": "Reklamo",
-      "category": "Kategorya",
-      "severity": "Kalubhaan",
-      "status": "Katayuan",
-      "complaintCounts": "Bilang ng Reklamo",
-      "view": "Tingnan"
+      "incidentId": "Incident ID",
+      "title": "Complaint",
+      "category": "Category",
+      "severity": "Severity",
+      "status": "Status",
+      "complaintCounts": "Bilang ng Complaints",
+      "view": "View"
     },
     "details": {
-      "description": "Paglalarawan",
-      "additionalDetails": "Karagdagang Detalye",
-      "firstReported": "Unang Naiulat",
-      "lastReported": "Huling Naiulat",
-      "relatedComplaints": "Kaugnay na Reklamo",
-      "viewAllComplaints": "Tingnan Lahat ng Reklamo",
-      "backToIncidents": "Bumalik sa Insidente",
-      "totalComplaints": "Bilang ng Reklamo"
+      "description": "Description",
+      "additionalDetails": "Additional Details",
+      "firstReported": "First Reported",
+      "lastReported": "Last Reported",
+      "relatedComplaints": "Related Complaints",
+      "viewAllComplaints": "View Lahat ng Complaints",
+      "backToIncidents": "Bumalik sa Incidents",
+      "totalComplaints": "Total Complaints"
     }
   },
+  "complaint": {
+    "id": "Complaint #{{id}}",
+    "incidentTitle": "Related Complaints para sa Incident #{{id}}",
+    "allComplaints": "Lahat ng Complaints",
+    "description": "Narito ang lahat ng complaints na pinagsama para sa incident na ito.",
+    "noComplaints": "Walang complaints para sa incident na ito.",
+    "showingCount": "Showing {{count}} ng {{total}} complaints",
+    "attachments": "Mga Attachments",
+    "additionalInfo": "Additional Info",
+    "submitted": "Submitted",
+    "reporterEmail": "Email ng Reporter",
+    "reporterPhone": "Phone ng Reporter",
+    "viewMore": "View More",
+    "viewLess": "Bawasan",
+    "info": {
+      "category": "Category",
+      "barangay": "Barangay",
+      "reportedBy": "Reported by",
+      "created": "Created"
+    },
+    "details": {
+      "title": "Description",
+      "status": "Status"
+    }
+  },
+  "announcements": {
+    "title": "Mga Announcement",
+    "description": "Gumawa at pamahalaan ang mga announcement para sa komunidad",
+    "createTab": "Gumawa ng Announcement",
+    "editTab": "I-edit ang Announcement",
+    "manageTab": "Pamahalaan ang mga Announcement",
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Ilagay ang title ng announcement",
+      "content": "Content",
+      "contentPlaceholder": "Ilagay ang content ng announcement",
+      "uploadMedia": "Upload ng Media",
+      "uploadDescription": "Mag-upload ng mga larawan o video (optional)",
+      "selectedFiles": "Mga Napiling Files",
+      "existingMedia": "Kasalukuyang Media",
+      "submit": "I-publish ang Announcement",
+      "update": "I-update ang Announcement",
+      "cancel": "Kanselahin ang Pag-edit"
+    },
+    "list": {
+      "noAnnouncements": "Wala pang announcements",
+      "noAnnouncementsMessage": "Gumawa ng iyong unang announcement para ibahagi sa komunidad",
+      "edit": "I-edit",
+      "delete": "I-delete",
+      "deleteConfirm": "Sigurado ka bang gusto mong i-delete ang announcement na ito?",
+      "confirmDelete": "Oo, I-delete",
+      "cancelDelete": "Kanselahin"
+    },
+    "success": {
+      "created": "Success!",
+      "createdMessage": "Successfully na-create ang announcement",
+      "updated": "Success!",
+      "updatedMessage": "Successfully na-update ang announcement",
+      "deleted": "Success!",
+      "deletedMessage": "Successfully na-delete ang announcement"
+    },
+    "error": {
+      "title": "Error",
+      "createFailed": "Hindi ma-create ang announcement",
+      "updateFailed": "Hindi ma-update ang announcement",
+      "deleteFailed": "Hindi ma-delete ang announcement"
+    }
+  },
+  "monthlyReports": {
+    "title": "Monthly Reports ng Barangay",
+    "description": "Tingnan ang monthly reports ng incidents ng bawat barangay",
+    "viewReport": "Tingnan ang Monthly Report",
+    "details": {
+      "title": "Monthly Report",
+      "selectMonth": "Pumili ng Buwan",
+      "selectYear": "Pumili ng Taon",
+      "barangayInfo": "Impormasyon ng Barangay",
+      "contact": "Contact",
+      "email": "Email",
+      "totalIncidents": "Total Incidents",
+      "noData": "Walang Data",
+      "noIncidents": "Walang naitalang incidents para sa buwan na ito",
+      "filterBy": "I-filter ayon sa Category",
+      "clearFilter": "I-clear ang Filter",
+      "categoryBreakdown": "Breakdown ayon sa Category",
+      "viewIncidents": "Tingnan ang mga Incidents",
+      "months": {
+        "january": "Enero",
+        "february": "Pebrero",
+        "march": "Marso",
+        "april": "Abril",
+        "may": "Mayo",
+        "june": "Hunyo",
+        "july": "Hulyo",
+        "august": "Agosto",
+        "september": "Setyembre",
+        "october": "Oktubre",
+        "november": "Nobyembre",
+        "december": "Disyembre"
+      }
+    },
+    "category": {
+      "title": "Mga Incidents ayon sa Category",
+      "backToReport": "Bumalik sa Monthly Report",
+      "noIncidents": "Walang nahanap na incidents para sa category na ito sa napiling panahon",
+      "incidentDetails": "Detalye ng Incident"
+    }
+  },
+  "barangayList": {
+    "withNewIncidents": "Mga Barangay na may Bagong Incidents",
+    "totalForwarded": "Total ng Forwarded Incidents",
+    "newIncidents": "Bagong Incidents"
+  },
+  "page": {
+    "monthlyReports": {
+      "title": "Monthly Reports ng Barangay",
+      "description": "Tingnan ang monthly reports ng incidents ng bawat barangay"
+    },
+    "barangayIncidents": {
+      "title": "Incidents ng Barangay",
+      "description": "Tingnan ang mga incidents galing sa bawat barangay"
+    }
+  },
+  "empty": {
+    "noMatch": "Walang barangay na match sa search mo.",
+    "noBarangays": "Walang barangays."
+  },
+  "layout": {
+    "toast": {
+      "newComplaint": "New Complaint",
+      "updated": "Updated Complaint",
+      "alert": "System Alert",
+      "notification": "Notification"
+    }
+  },
+  "success": {
+    "created": "Success!",
+    "updated": "Successfully updated ang announcement"
+  },
   "errors": {
-    "pageNotFound": "Hindi Natagpuan ang Page",
-    "pageNotFoundMessage": "Paumanhin, wala o nailipat ang page na hinahanap mo.",
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundMessage": "Sorry, wala o nadelete na yung page na hinahanap mo.",
     "backToDashboard": "Bumalik sa Dashboard",
-    "unauthorized": "Hindi Awtorisadong Access",
-    "unauthorizedMessage": "Wala kang permiso para ma-access ang pahinang ito. Mangyaring mag-login gamit ang tamang kredensyal.",
-    "failedToLoad": "Nabigong Mag-load",
-    "failedToLoadMessage": "Nagkaroon ng error habang naglo-load ang page. Pakisubukan muli mamaya."
+    "unauthorized": "Unauthorized Access",
+    "unauthorizedMessage": "Wala kang permission para ma-access ang page na ito. Mag-login gamit ang tamang credentials.",
+    "failedToLoad": "Failed to Load",
+    "failedToLoadMessage": "May error habang nag-loload ng page. Try ulit mamaya.",
+    "loadIncident": "Hindi ma-load ang incident details.",
+    "loadComplaints": "Hindi ma-load ang mga complaints. Try ulit.",
+    "loadComplaint": "Hindi ma-load ang complaint details. Try ulit.",
+    "complaintNotFound": "Hindi makita ang complaint.",
+    "loadAssignedIncidents": "Hindi ma-load ang assigned incidents. Try ulit.",
+    "mediaFailed": "Failed",
+    "invalidFileType": "JPG, PNG images at MP4, MPEG, MOV videos lang ang allowed"
   },
   "appInfo": {
     "country": "Republika ng Pilipinas",
     "municipality": "Sta. Maria, Laguna",
     "systemName": "Unified Complaints and Response System",
-    "systemDescription": "Isang digital na plataporma para sa mga opisyal ng gobyerno na madaling mag monitor, subaybayan, at lutasin ang mga reklamo."
+    "systemDescription": "Isang digital platform para sa mga government officials na madaling mag-monitor, mag-track, at lutasin ang mga complaints."
   },
   "auth": {
-    "officialLogin": "Opisyal na Login",
-    "barangayLogin": "Login ng Barangay",
-    "lguLogin": "Login ng LGU",
-    "departmentLogin": "Login ng Departamento",
-    "departmentLoginInstruction": "Mag-login gamit ang opisyal na department account.",
-    "lguLoginInstruction": "Mag-login gamit ang opisyal na LGU account.",
-    "signinInstruction": "Mag-login gamit ang iyong opisyal na kredensyal upang ma-access ang sistema.",
+    "officialLogin": "Official Login",
+    "barangayLogin": "Barangay Login",
+    "lguLogin": "LGU Login",
+    "departmentLogin": "Department Login",
+    "departmentLoginInstruction": "Mag-login using your official department account.",
+    "lguLoginInstruction": "Mag-login using your official LGU account.",
+    "signinInstruction": "Mag-login gamit ang iyong official credentials para ma-access ang system.",
     "usernameOrEmail": "Email Address",
-    "usernamePlaceholder": "hal. user.official@sta-maria.gov.ph",
+    "usernamePlaceholder": "e.g. user.official@sta-maria.gov.ph",
     "password": "Password",
-    "passwordPlaceholder": "Ilagay ang password",
-    "forgotPassword": "Nakalimutan ang Password?",
-    "login": "Mag-login",
-    "contactInfo": "Para sa account issues, kontakin ang Municipal IT Officer.",
-    "unauthorizedAccess": "Ang hindi awtorisadong access ay labag sa RA 10175."
+    "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot Password?",
+    "login": "Login",
+    "contactInfo": "Para sa account issues, contact ang Municipal IT Officer.",
+    "unauthorizedAccess": "Unauthorized access ay violation ng RA 10175."
   },
   "footer": {
     "copyright": "© 2026 Munisipalidad ng Sta. Maria, Laguna. Lahat ng karapatan nakalaan."

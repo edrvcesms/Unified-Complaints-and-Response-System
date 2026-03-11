@@ -1,4 +1,5 @@
 import { CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SuccessModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   message,
   onClose,
 }) => {
+  const { t } = useTranslation();
+  
   if (!isOpen) return null;
 
   return (
@@ -29,7 +32,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
             onClick={onClose}
             className="px-6 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors cursor-pointer"
           >
-            OK
+            {t('modal.ok')}
           </button>
         </div>
       </div>

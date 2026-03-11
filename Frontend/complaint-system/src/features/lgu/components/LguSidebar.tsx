@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Sidebar as GenericSidebar } from "../../general";
 import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon } from "../../barangay/components/Icons";
 import { MapPin, FileText } from "lucide-react";
@@ -7,20 +8,24 @@ interface LguSidebarProps {
   onClose: () => void;
 }
 
-const NAV_ITEMS = [
-  { path: "/lgu/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
-  { path: "/lgu/barangay-incidents", label: "Barangay Incidents", icon: <MapPin className="w-5 h-5" /> },
-  { path: "/lgu/incidents", label: "Forwarded Incidents", icon: <ComplaintsIcon /> },
-  { path: "/lgu/monthly-reports", label: "Monthly Barangay Reports", icon: <FileText className="w-5 h-5" /> },
-  { path: "/lgu/announcements", label: "Announcements", icon: <AnnouncementsIcon /> },
-];
+export const LguSidebar: React.FC<LguSidebarProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  
+  const NAV_ITEMS = [
+    { path: "/lgu/dashboard", label: t('sidebar.lgu.dashboard'), icon: <DashboardIcon />, end: true },
+    { path: "/lgu/barangay-incidents", label: t('sidebar.lgu.barangayIncidents'), icon: <MapPin className="w-5 h-5" /> },
+    { path: "/lgu/incidents", label: t('sidebar.lgu.forwardedIncidents'), icon: <ComplaintsIcon /> },
+    { path: "/lgu/monthly-reports", label: t('sidebar.lgu.monthlyReports'), icon: <FileText className="w-5 h-5" /> },
+    { path: "/lgu/announcements", label: t('sidebar.lgu.announcements'), icon: <AnnouncementsIcon /> },
+  ];
 
-export const LguSidebar: React.FC<LguSidebarProps> = ({ isOpen, onClose }) => (
-  <GenericSidebar
-    isOpen={isOpen}
-    onClose={onClose}
-    navItems={NAV_ITEMS}
-    navigationLabel="LGU Navigation"
-    footerText="Local Government Unit"
-  />
-);
+  return (
+    <GenericSidebar
+      isOpen={isOpen}
+      onClose={onClose}
+      navItems={NAV_ITEMS}
+      navigationLabel={t('sidebar.lgu.navLabel')}
+      footerText={t('sidebar.lgu.footer')}
+    />
+  );
+};

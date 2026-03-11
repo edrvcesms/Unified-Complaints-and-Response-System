@@ -1,5 +1,128 @@
 
 {
+  "common": {
+    "na": "N/A",
+    "unknown": "Unknown",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait",
+    "viewMore": "View More",
+    "viewLess": "View Less",
+    "showing": "Showing"
+  },
+  "nav": {
+    "logout": "Logout",
+    "confirmLogout": "Are you sure you want to logout?",
+    "notifications": "Notifications",
+    "markAllRead": "Mark all as read",
+    "loadingNotifications": "Loading notifications...",
+    "noNotifications": "No notifications yet",
+    "noNotificationsMessage": "You'll see updates here when they arrive"
+  },
+  "sidebar": {
+    "menu": "Menu",
+    "navigation": "Navigation",
+    "location": "Sta. Maria, Laguna",
+    "openBtn": "Open sidebar",
+    "barangay": {
+      "dashboard": "Dashboard",
+      "incidents": "Manage Incidents",
+      "announcements": "Announcements"
+    },
+    "lgu": {
+      "dashboard": "Dashboard",
+      "barangayIncidents": "Barangay Incidents",
+      "forwardedIncidents": "Forwarded Incidents",
+      "monthlyReports": "Monthly Barangay Reports",
+      "announcements": "Announcements",
+      "navLabel": "LGU Navigation",
+      "footer": "Local Government Unit"
+    },
+    "department": {
+      "dashboard": "Dashboard",
+      "incidents": "Assigned Incidents",
+      "navLabel": "Department Navigation",
+      "footer": "Department Portal"
+    }
+  },
+  "filters": {
+    "sort": {
+      "default": "Default",
+      "priorityHighLow": "Priority: High to Low",
+      "priorityLowHigh": "Priority: Low to High",
+      "dateNewestFirst": "Date: Newest First (First Reported)",
+      "dateOldestFirst": "Date: Oldest First (First Reported)",
+      "dateNewestLast": "Date: Newest Last (Last Reported)",
+      "dateOldestLast": "Date: Oldest Last (Last Reported)"
+    }
+  },
+  "search": {
+    "placeholder": "Search by title, category, barangay, or ID...",
+    "barangayPlaceholder": "Search barangays..."
+  },
+  "modal": {
+    "cancel": "Cancel",
+    "ok": "OK",
+    "select": "Select",
+    "processing": "Processing...",
+    "selectDept": {
+      "title": "Select Department",
+      "description": "Choose a department to assign this incident to:"
+    }
+  },
+  "pagination": {
+    "pageInfo": "Page {{current}} of {{total}}",
+    "prev": "← Prev",
+    "next": "Next →",
+    "showing": "Showing {{start}} to {{end}} of {{total}} {{item}}"
+  },
+  "btn": {
+    "backIncidents": "Back to Incidents",
+    "backIncident": "Back to Incident Details",
+    "backComplaints": "Back to Complaints",
+    "viewIncidents": "View Incidents",
+    "open": "Open"
+  },
+  "status": {
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "resolved": "Resolved",
+    "forwarded": "Forwarded",
+    "unknown": "Unknown",
+    "pending": "Pending"
+  },
+  "stats": {
+    "total": "Total",
+    "totalBarangays": "Total Barangays",
+    "newReports": "New Reports",
+    "barangays": "barangays"
+  },
+  "file": {
+    "image": "Image",
+    "video": "Video",
+    "pdf": "PDF",
+    "default": "File",
+    "kilobytes": "KB"
+  },
+  "table": {
+    "headers": {
+      "id": "ID",
+      "title": "Title",
+      "barangayName": "Barangay Name",
+      "barangay": "Barangay",
+      "category": "Category",
+      "status": "Status",
+      "address": "Address",
+      "contact": "Contact",
+      "email": "Email",
+      "action": "Action",
+      "severity": "Severity",
+      "complaintCounts": "Complaint Counts",
+      "view": "View"
+    }
+  },
+  "badge": {
+    "new": "new"
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Overview of complaint activity in Sta. Maria, Laguna",
@@ -15,7 +138,7 @@
     "noRecentActivitiesMessage": "No complaints have been submitted yet.",
     "columns": {
       "id": "ID",
-      "title": "Complaint",
+      "title": "Title",
       "category": "Category",
       "status": "Status",
       "total": "Total"
@@ -23,10 +146,33 @@
     "statuses": {
       "submitted": "Submitted",
       "underReview": "Under Review",
-      "forwarded": "Forwarded",
-      "unresolved": "Unresolved",
       "resolved": "Resolved"
+    },
+    "lgu": {
+      "title": "LGU Dashboard",
+      "description": "Overview of incidents forwarded from barangays",
+      "totalForwarded": "Total Forwarded",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "resolved": "Resolved",
+      "weeklyTitle": "Weekly Activity",
+      "weeklyDescription": "Incidents forwarded and resolved in the last 7 days",
+      "recentTitle": "Recent Forwarded Incidents"
+    },
+    "dept": {
+      "title": "Department Dashboard",
+      "description": "Overview of incidents assigned to your department",
+      "totalAssigned": "Total Assigned",
+      "pending": "Pending",
+      "underReview": "Under Review",
+      "resolved": "Resolved",
+      "weeklyTitle": "Weekly Activity",
+      "weeklyDescription": "Incidents assigned and resolved in the last 7 days"
     }
+  },
+  "chart": {
+    "forwarded": "Forwarded",
+    "resolved": "Resolved"
   },
   "incidents": {
     "manage": "Manage Incidents",
@@ -52,6 +198,145 @@
       "totalComplaints": "Total Complaints"
     }
   },
+  "complaint": {
+    "id": "Complaint #{{id}}",
+    "incidentTitle": "Related Complaints for Incident #{{id}}",
+    "allComplaints": "All Complaints",
+    "description": "Here are all the individual complaints that have been grouped together as part of this incident.",
+    "noComplaints": "No complaints found for this incident.",
+    "showingCount": "Showing {{count}} of {{total}} complaints",
+    "attachments": "Attachments",
+    "additionalInfo": "Additional Information",
+    "submitted": "Submitted",
+    "reporterEmail": "Reporter Email",
+    "reporterPhone": "Reporter Phone",
+    "viewMore": "View More",
+    "viewLess": "View Less",
+    "info": {
+      "category": "Category",
+      "barangay": "Barangay",
+      "reportedBy": "Reported by",
+      "created": "Created"
+    },
+    "details": {
+      "title": "Description",
+      "status": "Status"
+    }
+  },
+  "announcements": {
+    "title": "Announcements",
+    "description": "Create and manage announcements for the community",
+    "createTab": "Create Announcement",
+    "editTab": "Edit Announcement",
+    "manageTab": "Manage Announcements",
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Enter announcement title",
+      "content": "Content",
+      "contentPlaceholder": "Enter announcement content",
+      "uploadMedia": "Upload Media",
+      "uploadDescription": "Upload images or videos (optional)",
+      "selectedFiles": "Selected Files",
+      "existingMedia": "Existing Media",
+      "submit": "Publish Announcement",
+      "update": "Update Announcement",
+      "cancel": "Cancel Edit"
+    },
+    "list": {
+      "noAnnouncements": "No announcements yet",
+      "noAnnouncementsMessage": "Create your first announcement to share with the community",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this announcement?",
+      "confirmDelete": "Yes, Delete",
+      "cancelDelete": "Cancel"
+    },
+    "success": {
+      "created": "Success!",
+      "createdMessage": "Announcement created successfully",
+      "updated": "Success!",
+      "updatedMessage": "Announcement updated successfully",
+      "deleted": "Success!",
+      "deletedMessage": "Announcement deleted successfully"
+    },
+    "error": {
+      "title": "Error",
+      "createFailed": "Failed to create announcement",
+      "updateFailed": "Failed to update announcement",
+      "deleteFailed": "Failed to delete announcement"
+    }
+  },
+  "monthlyReports": {
+    "title": "Monthly Barangay Reports",
+    "description": "View monthly incident reports for each barangay",
+    "viewReport": "View Monthly Report",
+    "details": {
+      "title": "Monthly Report",
+      "selectMonth": "Select Month",
+      "selectYear": "Select Year",
+      "barangayInfo": "Barangay Information",
+      "contact": "Contact",
+      "email": "Email",
+      "totalIncidents": "Total Incidents",
+      "noData": "No Data",
+      "noIncidents": "No incidents recorded for this month",
+      "filterBy": "Filter by Category",
+      "clearFilter": "Clear Filter",
+      "categoryBreakdown": "Category Breakdown",
+      "viewIncidents": "View Incidents",
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      }
+    },
+    "category": {
+      "title": "Category Incidents",
+      "backToReport": "Back to Monthly Report",
+      "noIncidents": "No incidents found for this category in the selected period",
+      "incidentDetails": "Incident Details"
+    }
+  },
+  "barangayList": {
+    "withNewIncidents": "Barangays with New Incidents",
+    "totalForwarded": "Total Forwarded Incidents",
+    "newIncidents": "New Incidents"
+  },
+  "page": {
+    "monthlyReports": {
+      "title": "Monthly Barangay Reports",
+      "description": "View monthly incident reports for each barangay"
+    },
+    "barangayIncidents": {
+      "title": "Barangay Incidents",
+      "description": "View incidents forwarded from each barangay"
+    }
+  },
+  "empty": {
+    "noMatch": "No barangays match your search.",
+    "noBarangays": "No barangays found."
+  },
+  "layout": {
+    "toast": {
+      "newComplaint": "New Complaint",
+      "updated": "Complaint Updated",
+      "alert": "System Alert",
+      "notification": "Notification"
+    }
+  },
+  "success": {
+    "created": "Success!",
+    "updated": "Announcement updated successfully"
+  },
   "errors": {
     "pageNotFound": "Page Not Found",
     "pageNotFoundMessage": "Sorry, the page you're looking for doesn't exist or has been moved.",
@@ -59,7 +344,14 @@
     "unauthorized": "Unauthorized Access",
     "unauthorizedMessage": "You do not have permission to access this page. Please log in with appropriate credentials.",
     "failedToLoad": "Failed to Load",
-    "failedToLoadMessage": "An error occurred while loading the page. Please try again later."
+    "failedToLoadMessage": "An error occurred while loading the page. Please try again later.",
+    "loadIncident": "Failed to load incident details.",
+    "loadComplaints": "Failed to load complaints. Please try again.",
+    "loadComplaint": "Failed to load complaint details. Please try again.",
+    "complaintNotFound": "Complaint not found.",
+    "loadAssignedIncidents": "Failed to load assigned incidents. Please try again.",
+    "mediaFailed": "Failed",
+    "invalidFileType": "Only JPG, PNG images and MP4, MPEG, MOV videos are allowed"
   },
   "appInfo": {
     "country": "Republic of the Philippines",

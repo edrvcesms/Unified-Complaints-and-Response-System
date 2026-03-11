@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import { useAllBarangays } from "../../../hooks/useBarangays";
 import { BarangayCard } from "../components/BarangayCard";
 import { StatCard, ErrorMessage, SearchInput } from "../../general";
@@ -9,6 +10,7 @@ import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
 export const BarangayList: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
@@ -66,19 +68,19 @@ export const BarangayList: React.FC = () => {
     <div className="space-y-6">
       <div className="border-b border-gray-200 pb-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Barangay Incidents</h1>
-          <p className="text-sm text-gray-600 mt-1">View incidents forwarded from each barangay</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('page.barangayIncidents.title')}</h1>
+          <p className="text-sm text-gray-600 mt-1">{t('page.barangayIncidents.description')}</p>
         </div>
         <div className="flex gap-3">
-          <StatCard label="Total Barangays" value={barangays?.length || 0} />
+          <StatCard label={t('stats.totalBarangays')} value={barangays?.length || 0} />
           {barangaysWithNewIncidents > 0 && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 min-w-35">
               <div className="flex items-center gap-2 mb-1">
                 <Bell className="w-4 h-4 text-orange-600" />
-                <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">New Reports</p>
+                <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">{t('stats.newReports')}</p>
               </div>
               <p className="text-2xl font-bold text-orange-900">{barangaysWithNewIncidents}</p>
-              <p className="text-xs text-orange-600 mt-0.5">{totalNewIncidents} new incident{totalNewIncidents !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-orange-600 mt-0.5">{totalNewIncidents} {t('barangayList.newIncidents').toLowerCase()}</p>
             </div>
           )}
         </div>
@@ -101,7 +103,7 @@ export const BarangayList: React.FC = () => {
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
-            {searchTerm ? "No barangays match your search." : "No barangays found."}
+            {searchTerm ? t('empty.noMatch') : t('empty.noBarangays')}
           </div>
         )}
       </div>
@@ -110,11 +112,11 @@ export const BarangayList: React.FC = () => {
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
           <div className="text-sm text-gray-700">
-            Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+            {t('common.showing')} <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
             <span className="font-semibold text-gray-900">
               {Math.min(currentPage * itemsPerPage, filteredBarangays.length)}
             </span>{' '}
-            of <span className="font-semibold text-gray-900">{filteredBarangays.length}</span> barangays
+            of <span className="font-semibold text-gray-900">{filteredBarangays.length}</span> {t('stats.barangays')}
           </div>
           <div className="flex items-center gap-2">
             <button

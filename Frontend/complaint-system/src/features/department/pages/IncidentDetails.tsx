@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
 import { useIncidentDetails, useResolveIncident, useReviewIncident } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
@@ -13,6 +14,7 @@ import { ErrorModal } from "../../general/ErrorModal";
 export const DepartmentIncidentDetails: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
   

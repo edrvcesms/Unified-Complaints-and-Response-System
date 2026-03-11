@@ -1,4 +1,5 @@
 import { XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ErrorModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   message,
   onClose,
 }) => {
+  const { t } = useTranslation();
+  
   if (!isOpen) return null;
 
   return (
@@ -29,7 +32,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
             onClick={onClose}
             className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors cursor-pointer"
           >
-            OK
+            {t('modal.ok')}
           </button>
         </div>
       </div>

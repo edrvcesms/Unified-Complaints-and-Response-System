@@ -360,7 +360,6 @@ def recalculate_severity_task(self, incident_id: int) -> dict:
     }
     
     
-
 @celery_worker.task(
     bind=True,
     name="app.tasks.cluster_complaint_task",
@@ -393,7 +392,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                 description=cluster_data.description,
                 barangay_id=cluster_data.barangay_id,
                 category_id=cluster_data.category_id,
-                category_radius_km = cluster_data.category_radius_km,   
+                category_radius_km=cluster_data.category_radius_km,
                 category_time_window_hours=cluster_data.category_time_window_hours,
                 category_base_severity_weight=cluster_data.category_base_severity_weight,
                 similarity_threshold=cluster_data.similarity_threshold,
@@ -403,30 +402,32 @@ def cluster_complaint_task(self, complaint_data: dict):
 
             result = await use_case.execute(input_dto)
             logger.info(f"[cluster_complaint_task] Clustering use case completed for complaint_id={cluster_data.complaint_id} with result: {result}")
-            
+
             if not result.is_new_incident and result.existing_incident_status:
-                
                 complaint_result = await db.execute(
                     select(Complaint).where(Complaint.id == cluster_data.complaint_id)
                 )
                 complaint = complaint_result.scalars().first()
-                
-                if complaint and result.existing_incident_status != "submitted":
-                    old_status = complaint.status
-                    complaint.status = result.existing_incident_status
-                    complaint.updated_at = datetime.utcnow()
-                    
-                    if result.existing_incident_status in ["forwarded_to_lgu", "forwarded_to_department"] and not complaint.forwarded_at:
-                        complaint.forwarded_at = datetime.utcnow()
-                    
-                    if result.existing_incident_status == "resolved" and not complaint.resolved_at:
-                        complaint.resolved_at = datetime.utcnow()
-                    
-                    logger.info(
-                        f"[cluster_complaint_task] Updated complaint {cluster_data.complaint_id} "
-                        f"status from '{old_status}' to '{result.existing_incident_status}'"
-                    )
-                    
+
+                if complaint:
+                    # Only update status if not submitted
+                    if result.existing_incident_status != "submitted":
+                        old_status = complaint.status
+                        complaint.status = result.existing_incident_status
+                        complaint.updated_at = datetime.utcnow()
+
+                        if result.existing_incident_status in ["forwarded_to_lgu", "forwarded_to_department"] and not complaint.forwarded_at:
+                            complaint.forwarded_at = datetime.utcnow()
+
+                        if result.existing_incident_status == "resolved" and not complaint.resolved_at:
+                            complaint.resolved_at = datetime.utcnow()
+
+                        logger.info(
+                            f"[cluster_complaint_task] Updated complaint {cluster_data.complaint_id} "
+                            f"status from '{old_status}' to '{result.existing_incident_status}'"
+                        )
+
+                    # Always notify user when merged regardless of status
                     notification = Notification(
                         user_id=cluster_data.user_id,
                         complaint_id=cluster_data.complaint_id,
@@ -439,12 +440,24 @@ def cluster_complaint_task(self, complaint_data: dict):
                     )
                     db.add(notification)
                     logger.info(f"[cluster_complaint_task] Created notification for user {cluster_data.user_id} about merged incident")
-            
+
+                    await sse_manager.send(
+                        user_id=cluster_data.user_id,
+                        data={
+                            "title": "Your complaint is already part of an existing incident",
+                            "message": result.message or f"Your complaint has been merged with an existing incident that is currently {result.existing_incident_status.replace('_', ' ')}.",
+                            "sent_at": datetime.utcnow().isoformat(),
+                            "complaint_id": cluster_data.complaint_id,
+                            "notification_type": "info",
+                        },
+                        event="info",
+                    )
+
             await db.commit()
             return result
 
     result = asyncio.run(_run())
-    
+
     async def _cleanup_cache():
         cache_keys = [
             f"complaint:{cluster_data.complaint_id}",
@@ -462,7 +475,7 @@ def cluster_complaint_task(self, complaint_data: dict):
         ]
         for key in cache_keys:
             await delete_cache(key)
-    
+
     asyncio.run(_cleanup_cache())
 
     recalculate_severity_task.apply_async(
@@ -476,7 +489,6 @@ def cluster_complaint_task(self, complaint_data: dict):
             f"Existing status: {result.existing_incident_status}. "
             f"Message: {result.message}"
         )
-
 
     return {
         "incident_id": result.incident_id,
@@ -511,8 +523,10 @@ def send_notifications_task(self, user_id: int, title: str, message: str, compla
                 "title": title,
                 "message": message,
                 "sent_at": datetime.utcnow().isoformat(),
+                "complaint_id": complaint_id,
+                "notification_type": notification_type,
             },
-            event="notification",
+            event=notification_type,
         ))
         logger.info(f"Sent SSE notification to user_id={user_id}")
     

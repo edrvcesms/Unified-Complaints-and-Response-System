@@ -25,7 +25,8 @@
     "barangay": {
       "dashboard": "Dashboard",
       "incidents": "I-manage ang mga Insidente",
-      "announcements": "Mga Announcement"
+      "announcements": "Mga Announcement",
+      "events": "Mga Event"
     },
     "lgu": {
       "dashboard": "Dashboard",
@@ -263,6 +264,54 @@
       "createFailed": "Hindi ma-create ang announcement",
       "updateFailed": "Hindi ma-update ang announcement",
       "deleteFailed": "Hindi ma-delete ang announcement"
+    }
+  },
+  "events": {
+    "title": "Mga Event",
+    "description": "Gumawa at pamahalaan ang mga event ng barangay",
+    "createTab": "Gumawa ng Event",
+    "editTab": "I-edit ang Event",
+    "manageTab": "Pamahalaan ang mga Event",
+    "form": {
+      "name": "Pangalan ng Event",
+      "namePlaceholder": "Ilagay ang pangalan ng event",
+      "description": "Description",
+      "descriptionPlaceholder": "Ilagay ang detalye ng event (optional)",
+      "date": "Petsa at Oras",
+      "location": "Lokasyon",
+      "locationPlaceholder": "Ilagay ang lokasyon ng event (optional)",
+      "uploadMedia": "Upload ng Media",
+      "uploadDescription": "Mag-upload ng larawan o video (optional)",
+      "existingMedia": "Kasalukuyang Media",
+      "submit": "I-publish ang Event",
+      "update": "I-update ang Event",
+      "cancel": "Kanselahin ang Pag-edit",
+      "editing": "Ine-edit:"
+    },
+    "list": {
+      "noEvents": "Wala pang event",
+      "noEventsMessage": "Gumawa ng unang event para sa komunidad",
+      "edit": "I-edit",
+      "delete": "I-delete",
+      "deleteConfirm": "Sigurado ka bang gusto mong i-delete ang event na ito?",
+      "confirmDelete": "Oo, I-delete",
+      "cancelDelete": "Kanselahin",
+      "mediaCount": "media file(s)"
+    },
+    "success": {
+      "created": "Success!",
+      "createdMessage": "Successfully na-create ang event",
+      "updated": "Success!",
+      "updatedMessage": "Successfully na-update ang event",
+      "deleted": "Success!",
+      "deletedMessage": "Successfully na-delete ang event"
+    },
+    "error": {
+      "title": "Error",
+      "dateRequired": "Kailangan ang petsa at oras.",
+      "createFailed": "Hindi ma-create ang event",
+      "updateFailed": "Hindi ma-update ang event",
+      "deleteFailed": "Hindi ma-delete ang event"
     }
   },
   "monthlyReports": {

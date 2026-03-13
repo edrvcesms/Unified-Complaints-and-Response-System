@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Sidebar as GenericSidebar } from "../../general";
-import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon } from "./Icons";
+import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon, EventsIcon } from "./Icons";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { path: "/dashboard", label: t('sidebar.barangay.dashboard'), icon: <DashboardIcon />, end: true },
     { path: "/dashboard/incidents", label: t('sidebar.barangay.incidents'), icon: <ComplaintsIcon /> },
     { path: "/dashboard/announcements", label: t('sidebar.barangay.announcements'), icon: <AnnouncementsIcon /> },
+    { path: "/dashboard/events", label: t('sidebar.barangay.events'), icon: <EventsIcon /> },
   ];
 
   return (

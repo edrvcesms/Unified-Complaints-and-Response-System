@@ -16,6 +16,7 @@ import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
 import { ComplaintDetails } from "./features/barangay/pages/ComplaintDetails"
 import { AnnouncementsPage } from "./features/barangay/pages/Announcements"
+import { EventsPage } from "./features/barangay/pages/Events"
 import { LguDashboard } from "./features/lgu/pages/Dashboard"
 import { LguIncidents } from "./features/lgu/pages/Incidents"
 import { LguIncidentDetails } from "./features/lgu/pages/IncidentDetails"
@@ -59,6 +60,7 @@ function App() {
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="events" element={<EventsPage />} />
             </Route>
           </Route>
 

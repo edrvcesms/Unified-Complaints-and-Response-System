@@ -26,7 +26,8 @@
     "barangay": {
       "dashboard": "Dashboard",
       "incidents": "Manage Incidents",
-      "announcements": "Announcements"
+      "announcements": "Announcements",
+      "events": "Events"
     },
     "lgu": {
       "dashboard": "Dashboard",
@@ -264,6 +265,54 @@
       "createFailed": "Failed to create announcement",
       "updateFailed": "Failed to update announcement",
       "deleteFailed": "Failed to delete announcement"
+    }
+  },
+  "events": {
+    "title": "Events",
+    "description": "Create and manage barangay events",
+    "createTab": "Create Event",
+    "editTab": "Edit Event",
+    "manageTab": "Manage Events",
+    "form": {
+      "name": "Event Name",
+      "namePlaceholder": "Enter event name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter event details (optional)",
+      "date": "Date and Time",
+      "location": "Location",
+      "locationPlaceholder": "Enter event location (optional)",
+      "uploadMedia": "Upload Media",
+      "uploadDescription": "Upload images or videos (optional)",
+      "existingMedia": "Existing Media",
+      "submit": "Publish Event",
+      "update": "Update Event",
+      "cancel": "Cancel Edit",
+      "editing": "Editing:"
+    },
+    "list": {
+      "noEvents": "No events yet",
+      "noEventsMessage": "Create your first event for the community",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this event?",
+      "confirmDelete": "Yes, Delete",
+      "cancelDelete": "Cancel",
+      "mediaCount": "media file(s)"
+    },
+    "success": {
+      "created": "Success!",
+      "createdMessage": "Event created successfully",
+      "updated": "Success!",
+      "updatedMessage": "Event updated successfully",
+      "deleted": "Success!",
+      "deletedMessage": "Event deleted successfully"
+    },
+    "error": {
+      "title": "Error",
+      "dateRequired": "Date and time is required.",
+      "createFailed": "Failed to create event",
+      "updateFailed": "Failed to update event",
+      "deleteFailed": "Failed to delete event"
     }
   },
   "monthlyReports": {

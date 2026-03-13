@@ -13,6 +13,7 @@ export const notificationInstance = createApiInstance(`${BASE_URL}/notifications
 export const departmentInstance = createApiInstance(`${BASE_URL}/departments`, true);
 export const announcementInstance = createApiInstance(`${BASE_URL}/announcements`, true);
 export const reportInstance = createApiInstance(`${BASE_URL}/reports`, true);
+export const eventInstance = createApiInstance(`${BASE_URL}/events`, true);
 
 export const authApi = createApiClient(authInstance);
 export const barangayApi = createApiClient(barangayInstance);
@@ -23,3 +24,4 @@ export const notificationApi = createApiClient(notificationInstance);
 export const departmentApi = createApiClient(departmentInstance);
 export const announcementApi = createApiClient(announcementInstance);
 export const reportApi = createApiClient(reportInstance);
+export const eventApi = createApiClient(eventInstance);

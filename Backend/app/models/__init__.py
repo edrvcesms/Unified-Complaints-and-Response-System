@@ -15,3 +15,5 @@ from .category_config import CategoryConfigModel
 from .announcements import Announcement
 from .announcement_media import AnnouncementMedia
 from .app_feedback import AppFeedback
+from .event import Event
+from .event_media import EventMedia

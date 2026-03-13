@@ -64,13 +64,15 @@ export const IncidentComplaints: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <button
-          onClick={() => navigate(`/dashboard/incidents/${incidentId}`)}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
-        >
-          <ArrowLeft size={16} />
-          {t('btn.backIncident')}
-        </button>
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigate(`/dashboard/incidents/${incidentId}`)}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <ArrowLeft size={16} />
+            {t('btn.backIncident')}
+          </button>
+        </div>
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
           {t('complaint.incidentTitle', { id: incident.id })}
         </h1>

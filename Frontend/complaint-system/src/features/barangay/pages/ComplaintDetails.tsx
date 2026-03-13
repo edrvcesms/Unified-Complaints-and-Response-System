@@ -39,13 +39,15 @@ export const ComplaintDetails: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <button
+      <div className="flex justify-end mb-4">
+        <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
         {t('btn.backComplaints')}
       </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="space-y-4 sm:space-y-6">

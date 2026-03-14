@@ -422,6 +422,7 @@ class ClusterComplaintUseCase:
             incident_id=created.id,
             status="ACTIVE",
             created_at_unix=created_at_unix,
+            is_seed=True,  
         )
 
         logger.info(

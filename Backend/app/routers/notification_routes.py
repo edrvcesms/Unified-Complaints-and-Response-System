@@ -23,35 +23,5 @@ async def mark_all_as_read(current_user: User = Depends(get_current_user), db: A
 
 @router.get("/stream")
 async def notifications_stream(current_user: User = Depends(get_current_user), db = Depends(get_async_db)):
-    """
-    Endpoint for clients to connect to for receiving real-time notifications via Server-Sent Events (SSE).
-
-    The client should connect to this endpoint and listen for incoming events. The server will send two types of events:
-
-    1. User-specific events (sent via sse_manager.send):
-        {
-            "event": "order_update",
-            "data": {
-                "order_id": "ORD-001",
-                "status": "shipped"
-            }
-        }
-    2. Broadcast events (sent via sse_manager.broadcast):
-        {
-            "event": "announcement",
-            "data": {
-                "title": "New Feature!",
-                "message": "Dark mode is now available."
-            }
-        }
-    Raw SSE wire format the client receives:
-    event: order_update
-    data: {"order_id": "ORD-001", "status": "shipped"}  
-    event: announcement
-    data: {"title": "New Feature!", "message": "Dark mode is now available."}
-    Example usage in an endpoint:
-        @router.get("/notifications/stream")
-        async def notifications_stream(current_user = Depends(get_current_user)):
-            return await sse_manager.stream(current_user.id)
-    """
+  
     return await sse_manager.stream(current_user.id)

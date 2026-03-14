@@ -76,12 +76,20 @@ class PineconeVectorRepository(IVectorRepository):
         incident_id: Optional[int],
         status: str,
         created_at_unix: float,
+        is_seed: bool = False,
     ) -> None:
         """
         Store a complaint's embedding in Pinecone with filterable metadata.
-        Vector ID is the complaint_id (as string — Pinecone requires string IDs).
+        Seed vectors use 'incident-{incident_id}' as the vector ID — this enables
+        strongly consistent fetch-by-ID in fetch_incident_vector, avoiding
+        Pinecone's eventual consistency on metadata filter queries.
+        Non-seed (merged) complaint vectors use str(complaint_id) as before.
         """
         index = self._get_index()
+
+        # Seed vectors keyed by incident ID for strongly consistent fetching.
+        # Merged complaint vectors keyed by complaint ID as before.
+        vector_id = f"incident-{incident_id}" if is_seed and incident_id is not None else str(complaint_id)
 
         metadata = {
             "complaint_id": complaint_id,
@@ -93,12 +101,15 @@ class PineconeVectorRepository(IVectorRepository):
         }
 
         index.upsert(vectors=[{
-            "id": str(complaint_id),
+            "id": vector_id,
             "values": embedding,
             "metadata": metadata,
         }])
 
-        logger.debug(f"Upserted vector for complaint_id={complaint_id} into Pinecone")
+        logger.debug(
+            f"Upserted vector for complaint_id={complaint_id} "
+            f"vector_id='{vector_id}' into Pinecone"
+        )
 
     async def query_similar(
         self,
@@ -170,29 +181,31 @@ class PineconeVectorRepository(IVectorRepository):
         )
 
     async def fetch_incident_vector(
-    self,
-    incident_id: int,
-) -> list[float] | None:
-       """Fetch incident vector by querying metadata filter."""
-       try:
-          index = self._get_index()
-          result = index.query(
-            vector=[0.0] * self.DIMENSION,
-            filter={
-                "incident_id": {"$eq": incident_id},
-            },
-            top_k=1,
-            include_values=True,
-        )
-          matches = result.get("matches", [])
-          if not matches:
-            logger.warning(f"No vector found for incident_id={incident_id}")
+        self,
+        incident_id: int,
+    ) -> list[float] | None:
+        """
+        Fetch seed vector by direct ID lookup — strongly consistent.
+        Seed vectors are stored under 'incident-{incident_id}' to allow this.
+        Replaces the previous metadata filter query which was eventually consistent
+        and caused intermittent misses on recently upserted vectors.
+        """
+        try:
+            index = self._get_index()
+            result = index.fetch(ids=[f"incident-{incident_id}"])
+            vectors = result.get("vectors", {})
+            vector_data = vectors.get(f"incident-{incident_id}")
+
+            if not vector_data:
+                logger.warning(f"No vector found for incident_id={incident_id}")
+                return None
+
+            logger.info(f"Fetched seed vector for incident_id={incident_id} via direct ID lookup")
+            return vector_data["values"]
+
+        except Exception as e:
+            logger.error(f"Error fetching vector for incident_id={incident_id}: {e}")
             return None
-          logger.info(f"Fetched vector for incident_id={incident_id}, vector_id={matches[0]['id']}")
-          return matches[0]["values"]
-       except Exception as e:
-        logger.error(f"Error fetching vector for incident_id={incident_id}: {e}")
-        return None
 
     async def fetch_incident_vectors_batch(
         self,
@@ -203,10 +216,10 @@ class PineconeVectorRepository(IVectorRepository):
             return {}
         try:
             index = self._get_index()
-            result = index.fetch(ids=[str(i) for i in incident_ids])
+            result = index.fetch(ids=[f"incident-{i}" for i in incident_ids])
             vectors = result.get("vectors", {})
             return {
-                int(vec_id): vec_data["values"]
+                int(vec_id.replace("incident-", "")): vec_data["values"]
                 for vec_id, vec_data in vectors.items()
                 if "values" in vec_data
             }
@@ -252,5 +265,3 @@ class PineconeVectorRepository(IVectorRepository):
             f"Updated {len(matches)} vectors to status={status} "
             f"for incident_id={incident_id}"
         )
-        
-        

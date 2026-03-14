@@ -431,7 +431,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                     notification = Notification(
                         user_id=cluster_data.user_id,
                         complaint_id=cluster_data.complaint_id,
-                        title="This complaint is already part of an existing incident",
+                        title="Your complaint is already part of an existing incident",
                         message=result.message or f"Your complaint has been merged with an existing incident that is currently {result.existing_incident_status.replace('_', ' ')}.",
                         notification_type="info",
                         channel="in_app",

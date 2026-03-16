@@ -1,4 +1,4 @@
-import { Calendar, MapPin, User, Building2, Tag } from "lucide-react";
+import { Calendar, MapPin, User, Tag } from "lucide-react";
 import type { Complaint } from "../../../types/complaints/complaint";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDate } from "../../../utils/dateUtils";
@@ -9,16 +9,17 @@ interface InfoCardProps {
   value: string;
   bgColor: string;
   iconColor: string;
+  wrapValue?: boolean;
 }
 
-const InfoCard: React.FC<InfoCardProps> = ({ icon, label, value, bgColor, iconColor }) => (
+const InfoCard: React.FC<InfoCardProps> = ({ icon, label, value, bgColor, iconColor, wrapValue = false }) => (
   <div className="flex items-center gap-3">
     <div className={`w-10 h-10 rounded-lg ${bgColor} flex items-center justify-center shrink-0`}>
       <span className={iconColor}>{icon}</span>
     </div>
     <div className="min-w-0 flex-1">
       <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-gray-900 truncate" title={value}>
+      <p className={`text-sm font-semibold text-gray-900 ${wrapValue ? "wrap-break-word whitespace-normal" : "truncate"}`} title={value}>
         {value}
       </p>
     </div>
@@ -41,10 +42,11 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
     
     <InfoCard
       icon={<MapPin size={20} />}
-      label="Barangay"
-      value={complaint.barangay?.barangay_name || "N/A"}
+      label="Location of Incident"
+      value={complaint.location_details || "N/A"}
       bgColor=""
       iconColor="text-purple-600"
+      wrapValue
     />
     
     <InfoCard

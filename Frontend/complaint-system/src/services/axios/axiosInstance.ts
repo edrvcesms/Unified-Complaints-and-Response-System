@@ -1,10 +1,16 @@
 import axios, { type AxiosInstance, AxiosError } from "axios";
 import { refreshToken } from "../authentication/token";
 import { useBarangayStore } from "../../store/authStore";
+import {
+  type FetchRequestLogTracker,
+  finishNetworkFetchLog,
+  startNetworkFetchLog,
+} from "../../utils/fetchLogger";
 
 declare module "axios" {
   export interface AxiosRequestConfig {
     _retry?: boolean;
+    _requestDebugTracker?: FetchRequestLogTracker;
   }
 }
 
@@ -35,13 +41,28 @@ export const createApiInstance = (baseUrl: string, withCredentials?: boolean): A
       config.headers.Authorization = `Bearer ${token}`;
     }
     config.withCredentials = true;
+    config._requestDebugTracker = startNetworkFetchLog(
+      config.method ?? "GET",
+      `${baseUrl}${config.url ?? ""}`,
+      "axios",
+    );
     return config;
   });
 
   instance.interceptors.response.use(
-    response => response,
+    response => {
+      finishNetworkFetchLog(response.config._requestDebugTracker, {
+        status: response.status,
+      });
+      return response;
+    },
     async (error: AxiosError) => {
       const originalRequest = error.config;
+      finishNetworkFetchLog(originalRequest?._requestDebugTracker, {
+        status: error.response?.status,
+        error,
+      });
+
       if (!originalRequest) return Promise.reject(error);
 
       if (shouldSkipRefresh(originalRequest.url)) {

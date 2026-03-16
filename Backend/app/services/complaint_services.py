@@ -8,7 +8,6 @@ from app.models.user import User
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
-from app.models.incident_model import IncidentModel
 from app.models.barangay_account import BarangayAccount
 from sqlalchemy import select, update
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData
@@ -20,7 +19,7 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
 from app.tasks import cluster_complaint_task, send_notifications_task
-from .notification_services import create_notification
+from app.utils.reverse_geocoding import reverse_geocode
 
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
@@ -167,10 +166,16 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         if not complaint_data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid complaint data")
         
+        location = await reverse_geocode(complaint_data.latitude, complaint_data.longitude)
+        if location == {"display_name": "Unknown Location"}:
+            logger.warning(f"Reverse geocoding failed for lat: {complaint_data.latitude}, lon: {complaint_data.longitude}. Storing complaint with 'Unknown Location'.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not determine location from provided coordinates. Please make sure you pin the location accurately on the map.")
+        
+        
         new_complaint = Complaint(
             title=complaint_data.title,
             description=complaint_data.description,
-            location_details=complaint_data.location_details,
+            location_details=location,
             latitude=complaint_data.latitude,
             longitude=complaint_data.longitude,
             barangay_id=complaint_data.barangay_id,

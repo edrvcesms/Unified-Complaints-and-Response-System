@@ -1,4 +1,8 @@
 import { useAuthStore } from "../../store/authStore";
+import {
+  finishNetworkFetchLog,
+  startNetworkFetchLog,
+} from "../../utils/fetchLogger";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -19,8 +23,14 @@ export class NotificationService {
   private buffer = '';
   private isConnecting = false;
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  private pendingDisconnectTimeout: number | null = null;
 
   connect() {
+    if (this.pendingDisconnectTimeout) {
+      clearTimeout(this.pendingDisconnectTimeout);
+      this.pendingDisconnectTimeout = null;
+    }
+
     if (this.eventSource || this.isConnecting) {
       console.log("Already connected or connecting to notification stream");
       return;
@@ -47,6 +57,9 @@ export class NotificationService {
   }
 
   private async connectWithFetch(url: string, token: string) {
+    const requestTracker = startNetworkFetchLog("GET", url, "fetch");
+    let hasLoggedResult = false;
+
     try {
       const response = await fetch(url, {
         headers: {
@@ -57,12 +70,27 @@ export class NotificationService {
       });
 
       if (!response.ok) {
+        finishNetworkFetchLog(requestTracker, {
+          status: response.status,
+          error: new Error(`HTTP error! status: ${response.status}`),
+        });
+        hasLoggedResult = true;
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       if (!response.body) {
+        finishNetworkFetchLog(requestTracker, {
+          status: response.status,
+          error: new Error("No response body"),
+        });
+        hasLoggedResult = true;
         throw new Error('No response body');
       }
+
+      finishNetworkFetchLog(requestTracker, {
+        status: response.status,
+      });
+      hasLoggedResult = true;
 
       this.reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -104,6 +132,11 @@ export class NotificationService {
       processStream();
 
     } catch (error) {
+      if (!hasLoggedResult) {
+        finishNetworkFetchLog(requestTracker, {
+          error,
+        });
+      }
       console.error("Fetch connection error:", error);
       this.eventSource = null;
       this.reader = null;
@@ -151,6 +184,11 @@ export class NotificationService {
 
   disconnect() {
     this.isManuallyDisconnected = true;
+
+    if (this.pendingDisconnectTimeout) {
+      clearTimeout(this.pendingDisconnectTimeout);
+      this.pendingDisconnectTimeout = null;
+    }
     
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
@@ -170,6 +208,20 @@ export class NotificationService {
     this.buffer = '';
     this.isConnecting = false;
     this.reconnectAttempts = 0;
+  }
+
+  disconnectIfIdle(delayMs: number = 150) {
+    if (this.pendingDisconnectTimeout) {
+      clearTimeout(this.pendingDisconnectTimeout);
+    }
+
+    this.pendingDisconnectTimeout = window.setTimeout(() => {
+      this.pendingDisconnectTimeout = null;
+
+      if (this.handlers.size === 0) {
+        this.disconnect();
+      }
+    }, delayMs);
   }
 
   private scheduleReconnect() {

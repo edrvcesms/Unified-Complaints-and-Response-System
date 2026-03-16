@@ -5,6 +5,8 @@ import { refreshToken } from "../services/authentication/token";
 import { logoutBarangayAccount } from "../services/authentication/auth";
 import type { DepartmentAccount } from "../types/department/departmentAccount";
 
+let refreshAccessTokenPromise: Promise<void> | null = null;
+
 interface AuthState {
     accessToken: string | null;
     setAccessToken: (token: string | null) => void;
@@ -91,20 +93,34 @@ export const useAuthStore = create<AuthState>((set) => ({
         });
     },
     refreshAccessToken: async () => {
+        if (refreshAccessTokenPromise) {
+            return refreshAccessTokenPromise;
+        }
+
         set({ isCheckingAuth: true });
 
-        try {
-            const data = await refreshToken();
+        refreshAccessTokenPromise = (async () => {
+            try {
+                const data = await refreshToken();
 
-            if (data?.access_token) {
-                set({
-                    accessToken: data.access_token,
-                    isAuthenticated: true
-                });
-                
-                const store = useAuthStore.getState();
-                store.mapDataFromBackend(data);
-            } else {
+                if (data?.access_token) {
+                    set({
+                        accessToken: data.access_token,
+                        isAuthenticated: true
+                    });
+                    
+                    const store = useAuthStore.getState();
+                    store.mapDataFromBackend(data);
+                } else {
+                    set({
+                        accessToken: null,
+                        barangayAccountData: null,
+                        departmentAccountData: null,
+                        userRole: null,
+                        isAuthenticated: false
+                    });
+                }
+            } catch (error) {
                 set({
                     accessToken: null,
                     barangayAccountData: null,
@@ -112,18 +128,13 @@ export const useAuthStore = create<AuthState>((set) => ({
                     userRole: null,
                     isAuthenticated: false
                 });
+            } finally {
+                set({ isCheckingAuth: false });
+                refreshAccessTokenPromise = null;
             }
-        } catch (error) {
-            set({
-                accessToken: null,
-                barangayAccountData: null,
-                departmentAccountData: null,
-                userRole: null,
-                isAuthenticated: false
-            });
-        } finally {
-            set({ isCheckingAuth: false });
-        }
+        })();
+
+        return refreshAccessTokenPromise;
     }
 }));
 

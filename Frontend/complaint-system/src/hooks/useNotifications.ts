@@ -85,10 +85,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         notificationService.off(event, handleNotification);
       });
       
-      // Only disconnect if no handlers remain
-      if (notificationService['handlers'].size === 0) {
-        notificationService.disconnect();
-      }
+      notificationService.disconnectIfIdle();
     };
   }, [isAuthenticated, accessToken, memoizedEvents, handleNotification, autoConnect]);
 

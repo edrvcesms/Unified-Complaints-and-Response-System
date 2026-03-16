@@ -82,8 +82,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
           <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.weeklyActivity')}</h2>
           <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.weeklySubtitle')}</p>
         </div>
-        <div className="w-full h-60 sm:h-64">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-full min-w-0 h-60 sm:h-64">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
             <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />

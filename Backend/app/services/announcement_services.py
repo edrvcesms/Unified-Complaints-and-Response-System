@@ -11,6 +11,7 @@ from app.schemas.announcement_schema import AnnouncementCreate, AnnouncementOut
 from app.tasks import upload_announcement_media_task, delete_cloudinary_media_task
 from app.utils.logger import logger
 from app.models.user import User
+from app.utils.caching import get_cache, set_cache, delete_cache
 from app.constants.roles import UserRole
 from app.utils.cloudinary import extract_public_id_from_url
 import os
@@ -19,16 +20,23 @@ allowed_media_types = ["image/jpeg", "image/png", "video/mp4", "video/mpeg", "vi
 
 async def get_all_announcements(db: AsyncSession):
     try:
-      result = await db.execute(
-          select(Announcement).options(
-              selectinload(Announcement.uploader),
-              selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
-              selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
-              selectinload(Announcement.media)
-          ).order_by(Announcement.created_at.desc())
-      )
-      announcements = result.scalars().all()
-      return [AnnouncementOut.model_validate(announcement) for announcement in announcements]
+        all_announcement_cache = await get_cache("all_announcements")
+        if all_announcement_cache:
+            logger.info("Cache hit for all announcements")
+            return [AnnouncementOut.model_validate_json(announcement) if isinstance(announcement, str) else AnnouncementOut.model_validate(announcement) for announcement in all_announcement_cache]
+        
+        result = await db.execute(
+            select(Announcement).options(
+                selectinload(Announcement.uploader),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
+                selectinload(Announcement.media)
+            ).order_by(Announcement.created_at.desc())
+        )
+        announcements = result.scalars().all()
+        all_announcements = [AnnouncementOut.model_validate(announcement, from_attributes=True) for announcement in announcements]
+        await set_cache("all_announcements", [announcement.model_dump_json() for announcement in all_announcements], expiration=300)
+        return all_announcements
     
     except HTTPException:
         raise
@@ -41,6 +49,11 @@ async def get_all_announcements(db: AsyncSession):
         
 async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
     try:
+        announcement_cache = await get_cache(f"announcement:{announcement_id}")
+        if announcement_cache:
+            logger.info(f"Cache hit for announcement ID {announcement_id}")
+            return AnnouncementOut.model_validate_json(announcement_cache) if isinstance(announcement_cache, str) else AnnouncementOut.model_validate(announcement_cache)
+        
         result = await db.execute(
             select(Announcement).where(Announcement.id == announcement_id).options(
                 selectinload(Announcement.uploader),
@@ -55,7 +68,10 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Announcement not found"
             )
-        return AnnouncementOut.model_validate(announcement)
+            
+        announcement_out = AnnouncementOut.model_validate(announcement, from_attributes=True)
+        await set_cache(f"announcement:{announcement_id}", announcement_out.model_dump_json(), expiration=300)
+        return announcement_out
     
     except HTTPException:
         raise
@@ -68,6 +84,11 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
         
 async def get_announcement_by_uploader(uploader_id: int, db: AsyncSession):
     try:
+        announcement_by_uploader_cache = await get_cache(f"announcements_by_uploader:{uploader_id}")
+        if announcement_by_uploader_cache:
+            logger.info(f"Cache hit for announcements by uploader ID {uploader_id}")
+            return [AnnouncementOut.model_validate_json(announcement) if isinstance(announcement, str) else AnnouncementOut.model_validate(announcement) for announcement in announcement_by_uploader_cache]
+
         result = await db.execute(
             select(Announcement).options(
                 selectinload(Announcement.uploader),
@@ -77,7 +98,9 @@ async def get_announcement_by_uploader(uploader_id: int, db: AsyncSession):
             ).order_by(Announcement.created_at.desc()).where(Announcement.uploader_id == uploader_id)
         )
         announcements = result.scalars().all()
-        return [AnnouncementOut.model_validate(announcement) for announcement in announcements]
+        announcements_by_uploader = [AnnouncementOut.model_validate(announcement, from_attributes=True) for announcement in announcements]
+        await set_cache(f"announcements_by_uploader:{uploader_id}", [announcement.model_dump_json() for announcement in announcements_by_uploader], expiration=300)
+        return announcements_by_uploader
     
     except HTTPException:
         raise

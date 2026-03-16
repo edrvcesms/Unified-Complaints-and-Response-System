@@ -1,4 +1,5 @@
 import asyncio
+from app.utils.template_renderer import render_template
 from datetime import datetime
 from app.services.sse_manager import sse_manager
 import os
@@ -83,18 +84,13 @@ def send_email_task(self, subject: str, recipient: str, body: str):
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
     subject = f"Your OTP Code for Unified Complaints and Response System (UCRS) {purpose}"
-    body = f"""
-    <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-        <h2 style="color: #90ee90;">Your OTP Code for UCRS {purpose}</h2>
-        <p style="font-size: 16px; color: #333;">Use the following code to proceed:</p>
-        <div style="margin: 20px 0; font-size: 24px; font-weight: bold; color: #000; letter-spacing: 4px;">
-            {otp}
-        </div>
-        <p style="font-size: 14px; color: #666;">This code is valid for 5 minutes. Do not share it with anyone.</p>
-        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
-        <p style="font-size: 12px; color: #999;">If you did not request this, please ignore this email.</p>
-    </div>
-    """
+    body = render_template(
+        "otp_email.html",
+        {
+            "otp": otp,
+            "purpose": purpose,
+        }
+    )
     send_email_task.delay(subject=subject, recipient=recipient, body=body)
 
 

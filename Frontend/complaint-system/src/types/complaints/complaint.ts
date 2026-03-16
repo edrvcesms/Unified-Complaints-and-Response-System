@@ -20,6 +20,8 @@ export interface Complaint {
   category: Category;
   department: Department;
   attachment: Attachment[];
+  longitude?: number;
+  latitude?: number;
 }
 
 export type ComplaintStatus = "submitted" | "under_review" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay";

@@ -166,7 +166,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                     title="Complaint Forwarded to LGU",
                     message="Your complaint has been forwarded to the LGU for further processing.",
                     complaint_id=complaint.id,
-                    notification_type="complaint_update"
+                    notification_type="update"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
@@ -182,7 +182,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                 title="New Incident Forwarded to LGU",
                 message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
                 complaint_id=None,
-                notification_type="incident_update"
+                notification_type="update"
             )
             await delete_cache(f"user_notifications:{official.id}")
             logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
@@ -251,7 +251,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                     title="Complaint Forwarded to Department",
                     message="Your complaint has been forwarded to the department for further processing.",
                     complaint_id=complaint.id,
-                    notification_type="complaint_update"
+                    notification_type="update"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
@@ -269,7 +269,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                 title="New Incident Assigned",
                 message=f"A new incident with ID {incident.id} has been forwarded to your department.",
                 complaint_id=None,
-                notification_type="incident_update"
+                notification_type="update"
             )
             await delete_cache(f"user_notifications:{incident.department_account.user.id}")
             logger.info(f"Created notification for department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")

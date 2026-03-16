@@ -250,7 +250,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 title="New Complaint Submitted",
                 message=f"New complaint submitted: {updated_complaint.title}",
                 complaint_id=updated_complaint.id,
-                notification_type="new_complaint"
+                notification_type="info"
             )
             
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
@@ -321,7 +321,7 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
                     title="Complaint Under Review",
                     message=f"Your complaint '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
-                    notification_type="complaint_under_review"
+                    notification_type="update"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")
@@ -400,7 +400,7 @@ async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db:
                     title="Complaint Resolved",
                     message=f"Your complaint '{complaint.title}' has been resolved",
                     complaint_id=complaint.id,
-                    notification_type="complaint_resolved"
+                    notification_type="success"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint resolved ID: {complaint.id}")

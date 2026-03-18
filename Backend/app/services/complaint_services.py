@@ -163,13 +163,21 @@ async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSess
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
 
     try:
+        result = await db.execute(select(BarangayAccount).options(selectinload(BarangayAccount.barangay)).where(BarangayAccount.id == complaint_data.barangay_account_id))
+        barangay_account = result.scalar_one_or_none()
+
+
         if not complaint_data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid complaint data")
         
-        location = await reverse_geocode(complaint_data.latitude, complaint_data.longitude)
+        logger.info(f"Barangay account retrieved: {barangay_account.barangay.barangay_name if barangay_account and barangay_account.barangay else 'None'} for complaint submission")
+        
+        location = await reverse_geocode(complaint_data.latitude, complaint_data.longitude, barangay_account.barangay.barangay_name if barangay_account and barangay_account.barangay else "")
         if location == {"display_name": "Unknown Location"}:
             logger.warning(f"Reverse geocoding failed for lat: {complaint_data.latitude}, lon: {complaint_data.longitude}. Storing complaint with 'Unknown Location'.")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not determine location from provided coordinates. Please make sure you pin the location accurately on the map.")
+        
+        
         
         
         new_complaint = Complaint(

@@ -2,7 +2,7 @@ import httpx
 from fastapi import HTTPException, status
 
 
-async def reverse_geocode(latitude: float, longitude: float) -> dict:
+async def reverse_geocode(latitude: float, longitude: float, barangay_name: str) -> dict:
     try:
       url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
       headers = {"User-Agent": "UCRS/1.0"}
@@ -17,7 +17,7 @@ async def reverse_geocode(latitude: float, longitude: float) -> dict:
           address = data.get("address", {})
           if not address:
               raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No address found for the provided coordinates.")
-
+          
           municipality = (
               address.get("town")
               or address.get("city")
@@ -31,6 +31,15 @@ async def reverse_geocode(latitude: float, longitude: float) -> dict:
                   status_code=status.HTTP_400_BAD_REQUEST,
                   detail="Location of the complaint must be within Santa Maria, Laguna.",
               )
+
+        
+          barangay = (address.get("suburb") or address.get("neighbourhood") or address.get("quarter") or address.get("hamlet"))
+          if barangay and barangay.lower() != barangay_name.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"The provided coordinates do not match the specified barangay ({barangay_name})",
+                )
+
           
           return data.get("display_name", "Unknown Location")
     except HTTPException:

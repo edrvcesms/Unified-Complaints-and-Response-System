@@ -55,3 +55,12 @@ export const markIncidentAsViewed = async (incidentId: number): Promise<void> =>
     throw error;
   }
 };
+
+export const notifyHearing = async (incidentId: number, hearingDate: FormData): Promise<void> => {
+  try {
+    await incidentsApi.post(`/notify-hearing/${incidentId}`, hearingDate);
+  } catch (error) {
+    console.error("Error notifying hearing for incident:", error);
+    throw error;
+  }
+};

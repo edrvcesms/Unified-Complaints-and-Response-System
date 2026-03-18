@@ -28,6 +28,7 @@ class Complaint(Base):
     updated_at = Column(DateTime, nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    hearing_date = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")

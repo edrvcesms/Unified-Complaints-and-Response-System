@@ -4,6 +4,11 @@
       "path": "Backend/test.py",
       "envManager": "ms-python.python:system",
       "packageManager": "ms-python.python:pip"
+    },
+    {
+      "path": "Backend/clear_cache.py",
+      "envManager": "ms-python.python:system",
+      "packageManager": "ms-python.python:pip"
     }
   ],
   "python-envs.defaultEnvManager": "ms-python.python:system"

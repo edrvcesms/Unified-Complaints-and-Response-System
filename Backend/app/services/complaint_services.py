@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
-from app.tasks import cluster_complaint_task, send_notifications_task
+from app.tasks import cluster_complaint_task, send_notifications_task, notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
 
 
@@ -475,3 +475,74 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             detail=str(e),
         )
     
+async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: AsyncSession):
+    try:
+        normalized_hearing_date = (
+            hearing_date.astimezone(timezone.utc).replace(tzinfo=None)
+            if hearing_date.tzinfo is not None and hearing_date.utcoffset() is not None
+            else hearing_date
+        )
+
+        result = await db.execute(
+            select(IncidentComplaintModel.complaint_id)
+            .where(IncidentComplaintModel.incident_id == incident_id)
+        )
+        complaint_ids = result.scalars().all()
+
+        if not complaint_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
+
+        result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)).options(selectinload(Complaint.user), selectinload(Complaint.barangay)))
+        complaints = result.scalars().all()
+        
+        if not complaints:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
+        
+        for complaint in complaints:
+            if not complaint:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+            
+            user = complaint.user
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found for this complaint")
+            
+            complaint.hearing_date = normalized_hearing_date
+            
+            user_name = f"{user.first_name} {user.last_name}".strip() or user.name or "User"
+            
+            notify_user_for_hearing_task.delay(
+                recipient=user.email,
+                barangay_name=complaint.barangay.barangay_name if complaint.barangay else "N/A",
+                compliant_name=user_name,
+                hearing_day=normalized_hearing_date.strftime("%d"),
+                hearing_month=normalized_hearing_date.strftime("%B"),
+                hearing_year=normalized_hearing_date.strftime("%Y"),
+                issued_day=datetime.utcnow().strftime("%d"),
+                issued_month=datetime.utcnow().strftime("%B"),
+                issued_year=datetime.utcnow().strftime("%Y"),
+                notified_day=datetime.utcnow().strftime("%d"),
+                notified_month=datetime.utcnow().strftime("%B"),
+                notified_year=datetime.utcnow().strftime("%Y"),
+                hearing_time=normalized_hearing_date.strftime("%I:%M %p")
+            )
+
+        await db.commit()
+        await delete_cache(f"incident_complaints:{incident_id}")
+        for complaint_id in complaint_ids:
+            await delete_cache(f"complaint:{complaint_id}")
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "message": f"User {user_name} has been notified about the hearing scheduled for complaint '{complaint.title}'"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error in notify_user_for_hearing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e))

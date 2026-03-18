@@ -6,7 +6,7 @@ import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu } from '../../../hooks/useIncidents';
+import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing } from '../../../hooks/useIncidents';
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { SuccessModal } from "../../general/SuccessModal";
@@ -22,6 +22,9 @@ export const IncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const forwardToLguMutation = useForwardIncidentToLgu(Number(incidentId));
+  const notifyHearingMutation = useNotifyHearing();
+  const [hearingDate, setHearingDate] = useState('');
+  const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
 
   const confirmationModal = useConfirmationModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -72,6 +75,20 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [forwardToLguMutation.isSuccess]);
 
+  // Handle successful hearing notification
+  useEffect(() => {
+    if (notifyHearingMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setIsHearingModalOpen(false);
+      setHearingDate('');
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'Users have been notified for the hearing successfully.',
+      });
+    }
+  }, [notifyHearingMutation.isSuccess]);
+
   // Handle resolve error
   useEffect(() => {
     if (resolveIncidentMutation.isError) {
@@ -114,6 +131,20 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [forwardToLguMutation.isError]);
 
+  // Handle hearing notification error
+  useEffect(() => {
+    if (notifyHearingMutation.isError) {
+      confirmationModal.closeModal();
+      const error = notifyHearingMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to notify users for hearing. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [notifyHearingMutation.isError]);
+
   const handleViewAllComplaints = () => {
     navigate(`/dashboard/incidents/${incidentId}/complaints`);
   };
@@ -154,6 +185,28 @@ export const IncidentDetails: React.FC = () => {
     });
   };
 
+  const handleOpenHearingModal = () => {
+    setIsHearingModalOpen(true);
+  };
+
+  const handleNotifyHearing = async () => {
+    if (!hearingDate) {
+      setErrorModal({
+        isOpen: true,
+        title: 'Missing Hearing Date',
+        message: 'Please select a hearing date and time before notifying users.',
+      });
+      return;
+    }
+
+    const hearingDateFormData = new FormData();
+    hearingDateFormData.append("hearing_date", new Date(hearingDate).toISOString());
+    await notifyHearingMutation.mutateAsync({
+      incidentId: Number(incidentId),
+      hearingDate: hearingDateFormData,
+    });
+  };
+
   if (isLoading) {
     return (
         <LoadingIndicator />
@@ -186,7 +239,7 @@ export const IncidentDetails: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{incident.title}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 wrap-break-word">{incident.title}</h1>
                 <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
               </div>
             </div>
@@ -311,6 +364,13 @@ export const IncidentDetails: React.FC = () => {
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
+          onClick={handleOpenHearingModal}
+          disabled={notifyHearingMutation.isPending}
+          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}
+        </button>
+        <button
           onClick={handleForwardToLgu}
           disabled={forwardToLguMutation.isPending}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -325,6 +385,44 @@ export const IncidentDetails: React.FC = () => {
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
         </button>
       </div>
+
+      {isHearingModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Notify Complainants for Hearing</h3>
+            <p className="text-sm text-gray-600 mb-4">Select the hearing date and time, then confirm to notify all complainants.</p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Hearing Date & Time</label>
+              <input
+                type="datetime-local"
+                value={hearingDate}
+                onChange={(event) => setHearingDate(event.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsHearingModalOpen(false)}
+                disabled={notifyHearingMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleNotifyHearing}
+                disabled={notifyHearingMutation.isPending || !hearingDate}
+                className="px-4 py-2 text-sm font-medium text-white rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                {notifyHearingMutation.isPending ? "Notifying..." : "Confirm & Notify"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}

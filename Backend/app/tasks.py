@@ -3,6 +3,7 @@ from app.utils.template_renderer import render_template
 from datetime import datetime
 from app.services.sse_manager import sse_manager
 import os
+from sqlalchemy import func
 from app.models.notification import Notification
 from app.models.complaint import Complaint
 from app.models.attachment import Attachment
@@ -10,6 +11,8 @@ from app.models.announcement_media import AnnouncementMedia
 from app.models.event_media import EventMedia
 from fastapi_mail import FastMail, MessageSchema
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
+from sqlalchemy.orm import selectinload
+from app.models.incident_complaint import IncidentComplaintModel
 from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary, delete_multiple_from_cloudinary
 from app.utils.caching import delete_cache
@@ -89,6 +92,43 @@ def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
         {
             "otp": otp,
             "purpose": purpose,
+        }
+    )
+    send_email_task.delay(subject=subject, recipient=recipient, body=body)
+    
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def notify_user_for_hearing_task(
+    self,
+    recipient: str,
+    barangay_name: str,
+    compliant_name: str,
+    hearing_day: str,
+    hearing_month: str,
+    hearing_year: str,
+    hearing_time: str,
+    issued_day: str,
+    issued_month: str,
+    issued_year: str,
+    notified_day: str,
+    notified_month: str,
+    notified_year: str
+):
+    subject = "Notice of Hearing for Your Complaint - Unified Complaints and Response System (UCRS)"
+    body = render_template(
+        "hearing_notification_email.html",
+        {
+            "barangay_name": barangay_name,
+            "compliant_name": compliant_name,
+            "hearing_day": hearing_day,
+            "hearing_month": hearing_month,
+            "hearing_year": hearing_year,
+            "hearing_time": hearing_time,
+            "issued_day": issued_day,
+            "issued_month": issued_month,
+            "issued_year": issued_year,
+            "notified_day": notified_day,
+            "notified_month": notified_month,
+            "notified_year": notified_year
         }
     )
     send_email_task.delay(subject=subject, recipient=recipient, body=body)
@@ -401,8 +441,11 @@ def cluster_complaint_task(self, complaint_data: dict):
 
             if not result.is_new_incident and result.existing_incident_status:
                 complaint_result = await db.execute(
-                    select(Complaint).where(Complaint.id == cluster_data.complaint_id)
+                    select(Complaint)
+                    .options(selectinload(Complaint.user), selectinload(Complaint.barangay))
+                    .where(Complaint.id == cluster_data.complaint_id)
                 )
+                
                 complaint = complaint_result.scalars().first()
 
                 if complaint:
@@ -423,12 +466,11 @@ def cluster_complaint_task(self, complaint_data: dict):
                             f"status from '{old_status}' to '{result.existing_incident_status}'"
                         )
 
-                    # Always notify user when merged regardless of status
                     notification = Notification(
                         user_id=cluster_data.user_id,
                         complaint_id=cluster_data.complaint_id,
-                        title="Your complaint is already part of an existing incident",
-                        message=result.message or f"Your complaint has been merged with an existing incident that is currently {result.existing_incident_status.replace('_', ' ')}.",
+                        title="Update on your complaint",
+                        message=result.message or f"Your complaint is about the same issue as an existing report. Current status: {result.existing_incident_status.replace('_', ' ')}.",
                         notification_type="info",
                         channel="in_app",
                         is_read=False,
@@ -440,14 +482,94 @@ def cluster_complaint_task(self, complaint_data: dict):
                     await sse_manager.send(
                         user_id=cluster_data.user_id,
                         data={
-                            "title": "Your complaint is already part of an existing incident",
-                            "message": result.message or f"Your complaint has been merged with an existing incident that is currently {result.existing_incident_status.replace('_', ' ')}.",
+                            "title": "Update on your complaint",
+                            "message": result.message or f"Your complaint is about the same issue as an existing report. Current status: {result.existing_incident_status.replace('_', ' ')}.",
                             "sent_at": datetime.utcnow().isoformat(),
                             "complaint_id": cluster_data.complaint_id,
                             "notification_type": "info",
                         },
                         event="info",
                     )
+
+                    hearing_date_result = await db.execute(
+                        select(func.max(Complaint.hearing_date))
+                        .join(
+                            IncidentComplaintModel,
+                            IncidentComplaintModel.complaint_id == Complaint.id
+                        )
+                        .where(
+                            IncidentComplaintModel.incident_id == result.incident_id,
+                            Complaint.hearing_date.isnot(None)
+                        )
+                    )
+                    incident_hearing_date = hearing_date_result.scalar_one_or_none()
+                    logger.info(
+                        f"[cluster_complaint_task] Hearing date lookup for incident_id={result.incident_id}, "
+                        f"complaint_id={cluster_data.complaint_id}, hearing_date={incident_hearing_date}"
+                    )
+
+                    if incident_hearing_date:
+                        complaint.hearing_date = incident_hearing_date
+                        logger.info(
+                            f"[cluster_complaint_task] Applied hearing_date={incident_hearing_date} "
+                            f"to complaint_id={cluster_data.complaint_id}"
+                        )
+
+                        if incident_hearing_date > datetime.utcnow():
+                            logger.info(
+                                f"[cluster_complaint_task] Upcoming hearing detected for complaint_id={cluster_data.complaint_id}; "
+                                f"sending hearing email task"
+                            )
+                            user_name = (
+                                f"{complaint.user.first_name} {complaint.user.last_name}".strip()
+                                if complaint.user else "User"
+                            )
+                            notify_user_for_hearing_task.delay(
+                                recipient=complaint.user.email,
+                                barangay_name=complaint.barangay.barangay_name if complaint.barangay else "N/A",
+                                compliant_name=user_name or (complaint.user.name if complaint.user else "User"),
+                                hearing_day=incident_hearing_date.strftime("%d"),
+                                hearing_month=incident_hearing_date.strftime("%B"),
+                                hearing_year=incident_hearing_date.strftime("%Y"),
+                                issued_day=datetime.utcnow().strftime("%d"),
+                                issued_month=datetime.utcnow().strftime("%B"),
+                                issued_year=datetime.utcnow().strftime("%Y"),
+                                notified_day=datetime.utcnow().strftime("%d"),
+                                notified_month=datetime.utcnow().strftime("%B"),
+                                notified_year=datetime.utcnow().strftime("%Y"),
+                                hearing_time=incident_hearing_date.strftime("%I:%M %p")
+                            )
+                            logger.info(
+                                f"[cluster_complaint_task] notify_user_for_hearing_task queued for "
+                                f"complaint_id={cluster_data.complaint_id}, user_id={cluster_data.user_id}"
+                            )
+                        else:
+                            logger.info(
+                                f"[cluster_complaint_task] Hearing already completed for complaint_id={cluster_data.complaint_id}; "
+                                f"sending in-app hearing update"
+                            )
+                            current_status = (complaint.status or "submitted").replace("_", " ")
+                            hearing_done_message = (
+                                f"Your complaint is linked to an issue that already had a hearing on {incident_hearing_date.strftime('%B %d, %Y %I:%M %p')}. "
+                                f"Current status: {current_status}."
+                            )
+                            send_notifications_task.delay(
+                                user_id=cluster_data.user_id,
+                                title="Hearing update",
+                                message=hearing_done_message,
+                                complaint_id=cluster_data.complaint_id,
+                                notification_type="info"
+                            )
+                            logger.info(
+                                f"[cluster_complaint_task] send_notifications_task queued for "
+                                f"complaint_id={cluster_data.complaint_id}, user_id={cluster_data.user_id}"
+                            )
+                    else:
+                        logger.info(
+                            f"[cluster_complaint_task] No existing hearing date found for "
+                            f"incident_id={result.incident_id}; skipped hearing notifications for complaint_id={cluster_data.complaint_id}"
+                        )
+                    
 
             await db.commit()
             return result

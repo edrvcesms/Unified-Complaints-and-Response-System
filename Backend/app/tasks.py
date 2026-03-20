@@ -31,15 +31,22 @@ from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import
 from app.domain.repository.incident_repository import IncidentRepository
 from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from dotenv import load_dotenv
+
+from app.domain.infrastracture.service.chatbot_service import ChatbotService
+from app.domain.chatbot.rag_service import RAGService, RAGResponse
+from app.domain.IEmbeddingService.vector_store.pinecone_rag_repository import PineconeRAGVectorRepository
+from app.domain.infrastracture.llm.gemini_rag import GeminiRAGLanguageModel
+
 nest_asyncio.apply()
 load_dotenv()
 from app.core.config import settings
 
-# Lazy-loaded singletons to avoid heavy initialization on import
+
 _gemini_verifier = None
 _embedding_service = None
 _vector_repository = None
 _severity_calculator = None
+_chatbot_service = None
 
 def get_gemini_verifier():
     global _gemini_verifier
@@ -67,6 +74,22 @@ def get_severity_calculator():
     if _severity_calculator is None:
         _severity_calculator = WeightedSeverityCalculator()
     return _severity_calculator
+
+
+def get_chatbot_service():
+    global _chatbot_service
+    if _chatbot_service is None:
+        _chatbot_service = ChatbotService(
+            rag_service=RAGService(
+                vector_repo=PineconeRAGVectorRepository(
+                    api_key=os.environ["PINECONE_API_KEY"],
+                    index_name=os.environ["PINECONE_RAG_INDEX_NAME"],
+                ),
+                language_model=GeminiRAGLanguageModel(api_key=settings.GEMINI_API_KEY),
+            ),
+            embedding_service=get_embedding_service(),  
+        )
+    return _chatbot_service
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_email_task(self, subject: str, recipient: str, body: str):

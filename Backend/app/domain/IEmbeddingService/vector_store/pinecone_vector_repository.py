@@ -14,7 +14,7 @@ import numpy as np
 from pinecone import Pinecone, ServerlessSpec
 
 from app.domain.interfaces.i_vector_repository import IVectorRepository
-from app.domain.value_objects.similarity_result import SimilarityResult
+from app.domain.value_objects.similary_result import SimilarityResult
 
 logger = logging.getLogger(__name__)
 

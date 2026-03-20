@@ -10,7 +10,7 @@ from app.utils.attachments import AttachmentSizeLimitMiddleware
 from app.domain.infrastracture.jobs.incident_jobs import run_resolve_expired_incidents
 
 # Routers
-from app.routers import user_auth_routes, user_routes, barangay_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, department_routes, announcement_routes, report_routes, app_feedback_routes, event_routes
+from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, department_routes, announcement_routes, report_routes, app_feedback_routes, event_routes
 from app.admin import _super_admin_routes as _super_admin
 
 scheduler = AsyncIOScheduler()
@@ -75,3 +75,4 @@ app.include_router(announcement_routes.router, prefix="/api/v1/announcements", t
 app.include_router(report_routes.router, prefix="/api/v1/reports", tags=["Reports"])
 app.include_router(app_feedback_routes.router, prefix="/api/v1/app-feedback", tags=["App Feedback"])
 app.include_router(event_routes.router, prefix="/api/v1/events", tags=["Events"])
+app.include_router(chatbot_routes.router, prefix="/api/v1/chatbot", tags=["Chatbot"])

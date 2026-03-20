@@ -8,6 +8,8 @@ class BarangayModel(BaseModel):
     barangay_address: str
     barangay_contact_number: str
     barangay_email: EmailStr
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class BarangayAccountCreate(BarangayModel):
     password: str

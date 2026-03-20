@@ -34,6 +34,7 @@ async def reverse_geocode(latitude: float, longitude: float, barangay_name: str)
 
         
           barangay = (address.get("suburb") or address.get("neighbourhood") or address.get("quarter") or address.get("hamlet"))
+          print(f"Reverse geocoding result - Municipality: {municipality}, Province: {province}, Barangay: {barangay}")
           if barangay and barangay.lower() != barangay_name.lower():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from app.domain.value_objects.similarity_result import SimilarityResult
+from app.domain.value_objects.similary_result import SimilarityResult
 
 
 class IVectorRepository(ABC):

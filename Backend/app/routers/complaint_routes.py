@@ -5,7 +5,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
-from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats_by_barangay
+from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats_by_barangay, user_complaints_statistics
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.services.complaint_cluster_service import cluster_complaints
@@ -45,3 +45,8 @@ async def create_complaint(request: Request, data: str = Form(...), attachments:
         await upload_attachments(attachments, current_user.id, complaint.id, db)
 #await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
     return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}
+
+@router.get("/my-stats", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def my_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await user_complaints_statistics(current_user.id, db)

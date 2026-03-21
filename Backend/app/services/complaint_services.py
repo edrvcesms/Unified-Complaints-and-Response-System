@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
+from app.models.incident_model import IncidentModel
 from app.constants.roles import UserRole
 from app.models.user import User
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
@@ -478,7 +479,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
 async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: AsyncSession):
     try:
         normalized_hearing_date = (
-            hearing_date.astimezone(timezone.utc).replace(tzinfo=None)
+            hearing_date.replace(tzinfo=None)
             if hearing_date.tzinfo is not None and hearing_date.utcoffset() is not None
             else hearing_date
         )
@@ -495,6 +496,12 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)).options(selectinload(Complaint.user), selectinload(Complaint.barangay)))
         complaints = result.scalars().all()
         
+        result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
+        incident = result.scalar()
+
+        if not incident:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
         if not complaints:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
         
@@ -507,6 +514,8 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found for this complaint")
             
             complaint.hearing_date = normalized_hearing_date
+            incident.has_hearing_scheduled = True
+
             
             user_name = f"{user.first_name} {user.last_name}".strip() or user.name or "User"
             
@@ -530,6 +539,11 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         await delete_cache(f"incident_complaints:{incident_id}")
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
+            await delete_cache(f"user_complaints:{user.id}")
+            await delete_cache(f"user_notifications:{user.id}")
+            await delete_cache(f"incident_complaints:{incident_id}")
+            await delete_cache(f"incident:{incident_id}")
+    
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -546,3 +560,25 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e))
+        
+def user_complaints_statistics(user_id: int, db: AsyncSession):
+    try:
+        result = db.execute(
+            select(Complaint)
+            .where(Complaint.user_id == user_id)
+        )
+        complaints = result.scalars().all()
+
+        total_complaints = len(complaints)
+        resolved_complaints = sum(1 for c in complaints if c.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
+        pending_complaints = sum(1 for c in complaints if c.status not in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
+
+        return {
+            "total_complaints": total_complaints,
+            "resolved_complaints": resolved_complaints,
+            "pending_complaints": pending_complaints
+        }
+
+    except Exception as e:
+        logger.error(f"Error in user_complaints_statistics: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

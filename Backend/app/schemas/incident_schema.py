@@ -28,6 +28,7 @@ class IncidentData(IncidentBaseModel):
     severity_score: float
     first_reported_at: datetime
     last_reported_at: datetime
+    has_hearing_scheduled: Optional[bool] = False
     category: Optional[CategoryModel] = None
     barangay: Optional[BarangayModel] = None
     complaint_clusters: List[IncidentComplaintClusterModel] = []

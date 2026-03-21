@@ -1,5 +1,6 @@
 import httpx
 from fastapi import HTTPException, status
+from .geo_services import get_barangay
 
 
 async def reverse_geocode(latitude: float, longitude: float, barangay_name: str) -> dict:
@@ -31,17 +32,14 @@ async def reverse_geocode(latitude: float, longitude: float, barangay_name: str)
                   status_code=status.HTTP_400_BAD_REQUEST,
                   detail="Location of the complaint must be within Santa Maria, Laguna.",
               )
-
         
-          barangay = (address.get("suburb") or address.get("neighbourhood") or address.get("quarter") or address.get("hamlet"))
-          print(f"Reverse geocoding result - Municipality: {municipality}, Province: {province}, Barangay: {barangay}")
-          if barangay and barangay.lower() != barangay_name.lower():
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"The provided coordinates do not match the specified barangay ({barangay_name})",
-                )
+          barangay = get_barangay(latitude, longitude)
+          if barangay.lower() != barangay_name.lower():
+              raise HTTPException(
+                  status_code=status.HTTP_400_BAD_REQUEST,
+                  detail=f"Coordinates do not match the provided barangay name. Detected barangay: {barangay}",
+              )  
 
-          
           return data.get("display_name", "Unknown Location")
     except HTTPException:
         raise

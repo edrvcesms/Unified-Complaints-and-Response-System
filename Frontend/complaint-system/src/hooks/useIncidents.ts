@@ -129,8 +129,9 @@ export const useMarkIncidentAsViewed = () => {
 export const useNotifyHearing = () => {
   const mutation = useMutation({
     mutationFn: ({ incidentId, hearingDate }: { incidentId: number; hearingDate: FormData }) => notifyHearing(incidentId, hearingDate),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", variables.incidentId] });
     }
   });
   return mutation;

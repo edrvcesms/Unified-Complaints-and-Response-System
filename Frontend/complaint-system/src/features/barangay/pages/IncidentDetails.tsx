@@ -200,7 +200,7 @@ export const IncidentDetails: React.FC = () => {
     }
 
     const hearingDateFormData = new FormData();
-    hearingDateFormData.append("hearing_date", new Date(hearingDate).toISOString());
+    hearingDateFormData.append("hearing_date", hearingDate);
     await notifyHearingMutation.mutateAsync({
       incidentId: Number(incidentId),
       hearingDate: hearingDateFormData,
@@ -221,6 +221,8 @@ export const IncidentDetails: React.FC = () => {
       </div>
     );
   }
+
+  const isHearingAlreadyScheduled = Boolean(incident.has_hearing_scheduled);
 
   return (
     <div className="space-y-6">
@@ -365,10 +367,14 @@ export const IncidentDetails: React.FC = () => {
         </button>
         <button
           onClick={handleOpenHearingModal}
-          disabled={notifyHearingMutation.isPending}
+          disabled={notifyHearingMutation.isPending || isHearingAlreadyScheduled}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}
+          {notifyHearingMutation.isPending
+            ? "Notifying..."
+            : isHearingAlreadyScheduled
+              ? "Hearing Already Scheduled"
+              : "Notify Complainants for Hearing"}
         </button>
         <button
           onClick={handleForwardToLgu}

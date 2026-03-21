@@ -29,6 +29,7 @@ class IncidentModel(Base):
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    has_hearing_scheduled = Column(Boolean, nullable=True, default=False)
     
 
     status = Column(String(20), nullable=False, default="ACTIVE", index=True)

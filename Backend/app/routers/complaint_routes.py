@@ -30,6 +30,10 @@ async def weekly_complaint_stats(request: Request, db: AsyncSession = Depends(ge
 async def list_my_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_my_complaints(current_user.id, db)
 
+@router.get("/my-stats", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def my_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await user_complaints_statistics(current_user.id, db)
 
 @router.get("/{complaint_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
@@ -46,7 +50,3 @@ async def create_complaint(request: Request, data: str = Form(...), attachments:
 #await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
     return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}
 
-@router.get("/my-stats", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
-async def my_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await user_complaints_statistics(current_user.id, db)

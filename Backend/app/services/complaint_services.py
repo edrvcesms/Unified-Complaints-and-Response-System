@@ -111,6 +111,29 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
         logger.error(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+    
+async def user_complaints_statistics(user_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(Complaint)
+            .where(Complaint.user_id == user_id)
+        )
+        complaints = result.scalars().all()
+
+        total_complaints = len(complaints)
+        resolved_complaints = sum(1 for c in complaints if c.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
+        pending_complaints = sum(1 for c in complaints if c.status not in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
+
+        return {
+            "total_complaints": total_complaints,
+            "resolved_complaints": resolved_complaints,
+            "pending_complaints": pending_complaints
+        }
+
+    except Exception as e:
+        logger.error(f"Error in user_complaints_statistics: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
 async def get_weekly_complaint_stats_by_barangay(barangay_id: int, db: AsyncSession):
     try:
         weekly_stats_cache = await get_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
@@ -561,24 +584,3 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e))
         
-def user_complaints_statistics(user_id: int, db: AsyncSession):
-    try:
-        result = db.execute(
-            select(Complaint)
-            .where(Complaint.user_id == user_id)
-        )
-        complaints = result.scalars().all()
-
-        total_complaints = len(complaints)
-        resolved_complaints = sum(1 for c in complaints if c.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
-        pending_complaints = sum(1 for c in complaints if c.status not in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
-
-        return {
-            "total_complaints": total_complaints,
-            "resolved_complaints": resolved_complaints,
-            "pending_complaints": pending_complaints
-        }
-
-    except Exception as e:
-        logger.error(f"Error in user_complaints_statistics: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

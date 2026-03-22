@@ -7,6 +7,7 @@ export const createApiClient = (axiosInstance: AxiosInstance) => {
       config?: AxiosRequestConfig
     ): Promise<T> => {
       const response = await axiosInstance.get<T>(url, config);
+      console.log(`GET ${url} - Response:`, response.data);
       return response.data;
     },
 

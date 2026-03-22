@@ -20,5 +20,5 @@ export interface Incident {
   complaint_clusters: ComplaintCluster[];
   has_new_complaints?: boolean;
   new_complaint_count?: number;
-  has_hearing_scheduled?: boolean;
+  hearing_date?: string | null;
 }

@@ -537,7 +537,7 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found for this complaint")
             
             complaint.hearing_date = normalized_hearing_date
-            incident.has_hearing_scheduled = True
+            incident.hearing_date = normalized_hearing_date
 
             
             user_name = f"{user.first_name} {user.last_name}".strip() or user.name or "User"
@@ -560,13 +560,13 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
 
         await db.commit()
         await delete_cache(f"incident_complaints:{incident_id}")
+        
+        await delete_cache(f"user_complaints:{user.id}")
+        await delete_cache(f"user_notifications:{user.id}")
+        await delete_cache(f"incident_complaints:{incident_id}")
+        await delete_cache(f"incident:{incident_id}")
         for complaint_id in complaint_ids:
             await delete_cache(f"complaint:{complaint_id}")
-            await delete_cache(f"user_complaints:{user.id}")
-            await delete_cache(f"user_notifications:{user.id}")
-            await delete_cache(f"incident_complaints:{incident_id}")
-            await delete_cache(f"incident:{incident_id}")
-    
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,

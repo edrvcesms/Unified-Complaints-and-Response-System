@@ -186,6 +186,15 @@ export const IncidentDetails: React.FC = () => {
   };
 
   const handleOpenHearingModal = () => {
+    if (incidentHearingDate) {
+      const existingDate = new Date(incidentHearingDate);
+      if (!Number.isNaN(existingDate.getTime())) {
+        const localDateTime = new Date(existingDate.getTime() - existingDate.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 16);
+        setHearingDate(localDateTime);
+      }
+    }
     setIsHearingModalOpen(true);
   };
 
@@ -222,7 +231,31 @@ export const IncidentDetails: React.FC = () => {
     );
   }
 
-  const isHearingAlreadyScheduled = Boolean(incident.has_hearing_scheduled);
+  const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
+  const incidentHearingDate =
+    typeof incidentHearingDateRaw === "string"
+      ? incidentHearingDateRaw.trim() || null
+      : incidentHearingDateRaw;
+  const hasScheduledHearingDate = Boolean(incidentHearingDate);
+
+  // Helper to format hearing date as 'Month day, Year at Time'
+  const formatHearingDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    // e.g. March 22, 2026, 03:30 PM
+    const formatted = date.toLocaleString(undefined, options);
+    // Convert ", " before time to " at "
+    return formatted.replace(/, (\d{2}:\d{2} [AP]M)$/i, ' at $1');
+  };
 
   return (
     <div className="space-y-6">
@@ -366,17 +399,6 @@ export const IncidentDetails: React.FC = () => {
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
-          onClick={handleOpenHearingModal}
-          disabled={notifyHearingMutation.isPending || isHearingAlreadyScheduled}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {notifyHearingMutation.isPending
-            ? "Notifying..."
-            : isHearingAlreadyScheduled
-              ? "Hearing Already Scheduled"
-              : "Notify Complainants for Hearing"}
-        </button>
-        <button
           onClick={handleForwardToLgu}
           disabled={forwardToLguMutation.isPending}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -392,11 +414,41 @@ export const IncidentDetails: React.FC = () => {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+        {hasScheduledHearingDate && (
+          <p className="text-sm text-gray-700 sm:mr-2 sm:text-right">
+            Hearing Date: <span className="font-semibold">{formatHearingDate(incidentHearingDate as string)}</span>
+          </p>
+        )}
+
+        {hasScheduledHearingDate ? (
+          <button
+            onClick={handleOpenHearingModal}
+            disabled={notifyHearingMutation.isPending}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {notifyHearingMutation.isPending ? "Notifying..." : "Reschedule Hearing Date"}
+          </button>
+        ) : (
+          <button
+            onClick={handleOpenHearingModal}
+            disabled={notifyHearingMutation.isPending}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}
+          </button>
+        )}
+      </div>
+
       {isHearingModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Notify Complainants for Hearing</h3>
-            <p className="text-sm text-gray-600 mb-4">Select the hearing date and time, then confirm to notify all complainants.</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {hasScheduledHearingDate ? "Reschedule Hearing Date" : "Notify Complainants for Hearing"}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Select the hearing date and time, then confirm to notify all complainants.
+            </p>
 
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Hearing Date & Time</label>
@@ -423,7 +475,11 @@ export const IncidentDetails: React.FC = () => {
                 disabled={notifyHearingMutation.isPending || !hearingDate}
                 className="px-4 py-2 text-sm font-medium text-white rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
               >
-                {notifyHearingMutation.isPending ? "Notifying..." : "Confirm & Notify"}
+                {notifyHearingMutation.isPending
+                  ? "Notifying..."
+                  : hasScheduledHearingDate
+                    ? "Confirm & Reschedule"
+                    : "Confirm & Notify"}
               </button>
             </div>
           </div>

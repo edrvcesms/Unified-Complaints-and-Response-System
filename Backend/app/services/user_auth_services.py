@@ -287,6 +287,7 @@ async def refresh_access_token(request: Request, db: AsyncSession):
         barangay_data = None
         department_data = None
         cached_user_data = await get_cache(f"user_data:{user_id}")
+        logger.info(f"Cache data retrieved for user_id: {user_id} during token refresh attempt: {cached_user_data}")
         
         if user.role == UserRole.BARANGAY_OFFICIAL:
             barangay_json_data = cached_user_data.get("barangay_data") if cached_user_data else None

@@ -7,6 +7,7 @@ from jose import JWTError
 from app.models.barangay import Barangay
 from app.models.user import User
 from app.dependencies.db_dependency import get_async_db
+from app.utils.caching import get_cache
 from app.core.security import verify_token
 from app.constants.roles import UserRole
 from app.models.barangay_account import BarangayAccount
@@ -37,10 +38,15 @@ async def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     if user.role == UserRole.BARANGAY_OFFICIAL:
-        result = await db.execute(select(User).options(selectinload(User.barangay_account).selectinload(BarangayAccount.barangay)).where(User.id == user_id))
-        user = result.scalars().first()
-        logger.info(f"Fetched user with barangay data: {user}, Barangay: {user.barangay_account.barangay_id if user.barangay_account else 'N/A'}")
-        return user
+        try:
+            result = await db.execute(select(User).options(selectinload(User.barangay_account).selectinload(BarangayAccount.barangay)).where(User.id == user_id))
+            user = result.scalars().first()
+            logger.info(f"Fetched user with barangay data: {user}, Barangay: {user.barangay_account.barangay_id if user.barangay_account else 'N/A'}")
+            return user
+            
+        except Exception as e:
+            logger.error(f"Error fetching barangay data for user {user_id}: {e}")
+            raise HTTPException(status_code=500, detail="Error fetching barangay data")
     
     if user.role == UserRole.DEPARTMENT_STAFF:
         result = await db.execute(select(User).options(selectinload(User.department_account)).where(User.id == user_id))

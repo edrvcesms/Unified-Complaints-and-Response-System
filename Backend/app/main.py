@@ -8,11 +8,9 @@ from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
 from app.domain.infrastracture.jobs.incident_jobs import run_resolve_expired_incidents
-
-# Routers
 from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, department_routes, announcement_routes, report_routes, app_feedback_routes, event_routes
 from app.admin import _super_admin_routes as _super_admin
-
+from app.domain.infrastracture.jobs.incident_expiration_alert import run_expiry_warning_notifications
 scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
@@ -32,7 +30,15 @@ async def lifespan(app: FastAPI):
     yield
 
     scheduler.shutdown()
+    
     logger.info("Scheduler shut down.")
+    scheduler.add_job(
+    run_expiry_warning_notifications,
+    trigger="interval",
+    minutes=30,
+    id="expiry_warning_notifications",
+    replace_existing=True,
+)
     logger.info("Application shutdown complete.")
 
 app = FastAPI(lifespan=lifespan)

@@ -111,7 +111,7 @@ def send_email_task(self, subject: str, recipient: str, body: str):
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
     subject = f"Your OTP Code for Unified Complaints and Response System (UCRS) {purpose}"
     body = render_template(
-        "otp_email.html",
+        "email_otp.html",
         {
             "otp": otp,
             "purpose": purpose,

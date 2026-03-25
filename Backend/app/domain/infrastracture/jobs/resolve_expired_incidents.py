@@ -10,6 +10,7 @@ from sqlalchemy import update, cast
 from sqlalchemy.dialects.postgresql import INTERVAL
 
 logger = logging.getLogger(__name__)
+
 async def resolve_expired_incidents(db: AsyncSession) -> None:
     now = datetime.utcnow()
 

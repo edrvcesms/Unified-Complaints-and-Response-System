@@ -27,9 +27,13 @@ class IncidentModel(Base):
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
+    lgu_account_id = Column(Integer, ForeignKey("user.id"), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     hearing_date = Column(DateTime, nullable=True)
+    
+    last_expiry_notif_user_id = Column(Integer, nullable=True, default=None)
+    last_expiry_notif_checkpoint = Column(Integer, nullable=True, default=None)
     
 
     status = Column(String(20), nullable=False, default="ACTIVE", index=True)
@@ -54,6 +58,7 @@ class IncidentModel(Base):
     barangay = relationship("Barangay", back_populates="incidents")
     category = relationship("Category", back_populates="incidents")
     department_account = relationship("DepartmentAccount", back_populates="incidents")
+    lgu_account = relationship("User", back_populates="incidents")
     __table_args__ = (
         # Composite index for the most common query pattern:
         # "Find active incidents in this barangay + category"

@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.utils.logger import logger
-from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData
+from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
 from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token
 from datetime import datetime
@@ -35,6 +35,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
+            
 
         generated_otp = generate_otp()
         await set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
@@ -62,6 +63,17 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
 async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
 
     try:
+        
+        result = await db.execute(select(User).where(User.phone_number == user_data.phone_number))
+        existing_user = result.scalars().first()
+        
+        if existing_user:
+            logger.warning(f"OTP verification attempt with existing phone number: {user_data.phone_number}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
+
         cached_otp = await get_cache(f"otp:{user_data.email}")
         
 
@@ -140,7 +152,41 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during OTP verification. Please try again later."
         )
+        
+async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
+    try:
+        await delete_cache(f"otp:{email.email}")
+        result = await db.execute(select(User).where(User.email == email.email))
+        existing_user = result.scalars().first()
 
+        if existing_user:
+            logger.warning(f"OTP resend attempt with existing email: {email.email}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+
+        generated_otp = generate_otp()
+        await set_cache(f"otp:{email.email}", generated_otp, expiration=300)
+        print(f"OTP set in cache for {email.email}: {generated_otp}")
+        logger.info(f"OTP generated for {email.email} and stored in cache.")
+
+        send_otp_email_task.delay(email.email, generated_otp, purpose="Registration")
+        logger.info(f"OTP task enqueued for {email.email}.")
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "OTP resent to your email. Please verify to complete registration."}
+        )
+    except HTTPException:
+        raise   
+    
+    except Exception as e:
+        logger.error(f"Error during OTP resend for {email.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while resending OTP. Please try again later."
+        )
 
 async def login_user(login_data: LoginData, db: AsyncSession):
     try:

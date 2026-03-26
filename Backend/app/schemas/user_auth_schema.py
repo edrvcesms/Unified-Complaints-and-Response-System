@@ -11,6 +11,9 @@ class RegisterData(UserAuthModel):
 class OTPVerificationData(UserAuthModel, UserBase):
     password: str
     otp: str
+    
+class ResendOtpData(UserAuthModel):
+    pass
 
 class LoginData(UserAuthModel):
     role: str

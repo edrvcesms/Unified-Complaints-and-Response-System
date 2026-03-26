@@ -5,6 +5,7 @@ import { useIncidentDetails, useResolveIncident, useReviewIncident } from "../..
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
+import { formatHearingDate, isHearingDatePast } from "../../../utils/hearingDateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
@@ -126,6 +127,23 @@ export const DepartmentIncidentDetails: React.FC = () => {
     );
   }
 
+  // Hearing date logic
+  const hearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
+  const hearingDate = typeof hearingDateRaw === "string" ? hearingDateRaw.trim() || null : hearingDateRaw;
+  const hasHearingDate = Boolean(hearingDate);
+  let hearingDisplay: string | null = null;
+  let showReschedule = false;
+  if (hasHearingDate) {
+    if (isHearingDatePast(hearingDate)) {
+      hearingDisplay = "Hearing Finished";
+      if (incident.status !== "RESOLVED") {
+        showReschedule = true;
+      }
+    } else {
+      hearingDisplay = `Hearing Date: ${formatHearingDate(hearingDate)}`;
+    }
+  }
+
   return (
     <div className="space-y-6">
       <button
@@ -235,6 +253,17 @@ export const DepartmentIncidentDetails: React.FC = () => {
                   {incident.status.replace("_", " ")}
                 </p>
               </div>
+              {hasHearingDate && hearingDisplay && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-gray-500 mb-1">Hearing</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {hearingDisplay}
+                    {showReschedule && (
+                      <span className="ml-2 text-yellow-700 font-semibold">Reschedule</span>
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="border-t pt-6">

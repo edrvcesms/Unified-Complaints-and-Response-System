@@ -127,7 +127,6 @@ class IncidentRepository(IIncidentRepository):
             category_id=model.category_id,
             latitude=model.latitude,   # missing
             longitude=model.longitude,
-         
             status=model.status,
             complaint_count=model.complaint_count,
             severity_score=model.severity_score,
@@ -138,6 +137,7 @@ class IncidentRepository(IIncidentRepository):
             has_new_complaints=model.has_new_complaints,
             new_complaint_count=model.new_complaint_count,
             last_viewed_at=model.last_viewed_at,
+            hearing_date=model.hearing_date,
         )
 
     def _to_model(self, entity: IncidentEntity) -> IncidentModel:
@@ -148,7 +148,6 @@ class IncidentRepository(IIncidentRepository):
             category_id=entity.category_id,
             latitude=entity.latitude,   # missing
             longitude=entity.longitude,
-           
             status=entity.status,
             complaint_count=entity.complaint_count,
             severity_score=entity.severity_score,
@@ -159,6 +158,7 @@ class IncidentRepository(IIncidentRepository):
             has_new_complaints=entity.has_new_complaints,
             new_complaint_count=entity.new_complaint_count,
             last_viewed_at=entity.last_viewed_at,
+            hearing_date=entity.hearing_date,
         )
         
         

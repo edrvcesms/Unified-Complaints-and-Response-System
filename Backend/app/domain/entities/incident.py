@@ -30,6 +30,7 @@ class IncidentEntity:
     has_new_complaints: bool = False
     new_complaint_count: int = 0
     last_viewed_at: Optional[datetime] = None
+    hearing_date: Optional[datetime] = None
 
     def increment_complaint_count(self) -> None:
         self.complaint_count += 1

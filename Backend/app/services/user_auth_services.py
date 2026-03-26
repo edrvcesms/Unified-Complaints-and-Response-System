@@ -36,6 +36,16 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
                 detail="Email already registered"
             )
             
+        result_number = await db.execute(select(User).where(User.phone_number == user_data.phone_number))
+        existing_number = result.scalars().first()
+        
+        if existing_number:
+            logger.warning(f"OTP verification attempt with existing phone number: {user_data.phone_number}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
+            
 
         generated_otp = generate_otp()
         await set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)

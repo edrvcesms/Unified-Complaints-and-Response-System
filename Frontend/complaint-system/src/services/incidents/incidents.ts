@@ -29,18 +29,24 @@ export const getComplaintsByIncidentId = async (incidentId: number): Promise<Com
   }
 };
 
-export const resolveIncident = async (incidentId: number): Promise<void> => {
+export const resolveIncident = async (
+  incidentId: number,
+  payload: { actions_taken: string }
+): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/resolve`);
+    await incidentsApi.patch(`/${incidentId}/resolve`, payload);
   } catch (error) {
     console.error("Error resolving incident:", error);
     throw error;
   }
 };
 
-export const reviewIncident = async (incidentId: number): Promise<void> => {
+export const reviewIncident = async (
+  incidentId: number,
+  payload: { actions_taken: string }
+): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/review`);
+    await incidentsApi.patch(`/${incidentId}/review`, payload);
   } catch (error) {
     console.error("Error reviewing incident:", error);
     throw error;

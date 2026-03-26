@@ -34,3 +34,4 @@ psutil
 kombu
 google-genai
 apscheduler
+asgiref

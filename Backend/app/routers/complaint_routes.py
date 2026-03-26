@@ -8,7 +8,6 @@ from app.dependencies.rate_limiter import limiter
 from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats_by_barangay, user_complaints_statistics
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
-from app.services.complaint_cluster_service import cluster_complaints
 from app.models.user import User
 from fastapi.requests import Request
 

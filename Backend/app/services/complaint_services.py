@@ -1,9 +1,10 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
+from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.roles import UserRole
 from app.models.user import User
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
@@ -19,7 +20,7 @@ from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
-from app.tasks import cluster_complaint_task, send_notifications_task, notify_user_for_hearing_task
+from app.tasks import cluster_complaint_task, send_notifications_task, notify_user_for_hearing_task, save_response_task
 from app.utils.reverse_geocoding import reverse_geocode
 
 
@@ -289,6 +290,9 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 complaint_id=updated_complaint.id,
                 notification_type="info"
             )
+            logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
+            await delete_cache(f"user_notifications:{updated_complaint.barangay_account.user_id}")
+            
             
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
@@ -300,7 +304,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.error(f"Error in submit_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db: AsyncSession):
+async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -313,7 +317,7 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
 
         complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
         complaints = complaints.scalars().all()
-        result = await db.execute(select(User).where(User.id == reviewer_id))
+        result = await db.execute(select(User).where(User.id == responder_id))
         reviewer = result.scalars().first()
         for complaint in complaints:
             if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_DEPARTMENT.value]:
@@ -329,6 +333,13 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
         )
 
         await db.commit()
+        
+        for complaint_id in complaint_ids:
+            save_response_task.delay(
+                complaint_id=complaint_id,
+                responder_id=responder_id,
+                actions_taken=response_data.actions_taken
+            )
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -362,6 +373,7 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")
+                
         
 
         return JSONResponse(
@@ -377,14 +389,14 @@ async def review_complaints_by_incident(incident_id: int, reviewer_id: int,  db:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db: AsyncSession):
+async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
         )
         complaint_ids = result.scalars().all()
-        result = await db.execute(select(User).where(User.id == resolver_id))
+        result = await db.execute(select(User).where(User.id == responder_id))
         resolver = result.scalars().first()
 
         if not complaint_ids:
@@ -404,8 +416,15 @@ async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db:
             .where(Complaint.id.in_(complaint_ids))
             .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value, resolved_at=datetime.utcnow())
         )
-
+            
         await db.commit()
+        
+        for complaint_id in complaint_ids:
+            save_response_task.delay(
+                complaint_id=complaint_id,
+                responder_id=responder_id,
+                actions_taken=response_data.actions_taken
+            )
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -441,6 +460,7 @@ async def resolve_complaints_by_incident(incident_id: int, resolver_id: int, db:
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint resolved ID: {complaint.id}")
+                
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,

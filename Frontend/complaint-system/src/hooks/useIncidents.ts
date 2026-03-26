@@ -50,7 +50,7 @@ export const useIncidentComplaints = (incidentId: number, enabled: boolean = fal
 export const useResolveIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["resolveIncident", incidentId],
-    mutationFn: () => resolveIncident(incidentId),
+    mutationFn: (payload: { actions_taken: string }) => resolveIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
@@ -65,7 +65,7 @@ export const useResolveIncident = (incidentId: number) => {
 export const useReviewIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["reviewIncident", incidentId],
-    mutationFn: () => reviewIncident(incidentId),
+    mutationFn: (payload: { actions_taken: string }) => reviewIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
@@ -80,7 +80,7 @@ export const useReviewIncident = (incidentId: number) => {
 export const useForwardIncidentToLgu = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["forwardIncidentToLgu", incidentId],
-    mutationFn: () => delegateIncidentToLgu(incidentId),
+    mutationFn: (payload: { actions_taken: string }) => delegateIncidentToLgu(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });

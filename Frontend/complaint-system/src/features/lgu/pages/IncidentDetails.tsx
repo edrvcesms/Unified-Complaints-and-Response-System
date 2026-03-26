@@ -6,6 +6,9 @@ import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useState } from "react";
+import { ActionsTakenModal } from "../../general/ActionsTakenModal";
+import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
+import { useReviewIncident, useResolveIncident } from '../../../hooks/useIncidents';
 import { useAllDepartments } from "../../../hooks/useDepartment";
 import { DepartmentSelectionModal } from "../components/DepartmentSelectionModal";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
@@ -16,6 +19,7 @@ import { ToastContainer } from "../../../components/Toast";
 import { queryClient } from "../../../main";
 
 export const LguIncidentDetails: React.FC = () => {
+  const actionsTakenModal = useActionsTakenModal();
   const { t } = useTranslation();
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
@@ -24,10 +28,13 @@ export const LguIncidentDetails: React.FC = () => {
   const { departments, isLoading: isDepartmentsLoading } = useAllDepartments();
   const { toasts, showToast } = useToast();
   const confirmationModal = useConfirmationModal();
-  
+
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<{ id: number; name: string } | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
+  const reviewIncidentMutation = useReviewIncident(Number(incidentId));
+  const resolveIncidentMutation = useResolveIncident(Number(incidentId));
+
 
   const handleViewAllComplaints = () => {
     navigate(`/lgu/incidents/${incidentId}/complaints`);
@@ -45,7 +52,6 @@ export const LguIncidentDetails: React.FC = () => {
         name: department.department_name,
       });
       setIsDepartmentModalOpen(false);
-      
       // Open confirmation modal
       confirmationModal.openModal({
         title: 'Confirm Assignment',
@@ -59,27 +65,62 @@ export const LguIncidentDetails: React.FC = () => {
     }
   };
 
+  // Add actions taken modal logic for resolve/review
+  const handleResolve = () => {
+    actionsTakenModal.openModal({
+      title: "Resolve Incident",
+      confirmText: "Resolve",
+      confirmColor: "green",
+      onConfirm: async (actionsTaken: string) => {
+        try {
+          actionsTakenModal.setIsLoading(true);
+          await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally {
+          actionsTakenModal.setIsLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleReview = () => {
+    actionsTakenModal.openModal({
+      title: "Mark for Review",
+      confirmText: "Confirm",
+      confirmColor: "yellow",
+      onConfirm: async (actionsTaken: string) => {
+        try {
+          actionsTakenModal.setIsLoading(true);
+          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally { actionsTakenModal.setIsLoading(false); }
+      },
+    });
+  };
+
   const handleConfirmAssignment = async (departmentAccountId: number) => {
     setIsAssigning(true);
     try {
       await delegateIncidentToDepartment(Number(incidentId), departmentAccountId);
-      
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["incidentDetails", Number(incidentId)] });
       queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
-      
+
       showToast({
         type: 'success',
-        message: 'Incident successfully assigned to department',
+        message: 'Incident successfully assigned to department.',
       });
-      
+
       confirmationModal.closeModal();
-      
+
       // Navigate back to incidents list after a short delay
       setTimeout(() => {
         navigate("/lgu/incidents");
       }, 1500);
-      
+
     } catch (error) {
       console.error("Error assigning incident:", error);
       showToast({
@@ -98,7 +139,7 @@ export const LguIncidentDetails: React.FC = () => {
 
   if (isLoading) {
     return (
-        <LoadingIndicator />
+      <LoadingIndicator />
     );
   }
 
@@ -238,7 +279,7 @@ export const LguIncidentDetails: React.FC = () => {
                 View all the related complaints in this incident.
               </p>
             </div>
-            
+
             {isForwardedIncident && (
               <div className="border-t pt-6 mt-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
@@ -260,7 +301,7 @@ export const LguIncidentDetails: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       <DepartmentSelectionModal
         isOpen={isDepartmentModalOpen}
         departments={departments || []}
@@ -268,7 +309,17 @@ export const LguIncidentDetails: React.FC = () => {
         onCancel={() => setIsDepartmentModalOpen(false)}
         isLoading={isAssigning}
       />
-      
+
+      <ActionsTakenModal
+        isOpen={actionsTakenModal.isOpen}
+        title={actionsTakenModal.title}
+        confirmText={actionsTakenModal.confirmText}
+        confirmColor={actionsTakenModal.confirmColor as any}
+        onConfirm={actionsTakenModal.onConfirm}
+        onCancel={actionsTakenModal.closeModal}
+        isLoading={actionsTakenModal.isLoading}
+      />
+
       <ConfirmationModal
         isOpen={confirmationModal.isOpen}
         title={confirmationModal.title}
@@ -279,7 +330,7 @@ export const LguIncidentDetails: React.FC = () => {
         onCancel={confirmationModal.closeModal}
         isLoading={confirmationModal.isLoading || isAssigning}
       />
-      
+
       <ToastContainer toasts={toasts} />
     </div>
   );

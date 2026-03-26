@@ -7,6 +7,8 @@ import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing } from '../../../hooks/useIncidents';
+import { ActionsTakenModal } from "../../general/ActionsTakenModal";
+import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { SuccessModal } from "../../general/SuccessModal";
@@ -27,12 +29,13 @@ export const IncidentDetails: React.FC = () => {
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
 
   const confirmationModal = useConfirmationModal();
+  const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: '',
     message: '',
   });
-  
+
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: '',
@@ -150,38 +153,55 @@ export const IncidentDetails: React.FC = () => {
   };
 
   const handleResolve = () => {
-    confirmationModal.openModal({
+    actionsTakenModal.openModal({
       title: "Resolve Incident",
-      message: "Are you sure you want to resolve this incident? This action will mark the incident as resolved.",
+      description: "Please describe the actions taken to resolve this incident. This will be recorded and visible to complainants.",
       confirmText: "Resolve",
       confirmColor: "green",
-      onConfirm: async () => {
-        await resolveIncidentMutation.mutateAsync();
+      onConfirm: async (actionsTaken: string) => {
+        actionsTakenModal.setIsLoading(true);
+        await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        actionsTakenModal.setIsLoading(false);
       },
     });
   };
 
   const handleReview = () => {
-    confirmationModal.openModal({
+    actionsTakenModal.openModal({
       title: "Mark for Review",
-      message: "Are you sure you want to mark this incident for review?",
+      description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
       confirmText: "Confirm",
       confirmColor: "yellow",
-      onConfirm: async () => {
-        await reviewIncidentMutation.mutateAsync();
+      onConfirm: async (actionsTaken: string) => {
+        try{
+          actionsTakenModal.setIsLoading(true);
+          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally {
+          actionsTakenModal.setIsLoading(false);
+        }
       },
     });
   };
 
   const handleForwardToLgu = () => {
-    confirmationModal.openModal({
+    actionsTakenModal.openModal({
       title: "Delegate to LGU",
-      message: "Are you sure you want to delegate this incident to the Local Government Unit? This action cannot be undone.",
-      confirmText: "Delegate to LGU",
+      description: "Please provide any relevant notes or instructions for the LGU when delegating this incident.",
+      confirmText: "Delegate",
       confirmColor: "blue",
-      onConfirm: async () => {
-        await forwardToLguMutation.mutateAsync();
-      },
+      onConfirm: async (actionsTaken: string) => {
+        actionsTakenModal.setIsLoading(true);
+        try {
+          await forwardToLguMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+          actionsTakenModal.setIsLoading(false);
+        } finally {
+          actionsTakenModal.setIsLoading(false); // ✅ always runs
+        }
+      }
     });
   };
 
@@ -218,7 +238,7 @@ export const IncidentDetails: React.FC = () => {
 
   if (isLoading) {
     return (
-        <LoadingIndicator />
+      <LoadingIndicator />
     );
   }
 
@@ -413,6 +433,17 @@ export const IncidentDetails: React.FC = () => {
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
         </button>
       </div>
+
+      <ActionsTakenModal
+        isOpen={actionsTakenModal.isOpen}
+        title={actionsTakenModal.title}
+        description={actionsTakenModal.description}
+        confirmText={actionsTakenModal.confirmText}
+        confirmColor={actionsTakenModal.confirmColor as any}
+        onConfirm={actionsTakenModal.onConfirm}
+        onCancel={actionsTakenModal.closeModal}
+        isLoading={actionsTakenModal.isLoading}
+      />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         {hasScheduledHearingDate && (

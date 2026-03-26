@@ -1,28 +1,28 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { useIncidentDetails, useResolveIncident, useReviewIncident } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import { formatHearingDate, isHearingDatePast } from "../../../utils/hearingDateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { ConfirmationModal } from "../../general/ConfirmationModal";
-import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
+import { ActionsTakenModal } from "../../general/ActionsTakenModal";
+import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 
 export const DepartmentIncidentDetails: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
   
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
 
-  const confirmationModal = useConfirmationModal();
+  const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
     isOpen: false,
     title: '',
@@ -37,7 +37,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   // Handle successful resolve
   useEffect(() => {
     if (resolveIncidentMutation.isSuccess) {
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -49,7 +49,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   // Handle successful review
   useEffect(() => {
     if (reviewIncidentMutation.isSuccess) {
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -61,7 +61,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   // Handle resolve error
   useEffect(() => {
     if (resolveIncidentMutation.isError) {
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
       const error = resolveIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
       setErrorModal({
@@ -75,7 +75,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   // Handle review error
   useEffect(() => {
     if (reviewIncidentMutation.isError) {
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
       const error = reviewIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
@@ -91,25 +91,37 @@ export const DepartmentIncidentDetails: React.FC = () => {
   };
 
   const handleResolve = () => {
-    confirmationModal.openModal({
+    actionsTakenModal.openModal({
       title: "Resolve Incident",
-      message: "Are you sure you want to resolve this incident? This action will mark the incident as resolved.",
       confirmText: "Resolve",
       confirmColor: "green",
-      onConfirm: async () => {
-        await resolveIncidentMutation.mutateAsync();
+      onConfirm: async (actionsTaken: string) => {
+        try{
+          actionsTakenModal.setIsLoading(true);
+          await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally {
+          actionsTakenModal.setIsLoading(false);
+        }
       },
     });
   };
 
   const handleReview = () => {
-    confirmationModal.openModal({
+    actionsTakenModal.openModal({
       title: "Mark for Review",
-      message: "Are you sure you want to mark this incident for review?",
       confirmText: "Confirm",
       confirmColor: "yellow",
-      onConfirm: async () => {
-        await reviewIncidentMutation.mutateAsync();
+      onConfirm: async (actionsTaken: string) => {
+        try {
+          actionsTakenModal.setIsLoading(true);
+          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally {
+          actionsTakenModal.setIsLoading(false);
+        }
       },
     });
   };
@@ -159,7 +171,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{incident.title}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 wrap-break-word">{incident.title}</h1>
                 <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
               </div>
             </div>
@@ -303,15 +315,14 @@ export const DepartmentIncidentDetails: React.FC = () => {
         </button>
       </div>
 
-      <ConfirmationModal
-        isOpen={confirmationModal.isOpen}
-        title={confirmationModal.title}
-        message={confirmationModal.message}
-        confirmText={confirmationModal.confirmText}
-        confirmColor={confirmationModal.confirmColor}
-        onConfirm={confirmationModal.confirm}
-        onCancel={confirmationModal.closeModal}
-        isLoading={confirmationModal.isLoading}
+      <ActionsTakenModal
+        isOpen={actionsTakenModal.isOpen}
+        title={actionsTakenModal.title}
+        confirmText={actionsTakenModal.confirmText}
+        confirmColor={actionsTakenModal.confirmColor as any}
+        onConfirm={actionsTakenModal.onConfirm}
+        onCancel={actionsTakenModal.closeModal}
+        isLoading={actionsTakenModal.isLoading}
       />
 
       <SuccessModal

@@ -4,7 +4,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from app.models.department_account import DepartmentAccount
-from app.services.notification_services import create_notification
+from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
@@ -12,10 +12,8 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.tasks import send_notifications_task
+from app.tasks import send_notifications_task, save_response_task
 from app.utils.caching import delete_cache, set_cache, get_cache
-from app.schemas.notification_schema import NotificationCreateData
-from app.services.sse_manager import sse_manager
 from app.models.user import User
 from sqlalchemy.orm import selectinload
 
@@ -115,7 +113,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
         logger.error(f"Error in get_incident_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
+async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
     try:
         incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = incident_result.scalars().first()
@@ -170,6 +168,11 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
+                save_response_task.delay(
+                    complaint_id=complaint.id,
+                    responder_id=responder_id,
+                    actions_taken=response_data.actions_taken
+                )
         
         
         result = await db.execute(
@@ -187,6 +190,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
             await delete_cache(f"user_notifications:{official.id}")
             logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
             
+            
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "All complaints under this incident have been forwarded to LGU"}
@@ -199,7 +203,7 @@ async def forward_incident_to_lgu(incident_id: int, db: AsyncSession):
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def assign_incident_to_department(incident_id: int, department_account_id: int, db: AsyncSession):
+async def assign_incident_to_department(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, department_account_id: int, db: AsyncSession):
     try:
         incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = incident_result.scalars().first()
@@ -255,7 +259,11 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
-                
+                save_response_task.delay(
+                    complaint_id=complaint.id,
+                    responder_id=responder_id,
+                    actions_taken=response_data.actions_taken
+                )
         result = await db.execute(
             select(IncidentModel)
             .options(
@@ -273,6 +281,7 @@ async def assign_incident_to_department(incident_id: int, department_account_id:
             )
             await delete_cache(f"user_notifications:{incident.department_account.user.id}")
             logger.info(f"Created notification for department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")
+            
             
         return JSONResponse(
             status_code=status.HTTP_200_OK,

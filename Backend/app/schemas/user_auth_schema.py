@@ -4,6 +4,7 @@ from .user_schema import UserBase
 
 class UserAuthModel(BaseModel):
     email: EmailStr
+    phone_number: str
 
 class RegisterData(UserAuthModel):
     pass

@@ -37,7 +37,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
             )
             
         result_number = await db.execute(select(User).where(User.phone_number == user_data.phone_number))
-        existing_number = result.scalars().first()
+        existing_number = result_number.scalars().first()
         
         if existing_number:
             logger.warning(f"OTP verification attempt with existing phone number: {user_data.phone_number}")

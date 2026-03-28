@@ -4,7 +4,7 @@ from .user_schema import UserBase
 
 class UserAuthModel(BaseModel):
     email: EmailStr
-    phone_number: str
+    phone_number: str| None = None
 
 class RegisterData(UserAuthModel):
     pass
@@ -17,6 +17,7 @@ class ResendOtpData(UserAuthModel):
     pass
 
 class LoginData(UserAuthModel):
+
     role: str
     password: str
 

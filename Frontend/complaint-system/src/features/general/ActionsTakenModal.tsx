@@ -15,7 +15,7 @@ const colorClasses = {
   red: "bg-red-600 hover:bg-red-700",
   green: "bg-green-600 hover:bg-green-700",
   yellow: "bg-yellow-600 hover:bg-yellow-700",
-  blue: "bg-blue-600 hover:bg-blue-700",
+  blue: "bg-primary-600 hover:bg-primary-700",
 };
 
 export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
@@ -51,7 +51,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           )}
           <label className="block text-lg font-medium text-gray-700 mb-2">Actions Taken</label>
           <textarea
-            className="w-full border text-sm border-gray-300 rounded-md p-2 mb-6 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border text-sm border-gray-300 rounded-md p-2 mb-6 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
             rows={3}
             value={actionsTaken}
             onChange={e => setActionsTaken(e.target.value)}

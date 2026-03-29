@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   return (
     <>
       <ToastContainer toasts={toasts} />
-      <header className="w-full bg-gradient-to-br from-[#006837] via-[#00994d] to-[#00b36b] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
+      <header className="w-full bg-gradient-to-br from-[#006837] via-[#00994d] to-[#00b36b] shadow-lg shadow-primary-900/40 sticky top-0 z-50">
       <nav
         className="px-4 sm:px-6 lg:pr-8 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"

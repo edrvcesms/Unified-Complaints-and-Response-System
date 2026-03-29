@@ -15,7 +15,7 @@ const colorClasses = {
   red: 'bg-red-600 hover:bg-red-700',
   green: 'bg-green-600 hover:bg-green-700',
   yellow: 'bg-yellow-600 hover:bg-yellow-700',
-  blue: 'bg-blue-600 hover:bg-blue-700',
+  blue: 'bg-primary-600 hover:bg-primary-700',
 };
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({

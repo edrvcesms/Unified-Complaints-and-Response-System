@@ -53,7 +53,7 @@ export const MonthlyBarangayReports: React.FC = () => {
     <div className="space-y-6">
       <div className="border-b border-gray-200 pb-4">
         <div className="flex items-center gap-3 mb-2">
-          <FileText className="w-7 h-7 text-blue-600" />
+          <FileText className="w-7 h-7 text-primary-600" />
           <h1 className="text-2xl font-bold text-gray-900">{t('page.monthlyReports.title')}</h1>
         </div>
         <p className="text-sm text-gray-600">{t('page.monthlyReports.description')}</p>
@@ -97,7 +97,7 @@ export const MonthlyBarangayReports: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedBarangays && paginatedBarangays.length > 0 ? (
                 paginatedBarangays.map((barangay) => (
-                  <tr key={barangay.id} className="hover:bg-blue-50/50 transition-colors">
+                  <tr key={barangay.id} className="hover:bg-primary-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">{barangay.barangay_name}</div>
                     </td>
@@ -113,7 +113,7 @@ export const MonthlyBarangayReports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleViewReport(barangay.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow cursor-pointer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow cursor-pointer"
                       >
                         <FileText className="w-4 h-4" />
                         {t('monthlyReports.viewReport')}
@@ -146,19 +146,19 @@ export const MonthlyBarangayReports: React.FC = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
+                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm font-medium text-blue-900">
+              <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
+                <span className="text-sm font-medium text-primary-900">
                   Page {currentPage} of {totalPages}
                 </span>
               </div>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 cursor-pointer"
+                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

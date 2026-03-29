@@ -100,7 +100,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t('dashboard.lgu.totalForwarded')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
+            <StatCard label={t('dashboard.lgu.totalForwarded')} value={stats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
             <StatCard label={t('dashboard.lgu.pending')} value={stats.pending} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
             <StatCard label={t('dashboard.lgu.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
             <StatCard label={t('dashboard.lgu.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
@@ -160,7 +160,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "bg-orange-100 text-orange-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "bg-blue-100 text-blue-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "bg-primary-100 text-primary-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' ? "bg-green-100 text-green-800" : ""}
                       `}>
                         {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "FORWARDED" : 

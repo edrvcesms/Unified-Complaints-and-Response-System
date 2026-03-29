@@ -19,7 +19,7 @@ export const StatusFilterPills: React.FC<StatusFilterPillsProps> = ({
         onClick={() => onChange(value)}
         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
           current === value
-            ? "bg-blue-600 text-white"
+            ? "bg-primary-600 text-white"
             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
         }`}
       >
@@ -42,7 +42,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
     value={current}
     onChange={(e) => onChange(e.target.value as StatusFilter)}
     className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
-      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
       font-medium text-gray-700"
@@ -74,7 +74,7 @@ export const SeverityScoreFilterDropdown: React.FC<SeverityScoreFilterDropdownPr
     value={current}
     onChange={(e) => onChange(e.target.value as SeverityScoreFilter)}
     className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
-      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
       font-medium text-gray-700"
@@ -118,7 +118,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
     value={current}
     onChange={(e) => onChange(e.target.value as SortOption)}
     className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
-      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
       font-medium text-gray-700"
@@ -164,7 +164,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       min={minDate}
       max={maxDate}
       className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
         bg-white hover:border-gray-400 transition-colors cursor-pointer"
       placeholder="From"
     />
@@ -176,7 +176,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       min={minDate}
       max={maxDate}
       className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+        focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
         bg-white hover:border-gray-400 transition-colors cursor-pointer"
       placeholder="To"
     />

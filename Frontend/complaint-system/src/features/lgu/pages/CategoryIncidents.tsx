@@ -71,7 +71,7 @@ export const CategoryIncidents: React.FC = () => {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <FileText className="w-7 h-7 text-blue-600" />
+            <FileText className="w-7 h-7 text-primary-600" />
             <h1 className="text-2xl font-bold text-gray-900">
               {formatCategoryName(categoryData.category)} Incidents
             </h1>
@@ -86,7 +86,7 @@ export const CategoryIncidents: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <p className="text-xs text-gray-500 uppercase font-medium mb-2">Total Incidents</p>
-          <p className="text-3xl font-bold text-blue-600">{categoryData.total_incidents}</p>
+          <p className="text-3xl font-bold text-primary-600">{categoryData.total_incidents}</p>
           <p className="text-xs text-gray-500 mt-1">In this category</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
@@ -101,7 +101,7 @@ export const CategoryIncidents: React.FC = () => {
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-blue-600" />
+              <AlertCircle className="w-5 h-5 text-primary-600" />
               <h2 className="text-lg font-semibold text-gray-900">All Incidents</h2>
             </div>
             <div className="text-sm text-gray-600">
@@ -134,7 +134,7 @@ export const CategoryIncidents: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedIncidents.length > 0 ? (
                 paginatedIncidents.map((incident, index) => (
-                  <tr key={incident.incident_id} className="hover:bg-blue-50/50 transition-colors">
+                  <tr key={incident.incident_id} className="hover:bg-primary-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-500">
                         {((currentPage - 1) * incidentsPerPage) + index + 1}
@@ -146,7 +146,7 @@ export const CategoryIncidents: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-primary-100 to-primary-200 text-primary-800">
                         {incident.complaint_count}
                       </span>
                     </td>
@@ -200,19 +200,19 @@ export const CategoryIncidents: React.FC = () => {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm font-medium text-blue-900">
+              <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
+                <span className="text-sm font-medium text-primary-900">
                   Page {currentPage} of {totalPages}
                 </span>
               </div>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

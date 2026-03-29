@@ -102,9 +102,9 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
             <StatCard 
               label={t('dashboard.dept.totalAssigned')} 
               value={stats.total} 
-              color="text-blue-700" 
-              bg="bg-blue-50" 
-              border="border-blue-100" 
+              color="text-primary-700" 
+              bg="bg-primary-50" 
+              border="border-primary-100" 
               icon={<TotalIcon />} 
             />
             <StatCard 
@@ -224,7 +224,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' 
-                          ? "bg-blue-100 text-blue-800" : ""}
+                          ? "bg-primary-100 text-primary-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' 

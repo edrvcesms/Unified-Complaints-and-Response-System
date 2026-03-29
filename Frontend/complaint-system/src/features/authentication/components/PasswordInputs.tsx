@@ -53,7 +53,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         focus:outline-none focus:ring-2 transition
         ${hasError
           ? "border-red-400 bg-red-50 focus:ring-red-300"
-          : "border-gray-300 bg-white focus:ring-blue-400 focus:border-blue-400"
+          : "border-gray-300 bg-white focus:ring-primary-500 focus:border-green-400"
         }`}
     />
     <button

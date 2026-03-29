@@ -37,7 +37,7 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       label="Category"
       value={formatCategoryName(complaint.category?.category_name)}
       bgColor=""
-      iconColor="text-blue-600"
+      iconColor="text-primary-600"
     />
     
     <InfoCard

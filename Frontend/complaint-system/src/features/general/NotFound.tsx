@@ -14,15 +14,15 @@ export const NotFound: React.FC = () => {
       <div className="text-center">
         <h1 className="text-9xl font-black text-gray-200 select-none">404</h1>
         <div className="-mt-10">
-          <h2 className="text-2xl font-bold text-blue-800 mb-2">
+          <h2 className="text-2xl font-bold text-primary-800 mb-2">
             {t('errors.pageNotFound')}
           </h2>
-          <p className="text-blue-500 mb-8 max-w-sm mx-auto">
+          <p className="text-primary-500 mb-8 max-w-sm mx-auto">
             {t('errors.pageNotFoundMessage')}
           </p>
           <a
             onClick={() => handleClick()}
-            className="inline-flex items-center gap-2 bg-blue-900 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200 cursor-pointer"
+            className="inline-flex items-center gap-2 bg-primary-900 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors duration-200 cursor-pointer"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -51,7 +51,7 @@ const DepartmentIncidentTableRow: React.FC<DepartmentIncidentTableRowProps> = ({
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <Eye size={16} />
         </button>

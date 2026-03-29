@@ -191,9 +191,9 @@ export const IncidentDetails: React.FC = () => {
 
   const handleForwardToLgu = () => {
     actionsTakenModal.openModal({
-      title: "Delegate to LGU",
+      title: "Escalate to LGU",
       description: "Please provide any relevant notes or instructions for the LGU when delegating this incident.",
-      confirmText: "Delegate",
+      confirmText: "Escalate",
       confirmColor: "blue",
       onConfirm: async (actionsTaken: string) => {
         actionsTakenModal.setIsLoading(true);
@@ -293,7 +293,7 @@ export const IncidentDetails: React.FC = () => {
       <div className="flex justify-end">
         <button
           onClick={() => navigate("/dashboard/incidents")}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
         >
           <ArrowLeft size={16} />
           {t('incidents.details.backToIncidents')}
@@ -313,7 +313,7 @@ export const IncidentDetails: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-blue-600" size={20} />
+                  <AlertCircle className="text-primary-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500">Category</p>
@@ -334,7 +334,7 @@ export const IncidentDetails: React.FC = () => {
                   </p>
                   {hasLocation && (
                     <button
-                      className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                      className="mt-2 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors"
                       onClick={() => setIsMapOpen(true)}
                     >
                       View Incident Location
@@ -426,7 +426,7 @@ export const IncidentDetails: React.FC = () => {
                 </h3>
                 <button
                   onClick={handleViewAllComplaints}
-                  className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
                   {t('incidents.details.viewAllComplaints')}
                 </button>
@@ -452,7 +452,7 @@ export const IncidentDetails: React.FC = () => {
           disabled={forwardToLguMutation.isPending}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {forwardToLguMutation.isPending ? "Forwarding..." : "Delegate to LGU"}
+          {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
         </button>
         <button
           onClick={handleResolve}
@@ -516,7 +516,7 @@ export const IncidentDetails: React.FC = () => {
                 type="datetime-local"
                 value={hearingDate}
                 onChange={(event) => setHearingDate(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
 

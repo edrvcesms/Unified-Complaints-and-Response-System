@@ -29,7 +29,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
   return (
     <div 
       onClick={handleCardClick}
-      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
     >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-3">
         <div className="flex-1 min-w-0">
@@ -52,7 +52,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
         </p>
         {shouldShowViewMore && (
           <button
-            className="view-more-btn text-xs text-blue-600 hover:text-blue-800 font-medium mt-1"
+            className="view-more-btn text-xs text-primary-600 hover:text-primary-800 font-medium mt-1"
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);

@@ -30,7 +30,7 @@ export const AttachmentButton: React.FC<AttachmentButtonProps> = ({ attachment }
       href={attachment.file_path}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+      className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
     >
       <div className={`w-10 h-10 ${bgColor} rounded-lg flex items-center justify-center shrink-0`}>
         <Icon className={color} size={20} />
@@ -43,7 +43,7 @@ export const AttachmentButton: React.FC<AttachmentButtonProps> = ({ attachment }
           {label} • {(attachment.file_size / 1024).toFixed(2)} KB
         </p>
       </div>
-      <span className="text-xs text-blue-600 font-medium shrink-0">Open</span>
+      <span className="text-xs text-primary-600 font-medium shrink-0">Open</span>
     </a>
   );
 };

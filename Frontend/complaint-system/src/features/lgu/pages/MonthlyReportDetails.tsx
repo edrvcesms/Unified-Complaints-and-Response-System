@@ -123,8 +123,8 @@ export const MonthlyReportDetails: React.FC = () => {
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-primary-100 rounded-lg">
+                <FileText className="w-5 h-5 text-primary-600" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Monthly Incident Report</h1>
             </div>
@@ -135,12 +135,12 @@ export const MonthlyReportDetails: React.FC = () => {
         </div>
         
         {/* Month and Year Selector */}
-        <div className="flex items-center gap-2 bg-white rounded-lg p-4 border border-blue-200">
-          <Calendar className="w-5 h-5 text-blue-600" />
+        <div className="flex items-center gap-2 bg-white rounded-lg p-4 border border-primary-200">
+          <Calendar className="w-5 h-5 text-primary-600" />
           <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors cursor-pointer"
             >
               {months.map((month, index) => (
                 <option key={index} value={index + 1}>
@@ -151,7 +151,7 @@ export const MonthlyReportDetails: React.FC = () => {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors cursor-pointer"
             >
               {yearOptions.map((year) => (
                 <option key={year} value={year}>
@@ -165,7 +165,7 @@ export const MonthlyReportDetails: React.FC = () => {
       {/* Barangay Information */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Info className="w-5 h-5 text-blue-600" />
+          <Info className="w-5 h-5 text-primary-600" />
           <h2 className="text-lg font-semibold text-gray-900">Barangay Information</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -202,14 +202,14 @@ export const MonthlyReportDetails: React.FC = () => {
 
       {/* Report Period & Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-200 p-6">
+        <div className="bg-gradient-to-br from-primary-50 to-white rounded-lg border border-primary-200 p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-primary-600" />
             </div>
-            <p className="text-xs text-blue-700 uppercase font-semibold">Total Incidents</p>
+            <p className="text-xs text-primary-700 uppercase font-semibold">Total Incidents</p>
           </div>
-          <p className="text-3xl font-bold text-blue-900">{totalIncidents}</p>
+          <p className="text-3xl font-bold text-primary-900">{totalIncidents}</p>
         </div>
         <div className="bg-gradient-to-br from-orange-50 to-white rounded-lg border border-orange-200 p-6">
           <div className="flex items-center gap-3 mb-2">
@@ -235,12 +235,12 @@ export const MonthlyReportDetails: React.FC = () => {
         <div className="relative category-filter-container">
           <button
                 onClick={() => setShowCategoryFilter(!showCategoryFilter)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 cursor-pointer"
               >
                 <Filter className="w-4 h-4" />
                 Filter Categories
                 {selectedCategories.length < availableCategories.length && (
-                  <span className="ml-1 px-2 py-0.5 bg-blue-800 rounded-full text-xs font-semibold">
+                  <span className="ml-1 px-2 py-0.5 bg-primary-800 rounded-full text-xs font-semibold">
                     {selectedCategories.length}
                   </span>
                 )}
@@ -263,7 +263,7 @@ export const MonthlyReportDetails: React.FC = () => {
                     <div className="flex gap-2 mb-3">
                       <button
                         onClick={selectAllCategories}
-                        className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors cursor-pointer"
+                        className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded transition-colors cursor-pointer"
                       >
                         Select All
                       </button>
@@ -285,7 +285,7 @@ export const MonthlyReportDetails: React.FC = () => {
                             type="checkbox"
                             checked={selectedCategories.includes(category.category)}
                             onChange={() => toggleCategory(category.category)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
                           />
                           <div className="flex-1">
                             <div className="text-sm font-medium text-gray-900">
@@ -308,9 +308,9 @@ export const MonthlyReportDetails: React.FC = () => {
       {filteredCategories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredCategories.map((category, index) => (
-              <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-md transition-all">
+              <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:border-primary-300 hover:shadow-md transition-all">
                 <div className="flex items-start gap-2 mb-3">
-                  <div className="p-2 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-purple-100 to-primary-100 rounded-lg">
                     <AlertCircle className="w-4 h-4 text-purple-600" />
                   </div>
                   <h3 className="text-base font-semibold text-gray-900 line-clamp-2 flex-1">
@@ -319,12 +319,12 @@ export const MonthlyReportDetails: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2 mb-3">
-                  <div className="flex-1 bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded px-3 py-2">
+                  <div className="flex-1 bg-gradient-to-br from-primary-50 to-white border border-primary-200 rounded px-3 py-2">
                     <div className="flex justify-center items-center gap-1 mb-1">
-                      <TrendingUp className="w-3 h-3 text-blue-600" />
-                      <p className="text-xs text-center text-blue-700 font-medium">Incidents</p>
+                      <TrendingUp className="w-3 h-3 text-primary-600" />
+                      <p className="text-xs text-center text-primary-700 font-medium">Incidents</p>
                     </div>
-                    <p className="text-xl text-center font-semibold text-blue-900">{category.total_incidents}</p>
+                    <p className="text-xl text-center font-semibold text-primary-900">{category.total_incidents}</p>
                   </div>
                   <div className="flex-1 bg-gradient-to-br from-orange-50 to-white border border-orange-200 rounded px-3 py-2">
                     <div className="flex items-center gap-1 mb-1">
@@ -338,7 +338,7 @@ export const MonthlyReportDetails: React.FC = () => {
                 {/* View All Incidents Button */}
                 <button
                   onClick={() => handleViewAllIncidents(category.category)}
-                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow text-sm font-medium cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow text-sm font-medium cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   View Details
@@ -358,14 +358,14 @@ export const MonthlyReportDetails: React.FC = () => {
               </div>
             ) : (
               <div className="text-gray-500">
-                <div className="inline-flex p-4 bg-blue-100 rounded-full mb-4">
-                  <Filter className="w-12 h-12 text-blue-600" />
+                <div className="inline-flex p-4 bg-primary-100 rounded-full mb-4">
+                  <Filter className="w-12 h-12 text-primary-600" />
                 </div>
                 <p className="text-lg font-semibold text-gray-900">No categories selected</p>
                 <p className="text-sm mt-1 text-gray-600">Please select at least one category to view incidents.</p>
                 <button
                   onClick={selectAllCategories}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded hover:from-blue-700 hover:to-blue-800 transition-all shadow-sm hover:shadow text-sm font-medium cursor-pointer"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 transition-all shadow-sm hover:shadow text-sm font-medium cursor-pointer"
                 >
                   <AlertCircle className="w-4 h-4" />
                   Show All Categories

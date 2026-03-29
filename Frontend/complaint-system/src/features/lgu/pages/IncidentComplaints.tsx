@@ -41,7 +41,7 @@ export const LguIncidentComplaints: React.FC = () => {
       <div>
         <button
           onClick={() => navigate(`/lgu/incidents/${incidentId}`)}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
+          className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 mb-4"
         >
           <ArrowLeft size={16} />
           {t('btn.backIncident')}

@@ -13,7 +13,7 @@ export const BarangayCard: React.FC<BarangayCardProps> = ({ barangay, onViewInci
     <div className={`bg-white rounded-lg border transition-all duration-200 hover:shadow-md ${
       hasNewIncidents 
         ? "border-orange-300 hover:border-orange-400 shadow-sm" 
-        : "border-gray-200 hover:border-blue-300"
+        : "border-gray-200 hover:border-primary-300"
     }`}>
       <div className="p-6 space-y-4">
         {/* Header with notification badge */}
@@ -51,7 +51,7 @@ export const BarangayCard: React.FC<BarangayCardProps> = ({ barangay, onViewInci
           className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 ${
             hasNewIncidents
               ? "bg-orange-600 hover:bg-orange-700 focus:ring-orange-500"
-              : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              : "bg-primary-600 hover:bg-primary-700 focus:ring-primary-500"
           }`}
         >
           <FileText className="w-4 h-4" />

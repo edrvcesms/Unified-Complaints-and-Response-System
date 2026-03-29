@@ -59,10 +59,10 @@ export const Toast: React.FC<ToastProps> = ({
     },
     info: {
       icon: Info,
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
-      iconColor: 'text-blue-600',
-      textColor: 'text-blue-800',
+      bgColor: 'bg-primary-50',
+      borderColor: 'border-primary-200',
+      iconColor: 'text-primary-600',
+      textColor: 'text-primary-800',
     },
   };
 

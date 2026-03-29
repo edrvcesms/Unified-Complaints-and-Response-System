@@ -55,7 +55,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             focus:outline-none focus:ring-2 transition
             ${errors.email
               ? "border-red-400 bg-red-50 focus:ring-red-300"
-              : "border-gray-300 bg-white focus:ring-blue-400 focus:border-blue-400"
+              : "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
             }`}
         />
         {errors.email && <ErrorMessage id="email-error" message={errors.email} />}
@@ -82,7 +82,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <button
           type="button"
           onClick={onForgotPassword}
-          className="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline transition cursor-pointer"
+          className="text-sm font-medium text-primary-700 hover:text-primary-900 hover:underline transition cursor-pointer"
         >
           {t('auth.forgotPassword')}
         </button>

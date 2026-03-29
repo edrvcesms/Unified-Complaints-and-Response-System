@@ -171,7 +171,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
     <div className="space-y-6">
       <button
         onClick={() => navigate("/department/incidents")}
-        className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
       >
         <ArrowLeft size={16} />
         Back to Incidents
@@ -190,7 +190,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-blue-600" size={20} />
+                  <AlertCircle className="text-primary-600" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-500">Category</p>
@@ -211,7 +211,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
                   </p>
                   {hasLocation && (
                     <button
-                      className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                      className="mt-2 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors"
                       onClick={() => setIsMapOpen(true)}
                     >
                       View Incident Location
@@ -314,7 +314,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
                 </h3>
                 <button
                   onClick={handleViewAllComplaints}
-                  className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
                   View All Complaints
                 </button>

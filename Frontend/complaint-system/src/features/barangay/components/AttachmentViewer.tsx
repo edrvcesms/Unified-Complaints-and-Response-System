@@ -36,7 +36,7 @@ const AttachmentFileCard: React.FC<AttachmentFileCardProps> = ({
         href={attachment.file_path}
         target="_blank"
         rel="noopener noreferrer"
-        className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer shrink-0"
+        className="px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer shrink-0"
       >
         {buttonText}
       </a>
@@ -98,8 +98,8 @@ export const AttachmentViewer: React.FC<AttachmentViewerProps> = ({ attachment }
       return (
         <AttachmentFileCard 
           attachment={attachment}
-          iconBgColor="bg-blue-100"
-          iconColor="text-blue-600"
+          iconBgColor="bg-primary-100"
+          iconColor="text-primary-600"
           buttonText="Download"
         />
       );

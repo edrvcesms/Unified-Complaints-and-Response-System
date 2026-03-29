@@ -21,8 +21,8 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => {
     className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
       text-white font-semibold text-sm tracking-wide shadow-md transition duration-200 cursor-pointer
       ${isLoading
-        ? "bg-blue-400 cursor-not-allowed"
-        : "bg-blue-700 hover:bg-blue-800 active:scale-[0.98]"
+        ? "bg-primary-400 cursor-not-allowed"
+        : "bg-primary-700 hover:bg-primary-800 active:scale-[0.98]"
       }`}
   >
     {isLoading && <Spinner />}

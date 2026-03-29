@@ -68,7 +68,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t('dashboard.totalComplaints')} value={stats.total} color="text-blue-700" bg="bg-blue-50" border="border-blue-100" icon={<TotalIcon />} />
+            <StatCard label={t('dashboard.totalComplaints')} value={stats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
             <StatCard label={t('dashboard.submitted')} value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
             <StatCard label={t('dashboard.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
             <StatCard label="Forwarded" value={stats.forwarded || 0} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
@@ -142,7 +142,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ complaints, isLoad
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
                         ${c.status === "submitted" ? "bg-yellow-100 text-yellow-800" : ""}
-                        ${c.status === "under_review" || c.status === "reviewed_by_department" || c.status === "reviewed_by_barangay" ? "bg-blue-100 text-blue-800" : ""}
+                        ${c.status === "under_review" || c.status === "reviewed_by_department" || c.status === "reviewed_by_barangay" ? "bg-primary-100 text-primary-800" : ""}
                         ${c.status === "forwarded_to_lgu" || c.status === "forwarded_to_department" ? "bg-orange-100 text-orange-800" : ""}
                         ${c.status === "resolved" || c.status === "resolved_by_department" || c.status === "resolved_by_barangay" ? "bg-green-100 text-green-800" : ""}
                       `}>

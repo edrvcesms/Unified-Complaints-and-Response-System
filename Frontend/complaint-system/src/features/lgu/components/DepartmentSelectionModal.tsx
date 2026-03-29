@@ -53,7 +53,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
               key={department.id}
               className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
                 selectedDepartmentId === department.department_account?.id
-                  ? 'border-blue-500 bg-blue-50'
+                  ? 'border-primary-500 bg-primary-50'
                   : 'border-gray-200 hover:border-gray-300'
               } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -89,7 +89,7 @@ export const DepartmentSelectionModal: React.FC<DepartmentSelectionModalProps> =
             type="button"
             onClick={handleConfirm}
             disabled={isLoading || selectedDepartmentId === null}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isLoading && (
               <svg

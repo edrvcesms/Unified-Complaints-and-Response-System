@@ -222,7 +222,7 @@ export const EventsPage: React.FC = () => {
           <button
             onClick={() => setActiveTab("create")}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "create" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeTab === "create" ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
             <Plus className="w-4 h-4" />
@@ -234,13 +234,13 @@ export const EventsPage: React.FC = () => {
               refetch();
             }}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "manage" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"
+              activeTab === "manage" ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
             <Edit className="w-4 h-4" />
             {t("events.manageTab")}
             {!!events?.length && (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-600 rounded-full">{events.length}</span>
+              <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 text-primary-600 rounded-full">{events.length}</span>
             )}
           </button>
         </div>
@@ -248,11 +248,11 @@ export const EventsPage: React.FC = () => {
         {activeTab === "create" && (
           <div className="p-6">
             {editingEvent && (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-                <p className="text-sm text-blue-700">
+              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg flex items-center justify-between">
+                <p className="text-sm text-primary-700">
                   {t("events.form.editing")} <span className="font-semibold">{editingEvent.event_name}</span>
                 </p>
-                <button onClick={resetForm} type="button" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                <button onClick={resetForm} type="button" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
                   {t("events.form.cancel")}
                 </button>
               </div>
@@ -273,7 +273,7 @@ export const EventsPage: React.FC = () => {
                   className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 transition ${
                     errors.event_name
                       ? "border-red-400 bg-red-50 focus:ring-red-300"
-                      : "border-gray-300 bg-white focus:ring-blue-400 focus:border-blue-400"
+                      : "border-gray-300 bg-white focus:ring-primary-400 focus:border-primary-400"
                   }`}
                 />
                 {errors.event_name && <p className="mt-1 text-sm text-red-600">{errors.event_name}</p>}
@@ -372,7 +372,7 @@ export const EventsPage: React.FC = () => {
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
                 >
                   <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600">{t("events.form.uploadDescription")}</p>
@@ -426,7 +426,7 @@ export const EventsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isMutating}
-                  className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {editingEvent
                     ? updateEventMutation.isPending
@@ -445,7 +445,7 @@ export const EventsPage: React.FC = () => {
           <div className="p-6">
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
               </div>
             ) : events && events.length > 0 ? (
               <div className="space-y-4">

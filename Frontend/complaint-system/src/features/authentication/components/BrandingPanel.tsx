@@ -7,7 +7,7 @@ export const BrandingPanel: React.FC = () => {
   return (
   <div
     className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
-    style={{ background: "linear-gradient(160deg, #003087 0%, #0055b3 60%, #0077cc 100%)" }}
+    style={{ background: "linear-gradient(160deg, #4CAF50 0%, #45a049 60%, #388E3C 100%)" }} // green gradient background
   >
 
     <div className="relative z-10 flex flex-col items-center text-center px-12 space-y-6">
@@ -20,19 +20,19 @@ export const BrandingPanel: React.FC = () => {
       </div>
 
       <div className="text-white space-y-2">
-        <p className="text-xs uppercase tracking-widest font-semibold text-blue-200">
+        <p className="text-xs uppercase tracking-widest font-semibold text-primary-200">
           {t('appInfo.country')}
         </p>
         <h1 className="text-3xl font-extrabold leading-tight tracking-tight drop-shadow">
           {t('appInfo.municipality')}
         </h1>
-        <h2 className="text-xl font-semibold text-blue-100">
+        <h2 className="text-xl font-semibold text-primary-200">
           {t('appInfo.systemName')}
         </h2>
         <div className="w-16 h-1 bg-white mx-auto rounded-full mt-3" />
       </div>
 
-      <p className="text-blue-200 text-sm leading-relaxed max-w-xs">
+      <p className="text-primary-50 text-sm leading-relaxed max-w-xs">
         {t('appInfo.systemDescription')}
       </p>
     </div>

@@ -75,11 +75,11 @@ export const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment
               href={file.url}
               download={name}
               className="flex items-center gap-3 p-3 rounded-xl border border-gray-100
-                bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition group"
+                bg-gray-50 hover:bg-primary-50 hover:border-primary-200 transition group"
               aria-label={`Download file: ${name}`}
             >
               <FileIcon />
-              <span className="text-xs text-gray-600 group-hover:text-blue-700 truncate font-medium">
+              <span className="text-xs text-gray-600 group-hover:text-primary-700 truncate font-medium">
                 {name}
               </span>
             </a>

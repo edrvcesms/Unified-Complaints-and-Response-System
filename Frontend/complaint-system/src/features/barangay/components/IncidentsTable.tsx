@@ -34,7 +34,7 @@ const getStatusColor = (status: string) => {
     case "under_review":
     case "reviewed_by_department":
     case "reviewed_by_barangay":
-      return "bg-blue-100 text-blue-800";
+      return "bg-primary-100 text-primary-800";
     case "submitted":
       return "bg-yellow-100 text-yellow-800";
     case "in_progress":
@@ -122,7 +122,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <Eye size={16} />
         </button>

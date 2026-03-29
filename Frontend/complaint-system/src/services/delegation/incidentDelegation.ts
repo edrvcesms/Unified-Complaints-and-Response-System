@@ -9,9 +9,9 @@ export const delegateIncidentToDepartment = async (incidentId: number, departmen
   };
 };
 
-export const delegateIncidentToLgu = async (incidentId: number): Promise<void> => {
+export const delegateIncidentToLgu = async (incidentId: number, payload: { actions_taken: string }): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/forward/lgu`);
+    await incidentsApi.patch(`/${incidentId}/forward/lgu`, payload);
   } catch (error) {
     console.error("Error delegating incident to LGU:", error);
     throw error;

@@ -80,8 +80,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                 text-sm font-medium transition-all duration-150 text-left group
                 ${isActive
-                  ? "bg-blue-700 text-white shadow-sm shadow-blue-200"
-                  : "text-gray-600 hover:bg-blue-50 hover:text-blue-800"
+                  ? "bg-green-600 text-white shadow-sm shadow-green-200"
+                  : "text-gray-600 hover:bg-green-50 hover:text-green-800"
                 }
               `}
             >
@@ -91,14 +91,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={
                       isActive
                         ? "text-white"
-                        : "text-gray-400 group-hover:text-blue-600"
+                        : "text-gray-400 group-hover:text-green-600"
                     }
                   >
                     {item.icon}
                   </span>
                   {item.label}
                   {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500" />
                   )}
                 </>
               )}

@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   return (
     <>
       <ToastContainer toasts={toasts} />
-      <header className="w-full bg-gradient-to-br from-[#003087] via-[#0055b3] to-[#0077cc] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
+      <header className="w-full bg-gradient-to-br from-[#006837] via-[#00994d] to-[#00b36b] shadow-lg shadow-blue-950/40 sticky top-0 z-50">
       <nav
         className="px-4 sm:px-6 lg:pr-8 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
         role="navigation"
@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             <p className="text-white font-bold text-sm sm:text-base lg:text-xl leading-tight truncate tracking-tight">
               {t('appInfo.municipality')}
             </p>
-            <p className="text-blue-300 text-[10px] sm:text-xs lg:text-sm leading-tight truncate tracking-widest uppercase font-medium mt-0.5">
+            <p className="text-green-300 text-[10px] sm:text-xs lg:text-sm leading-tight truncate tracking-widest uppercase font-medium mt-0.5">
               {t('appInfo.systemName')}
             </p>
           </div>
@@ -148,7 +148,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               aria-haspopup="true"
               aria-expanded={notificationDropdownOpen}
               aria-label={t('nav.notifications')}
-              className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-blue-600 transition duration-200 cursor-pointer"
+              className="relative p-2 rounded-lg text-white/80 hover:text-white hover:bg-green-600 transition duration-200 cursor-pointer"
             >
               <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
               {unreadCount > 0 && (
@@ -171,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                   {unreadCount > 0 && (
                     <button
                       onClick={() => markAllAsRead()}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium transition"
+                      className="text-xs text-green-600 hover:text-green-800 font-medium transition"
                     >
                       {t('nav.markAllRead')}
                     </button>
@@ -181,7 +181,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 <div className="max-h-96 overflow-y-auto">
                   {isLoading ? (
                     <div className="px-5 py-8 text-center">
-                      <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                      <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3"></div>
                       <p className="text-sm text-gray-500">{t('nav.loadingNotifications')}</p>
                     </div>
                   ) : !notifications || notifications.length === 0 ? (
@@ -197,11 +197,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                           key={notification.id}
                           onClick={() => handleNotificationClick(notification)}
                           className={`w-full px-5 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100
-                            ${notification.is_read ? 'bg-white' : 'bg-blue-50'}`}
+                            ${notification.is_read ? 'bg-white' : 'bg-green-50'}`}
                         >
                           <div className="flex gap-3">
                             {!notification.is_read && (
-                              <div className="shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                              <div className="shrink-0 w-2 h-2 bg-green-500 rounded-full mt-1.5" />
                             )}
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-medium ${notification.is_read ? 'text-gray-700' : 'text-gray-900'}`}>
@@ -237,7 +237,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
           >
             <div
               aria-hidden="true"
-              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm shrink-0"
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-white text-green-600 flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm shrink-0"
             >
               {initials}
             </div>
@@ -248,7 +248,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
             <svg
               aria-hidden="true"
-              className={`w-4 h-4 text-blue-200 transition-transform duration-200 shrink-0
+              className={`w-4 h-4 text-green-200 transition-transform duration-200 shrink-0
                 ${dropdownOpen ? "rotate-180" : "rotate-0"}`}
               fill="none"
               stroke="currentColor"

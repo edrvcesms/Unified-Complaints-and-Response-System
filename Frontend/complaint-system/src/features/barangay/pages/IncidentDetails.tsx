@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
+import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
@@ -41,6 +42,9 @@ export const IncidentDetails: React.FC = () => {
     title: '',
     message: '',
   });
+
+  // Map modal state
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   // Handle successful resolve
   useEffect(() => {
@@ -251,6 +255,13 @@ export const IncidentDetails: React.FC = () => {
     );
   }
 
+  // Check for valid coordinates
+  const hasLocation =
+    typeof incident.latitude === 'number' &&
+    typeof incident.longitude === 'number' &&
+    !isNaN(incident.latitude) &&
+    !isNaN(incident.longitude);
+
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
     typeof incidentHearingDateRaw === "string"
@@ -321,8 +332,26 @@ export const IncidentDetails: React.FC = () => {
                   <p className="text-sm font-semibold text-gray-900 truncate">
                     {incident.barangay?.barangay_name || "N/A"}
                   </p>
+                  {hasLocation && (
+                    <button
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                      onClick={() => setIsMapOpen(true)}
+                    >
+                      View Incident Location
+                    </button>
+                  )}
                 </div>
               </div>
+      {/* Map Modal */}
+      {hasLocation && (
+        <MapModal
+          open={isMapOpen}
+          onClose={() => setIsMapOpen(false)}
+          latitude={incident.latitude}
+          longitude={incident.longitude}
+          incidentTitle={incident.title}
+        />
+      )}
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">

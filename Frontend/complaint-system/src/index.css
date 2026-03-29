@@ -31,3 +31,30 @@ html {
 @media (min-width: 1024px) {
   :root { --navbar-h: 127.5px; } /* 102px × 1.25 */
 }
+
+
+/* GREEN PRIMARY PALETTE */
+:root {
+  --color-primary-50:  #e6f4ea;
+  --color-primary-100: #cce9d5;
+  --color-primary-200: #99d3ab;
+  --color-primary-300: #66bd81;
+  --color-primary-400: #33a757;
+  --color-primary-500: #00994d;
+  --color-primary-600: #008a45;
+  --color-primary-700: #007a3d;
+  --color-primary-800: #006837;
+  --color-primary-900: #00552d;
+}
+
+/* Tailwind-style classes mapped to CSS variables */
+.bg-primary-50  { background-color: var(--color-primary-50); }
+.bg-primary-100 { background-color: var(--color-primary-100); }
+.bg-primary-200 { background-color: var(--color-primary-200); }
+.bg-primary-300 { background-color: var(--color-primary-300); }
+.bg-primary-400 { background-color: var(--color-primary-400); }
+.bg-primary-500 { background-color: var(--color-primary-500); }
+.bg-primary-600 { background-color: var(--color-primary-600); }
+.bg-primary-700 { background-color: var(--color-primary-700); }
+.bg-primary-800 { background-color: var(--color-primary-800); }
+.bg-primary-900 { background-color: var(--color-primary-900); }

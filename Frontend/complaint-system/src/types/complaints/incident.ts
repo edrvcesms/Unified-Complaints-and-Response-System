@@ -20,5 +20,7 @@ export interface Incident {
   complaint_clusters: ComplaintCluster[];
   has_new_complaints?: boolean;
   new_complaint_count?: number;
+  longitude: number;
+  latitude: number;
   hearing_date?: string | null;
 }

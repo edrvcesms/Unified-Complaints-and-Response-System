@@ -34,6 +34,8 @@ class IncidentData(IncidentBaseModel):
     has_new_complaints: Optional[bool] = False
     new_complaint_count: Optional[int] = 0
     hearing_date: Optional[datetime] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     
     class Config:
         from_attributes = True

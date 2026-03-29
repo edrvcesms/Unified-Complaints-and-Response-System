@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
+import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, Send } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
@@ -34,6 +35,9 @@ export const LguIncidentDetails: React.FC = () => {
   const [isAssigning, setIsAssigning] = useState(false);
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
+
+  // Map modal state
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
 
   const handleViewAllComplaints = () => {
@@ -112,6 +116,7 @@ export const LguIncidentDetails: React.FC = () => {
       showToast({
         type: 'success',
         message: 'Incident successfully assigned to department.',
+        title: ''
       });
 
       confirmationModal.closeModal();
@@ -126,6 +131,7 @@ export const LguIncidentDetails: React.FC = () => {
       showToast({
         type: 'error',
         message: 'Failed to assign incident. Please try again.',
+        title: ''
       });
       confirmationModal.closeModal();
     } finally {
@@ -151,6 +157,7 @@ export const LguIncidentDetails: React.FC = () => {
       </div>
     );
   }
+
 
   return (
     <div className="space-y-6">
@@ -194,8 +201,26 @@ export const LguIncidentDetails: React.FC = () => {
                   <p className="text-sm font-semibold text-gray-900 truncate">
                     {incident.barangay?.barangay_name || "N/A"}
                   </p>
+                  {incident.latitude !== null && incident.longitude !== null && (
+                    <button
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                      onClick={() => setIsMapOpen(true)}
+                    >
+                      View Incident Location
+                    </button>
+                  )}
                 </div>
               </div>
+      {/* Map Modal */}
+      {incident.latitude !== null && incident.longitude !== null && (
+        <MapModal
+          open={isMapOpen}
+          onClose={() => setIsMapOpen(false)}
+          latitude={incident.latitude}
+          longitude={incident.longitude}
+          incidentTitle={incident.title}
+        />
+      )}
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">

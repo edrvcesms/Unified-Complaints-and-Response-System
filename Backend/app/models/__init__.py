@@ -17,4 +17,7 @@ from .announcement_media import AnnouncementMedia
 from .app_feedback import AppFeedback
 from .event import Event
 from .event_media import EventMedia
+from .emergency_agencies import EmergencyAgency
 from .response import Response
+from .emergency_contacts import EmergencyContact
+from .evacuation_centers import EvacuationCenter

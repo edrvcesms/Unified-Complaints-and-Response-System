@@ -18,3 +18,9 @@ class DepartmentAccountCreate(BaseModel):
     email: str
     password: str
     
+class AddEvacuationCenterLocation(BaseModel):
+    center_name: str
+    barangay_id: int
+    latitude: float
+    longitude: float
+    

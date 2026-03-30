@@ -4,7 +4,7 @@ from sqlalchemy import select
 from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
 from app.models.emergency_agencies import EmergencyAgency
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy.orm import selectinload
 async def add_emergency_hotlines(hotline_data: CreateEmergencyHotlineModel, db: AsyncSession):
     try:
       result = await db.execute(
@@ -38,4 +38,27 @@ async def add_emergency_hotlines(hotline_data: CreateEmergencyHotlineModel, db: 
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
       
       
-      
+
+
+async def get_emergency_hotlines(db: AsyncSession):
+    result = await db.execute(
+        select(EmergencyAgency).options(selectinload(EmergencyAgency.emergency_contacts))
+    )
+    agencies = result.scalars().all()
+
+    if not agencies:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No emergency hotlines found.")
+
+    return [
+        {
+            "id": agency.id,
+            "agency_name": agency.agency_name,
+            "created_at": agency.created_at,
+            "updated_at": agency.updated_at,
+            "contacts": [
+                {"id": contact.id, "contact_number": contact.contact_number}
+                for contact in agency.emergency_contacts
+            ]
+        }
+        for agency in agencies
+    ]

@@ -38,3 +38,51 @@ export const SkeletonRow = () => (
     ))}
   </tr>
 );
+
+export const SkeletonChart = () => (
+  <div className="bg-white rounded-xl border border-gray-100 p-5 animate-pulse">
+    {/* fake title */}
+    <div className="h-3 w-32 bg-gray-100 rounded mb-6" />
+    {/* fake bars */}
+    <div className="flex items-end justify-between gap-2 h-44 px-2">
+      {[55, 80, 40, 95, 60, 75, 45].map((h, i) => (
+        <div
+          key={i}
+          className="flex-1 bg-gray-100 rounded-t"
+          style={{ height: `${h}%` }}
+        />
+      ))}
+    </div>
+    {/* fake x-axis labels */}
+    <div className="flex justify-between gap-2 mt-3 px-2">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <div key={i} className="flex-1 h-2 bg-gray-100 rounded" />
+      ))}
+    </div>
+  </div>
+);
+
+export const SkeletonPieChart = () => (
+  <div className="bg-white rounded-xl border border-gray-100 p-5 animate-pulse">
+    {/* fake title */}
+    <div className="h-3 w-28 bg-gray-100 rounded mb-6" />
+    <div className="flex items-center justify-between gap-6">
+      {/* fake donut */}
+      <div className="relative w-36 h-36 shrink-0">
+        <div className="w-36 h-36 rounded-full bg-gray-100" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-white" />
+        </div>
+      </div>
+      {/* fake legend */}
+      <div className="flex-1 space-y-3">
+        {[70, 55, 85, 45].map((w, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-sm bg-gray-100 shrink-0" />
+            <div className="h-2.5 bg-gray-100 rounded" style={{ width: `${w}%` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);

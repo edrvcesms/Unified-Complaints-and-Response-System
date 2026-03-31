@@ -54,6 +54,7 @@ class IncidentModel(Base):
     last_viewed_at = Column(DateTime, nullable=True)
 
     # Relationships
+    responses = relationship("Response", back_populates="incident", cascade="all, delete-orphan")
     complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")
     barangay = relationship("Barangay", back_populates="incidents")
     category = relationship("Category", back_populates="incidents")

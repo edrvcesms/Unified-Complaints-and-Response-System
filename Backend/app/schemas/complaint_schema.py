@@ -5,7 +5,7 @@ from .user_schema import UserData
 from .barangay_schema import BarangayModel
 from .category_schema import CategoryModel
 from .department_schema import DepartmentModel
-from .priority_level_schema import PriorityLevelModel
+from .response_schema import ResponseSchema
 from pydantic import BaseModel
 from datetime import datetime 
 from .attachment_schema import AttachmentBaseModel
@@ -20,6 +20,8 @@ class ComplaintBaseModel(BaseModel):
     barangay_id: int
     barangay_account_id: Optional[int] = None
     category_id: int
+    is_rejected_by_lgu: Optional[bool] = None
+    is_rejected_by_department: Optional[bool] = None
 
 class ComplaintCreateData(ComplaintBaseModel):
     pass
@@ -34,8 +36,20 @@ class ComplaintWithUserData(ComplaintBaseModel):
     department: Optional[DepartmentModel] = None
     attachment: List[AttachmentBaseModel]
     
+class IncidentData(BaseModel):
+    id: int
+    responses: Optional[List[ResponseSchema]] = []
 
+    class Config:
+        from_attributes = True
+        
+class IncidentLinkData(BaseModel):
+    id: int
+    response_id: Optional[int] = None
+    incident: Optional[IncidentData] = None
 
+    class Config:
+        from_attributes = True
 
 class BarangayInfo(BaseModel):
     id: int
@@ -72,5 +86,6 @@ class MyComplaintData(BaseModel):
     barangay: BarangayInfo | None
     category: CategoryInfo | None
     department: DepartmentInfo | None = None
+    incident_links: Optional[List[IncidentLinkData]] = None
     class Config:
         from_attributes = True

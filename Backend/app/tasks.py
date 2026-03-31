@@ -2,7 +2,6 @@ import asyncio
 from app.utils.template_renderer import render_template
 from datetime import datetime
 from app.services.sse_manager import sse_manager
-from asgiref.sync import async_to_sync
 import os
 from sqlalchemy import func
 from app.models.notification import Notification
@@ -596,12 +595,13 @@ def send_notifications_task(self, user_id: int, title: str, message: str, compla
     
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def save_response_task(self, complaint_id: int, responder_id: int, actions_taken: str):
+def save_response_task(self, incident_id: int, responder_id: int, actions_taken: str):
 
     async def _run():
         async with AsyncSessionLocal() as db:
+
             response = Response(
-                complaint_id=complaint_id,
+                incident_id=incident_id,
                 responder_id=responder_id,
                 actions_taken=actions_taken,
                 response_date=datetime.utcnow(),

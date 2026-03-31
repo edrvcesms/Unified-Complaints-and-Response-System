@@ -14,6 +14,7 @@ class IncidentBaseModel(BaseModel):
     status: Optional[str] = None
     complaint_count: int
     severity_level: str
+    response_id: Optional[int] = None
 
 class IncidentComplaintClusterModel(BaseModel):
     id: int

@@ -8,7 +8,7 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account
 from fastapi import status
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate
 
@@ -57,9 +57,19 @@ async def create_lgu_account_route(request: Request, lgu_data: LGUAccountCreate,
     except HTTPException as e:
         raise e
     
+@router.post("/verify-user-account/{user_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def verify_user_account_route(request: Request, user_id: int, db: AsyncSession = Depends(get_async_db)):
+    try:
+        return await verify_user_account(user_id, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+
 @router.delete("/delete-pinecone-data", status_code=status.HTTP_200_OK)
 @limiter.limit("22/minute")
-def delete_pinecone_data_route(request: Request, index_name: str):
+async def delete_pinecone_data_route(request: Request, index_name: str, db: AsyncSession = Depends(get_async_db)):
     try:
         # Initialize Pinecone client
         pc = Pinecone(api_key=settings.PINECONE_API_KEY, environment=settings.PINECONE_ENVIRONMENT)

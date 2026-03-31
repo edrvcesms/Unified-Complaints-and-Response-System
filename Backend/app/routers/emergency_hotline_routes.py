@@ -21,8 +21,9 @@ async def create_emergency_hotline(request: Request, hotline_data: CreateEmergen
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_emergency_hotlines_route(
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user)
-):
+@limiter.limit("10/minute")
+async def get_emergency_hotlines_route(request: Request, db: AsyncSession = Depends(get_async_db),current_user: User = Depends(get_current_user)):
+    if current_user.role != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this action.")
+    
     return await get_emergency_hotlines(db)

@@ -4,7 +4,7 @@ from app.dependencies.rate_limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.incidents_services import assign_incident_to_department, get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed
 from app.dependencies.auth_dependency import get_current_user
-from app.services.complaint_services import get_complaints_by_incident, resolve_complaints_by_incident, review_complaints_by_incident, notify_user_for_hearing
+from app.services.complaint_services import get_complaints_by_incident, resolve_complaints_by_incident, review_complaints_by_incident, notify_user_for_hearing, reject_complaints_by_incident
 from app.services.incidents_services import forward_incident_to_lgu, assign_incident_to_department, get_incidents_forwarded_to_department
 from app.dependencies.db_dependency import get_async_db
 from app.constants.roles import UserRole
@@ -67,6 +67,15 @@ async def review_incident_complaints(response_data: ResponseCreateSchema, incide
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
     return await review_complaints_by_incident(response_data, incident_id, current_user.id, db)
+
+@router.patch("/{incident_id}/reject", status_code=status.HTTP_200_OK)
+async def reject_incident_complaints(response_data: ResponseCreateSchema, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    
+    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+    
+    return await reject_complaints_by_incident(response_data, incident_id, current_user.id, db)
 
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
 async def forward_incident_lgu(response_data: ResponseCreateSchema, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

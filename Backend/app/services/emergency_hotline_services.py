@@ -49,16 +49,4 @@ async def get_emergency_hotlines(db: AsyncSession):
     if not agencies:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No emergency hotlines found.")
 
-    return [
-        {
-            "id": agency.id,
-            "agency_name": agency.agency_name,
-            "created_at": agency.created_at,
-            "updated_at": agency.updated_at,
-            "contacts": [
-                {"id": contact.id, "contact_number": contact.contact_number}
-                for contact in agency.emergency_contacts
-            ]
-        }
-        for agency in agencies
-    ]
+    return agencies

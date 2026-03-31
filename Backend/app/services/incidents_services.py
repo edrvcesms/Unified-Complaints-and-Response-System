@@ -168,11 +168,12 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
-                save_response_task.delay(
-                    complaint_id=complaint.id,
-                    responder_id=responder_id,
-                    actions_taken=response_data.actions_taken
-                )
+                
+        save_response_task.delay(
+            incident_id=incident_id,
+            responder_id=responder_id,
+            actions_taken=response_data.actions_taken
+        )
         
         
         result = await db.execute(
@@ -259,11 +260,12 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
-                save_response_task.delay(
-                    complaint_id=complaint.id,
-                    responder_id=responder_id,
-                    actions_taken=response_data.actions_taken
-                )
+                
+        save_response_task.delay(
+            incident_id=incident_id,
+            responder_id=responder_id,
+            actions_taken=response_data.actions_taken
+        )
         result = await db.execute(
             select(IncidentModel)
             .options(

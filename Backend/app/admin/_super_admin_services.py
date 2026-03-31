@@ -161,3 +161,23 @@ async def delete_pinecone_data(index_name: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting Pinecone data: {str(e)}"
         )
+        
+async def verify_user_account(user_id: int, db: AsyncSession):
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalars().first()
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    if user.is_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User account is already verified")
+    
+    user.is_verified = True
+    user.updated_at = datetime.utcnow()
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    return {"message": f"User account with ID {user_id} has been verified."}

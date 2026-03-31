@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, DateTime, Integer, String, ForeignKey, Float
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -29,6 +29,8 @@ class Complaint(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     hearing_date = Column(DateTime, nullable=True)
+    is_rejected_by_lgu = Column(Boolean, default=False, nullable=True)
+    is_rejected_by_department = Column(Boolean, default=False, nullable=True)
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")
@@ -39,7 +41,6 @@ class Complaint(Base):
     attachment = relationship("Attachment", back_populates="complaint")
     feedback = relationship("Feedback", back_populates="complaint")
     notifications = relationship("Notification", back_populates="complaint")
-    responses = relationship("Response", back_populates="complaint", cascade="all, delete-orphan")
 
    
     incident_links = relationship(

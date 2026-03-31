@@ -5,7 +5,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
-from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_weekly_complaint_stats_by_barangay, user_complaints_statistics
+from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, user_complaints_statistics, get_weekly_stats, get_monthly_stats, get_yearly_stats
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.models.user import User
@@ -19,10 +19,20 @@ async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_a
     
     return await get_all_complaints(db, barangay_id=current_user.barangay_account.barangay_id)
 
-@router.get("/stats/weekly", status_code=status.HTTP_200_OK)
+@router.get("/weekly", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
 async def weekly_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_weekly_complaint_stats_by_barangay(current_user.barangay_account.barangay_id, db)
+    return await get_weekly_stats(current_user.barangay_account.barangay_id, db)
+
+@router.get("/monthly/{year}/{month}", status_code=status.HTTP_200_OK)
+@limiter.limit("50/minute")
+async def monthly_complaint_stats(request: Request, year: int, month: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_monthly_stats(current_user.barangay_account.barangay_id, year, month, db)
+
+@router.get("/yearly/{year}", status_code=status.HTTP_200_OK)
+@limiter.limit("50/minute")
+async def yearly_complaint_stats(request: Request, year: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_yearly_stats(current_user.barangay_account.barangay_id, year, db)
 
 @router.get("/my-complaints", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")

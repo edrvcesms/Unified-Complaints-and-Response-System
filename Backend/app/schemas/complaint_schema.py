@@ -26,15 +26,6 @@ class ComplaintBaseModel(BaseModel):
 class ComplaintCreateData(ComplaintBaseModel):
     pass
 
-class ComplaintWithUserData(ComplaintBaseModel):
-    id: int
-    status: Optional[str] = None
-    created_at: datetime
-    user: UserData
-    barangay: BarangayModel
-    category: Optional[CategoryModel] = None
-    department: Optional[DepartmentModel] = None
-    attachment: List[AttachmentBaseModel]
     
 class IncidentData(BaseModel):
     id: int
@@ -87,5 +78,20 @@ class MyComplaintData(BaseModel):
     category: CategoryInfo | None
     department: DepartmentInfo | None = None
     incident_links: Optional[List[IncidentLinkData]] = None
+    class Config:
+        from_attributes = True
+        
+
+class ComplaintWithUserData(ComplaintBaseModel):
+    id: int
+    status: Optional[str] = None
+    created_at: datetime
+    user: UserData
+    barangay: BarangayModel
+    category: Optional[CategoryModel] = None
+    department: Optional[DepartmentModel] = None
+    attachment: List[AttachmentBaseModel]
+    incident_links: Optional[List[IncidentLinkData]] = None
+    
     class Config:
         from_attributes = True

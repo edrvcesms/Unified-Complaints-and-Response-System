@@ -63,7 +63,8 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         if complaint_cache is not None:
             logger.info(f"Cache hit for complaint ID: {complaint_id}")
             return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)).where(Complaint.id == complaint_id))
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
+                ).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
         
         if not complaint:

@@ -539,10 +539,10 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
                 await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
-                    title="Complaint Under Review",
-                    message=f"Your complaint '{complaint.title}' is now under review",
+                    title=complaint.title,
+                    message=f"Your complaint about '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
-                    notification_type="update"
+                    notification_type="complaint_under_review"
                 )
                 await delete_cache(f"user_notifications:{complaint.user_id}")
                 logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")

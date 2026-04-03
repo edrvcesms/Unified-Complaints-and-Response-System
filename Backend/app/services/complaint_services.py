@@ -66,7 +66,7 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
                 ).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
-        
+
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
@@ -91,6 +91,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         
         query = select(Complaint).options(
+            selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses),
             selectinload(Complaint.user), 
             selectinload(Complaint.barangay), 
             selectinload(Complaint.category), 
@@ -129,7 +130,9 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
-            .options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
+            .options(selectinload(Complaint.user), 
+                     selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses),
+                     selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
             .order_by(Complaint.created_at.asc())
         )
         complaints = result.scalars().all()

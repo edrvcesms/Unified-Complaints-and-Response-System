@@ -46,12 +46,18 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment),
+                        .selectinload(Complaint.attachment),
                 selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
             )
             .order_by(IncidentModel.first_reported_at.asc())
         )
@@ -83,11 +89,18 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user),
-                selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment)
+                        .selectinload(Complaint.attachment),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
             )
             .where(IncidentModel.id == incident_id)
         )
@@ -310,12 +323,18 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment),
+                        .selectinload(Complaint.attachment),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
             )
             .order_by(IncidentModel.first_reported_at.asc())
         )
@@ -343,12 +362,18 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment),
+                        .selectinload(Complaint.attachment),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
             )
         )
         incident = result.scalars().first()

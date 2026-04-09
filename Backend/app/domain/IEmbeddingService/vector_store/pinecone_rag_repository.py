@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # fallback only.
 _DEFAULT_TOP_K = 5
 _MAX_TOP_K = 8          # Hard ceiling — enforced before every Pinecone call
-_SCORE_THRESHOLD = 0.70  # Chunks below this score are dropped even if top_k allows them
+_SCORE_THRESHOLD = 0.40  # Chunks below this score are dropped even if top_k allows them
 
 
 class PineconeRAGVectorRepository(IRAGVectorRepository):
@@ -38,7 +38,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
         self,
         api_key: str,
         index_name: str,
-        namespace: str = "ucrs-docs",
+        namespace: str = "",
     ):
         self._pc = Pinecone(api_key=api_key)
         self._index = self._pc.Index(index_name)
@@ -82,7 +82,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
         """
         Retrieve the most semantically similar chunks for a query embedding.
 
-        top_k is capped at _MAX_TOP_K (8) and filtered by _SCORE_THRESHOLD (0.70)
+        top_k is capped at _MAX_TOP_K (8) and filtered by _SCORE_THRESHOLD (0.40)
         so the LLM context stays focused and high-signal.
         """
         safe_top_k = min(top_k, _MAX_TOP_K)
@@ -112,7 +112,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
             results.append(
                 RAGRetrievalResult(
                     chunk_id=match.id,
-                    text=meta.pop("text", ""),
+                    text=meta.pop("content", ""),
                     source=meta.pop("source", "unknown"),
                     score=match.score,
                     metadata=meta,

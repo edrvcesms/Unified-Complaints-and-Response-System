@@ -10,5 +10,5 @@ class ChatbotService:
         self._embedder = embedding_service
 
     async def ask(self, question: str) -> RAGResponse:
-        embedding = await self._embedder.generate(question, prefix="query: ")
+        embedding = await self._embedder.generate(question)
         return await self._rag.query(question=question, embedding=embedding)

@@ -28,6 +28,7 @@ from app.domain.application.use_cases.cluster_complaint import ClusterComplaintU
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
 from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
+from app.domain.config.embeddings.gemini_embedding_service import GeminiEmbeddingService
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
 from app.domain.repository.incident_repository import IncidentRepository
 from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
@@ -48,6 +49,7 @@ _embedding_service = None
 _vector_repository = None
 _severity_calculator = None
 _chatbot_service = None
+_gemini_embedding_service = None
 
 def get_gemini_verifier():
     global _gemini_verifier
@@ -60,6 +62,13 @@ def get_embedding_service():
     if _embedding_service is None:
         _embedding_service = SentenceTransformerEmbeddingService()
     return _embedding_service
+
+
+def get_gemini_embedding_service():
+    global _gemini_embedding_service
+    if _gemini_embedding_service is None:
+       _gemini_embedding_service = GeminiEmbeddingService(api_key=settings.GEMINI_API_KEY)
+    return _gemini_embedding_service
 
 def get_vector_repository():
     global _vector_repository
@@ -88,7 +97,7 @@ def get_chatbot_service():
                 ),
                 language_model=GeminiRAGLanguageModel(api_key=settings.GEMINI_API_KEY),
             ),
-            embedding_service=get_embedding_service(),  
+            embedding_service=get_gemini_embedding_service(),  
         )
     return _chatbot_service
 

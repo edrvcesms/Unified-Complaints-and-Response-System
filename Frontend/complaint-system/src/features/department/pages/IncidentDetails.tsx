@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 // import { useTranslation } from 'react-i18next';
-import { useIncidentDetails, useResolveIncident, useReviewIncident } from "../../../hooks/useIncidents";
+import { useIncidentDetails, useResolveIncident, useReviewIncident, useRejectIncident } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
@@ -12,6 +12,7 @@ import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
+import type { ComplaintStatus } from '../../../types/complaints/complaint';
 
 export const DepartmentIncidentDetails: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -22,6 +23,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
+  const rejectIncidentMutation = useRejectIncident(Number(incidentId));
 
   const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -76,6 +78,18 @@ export const DepartmentIncidentDetails: React.FC = () => {
     }
   }, [resolveIncidentMutation.isError]);
 
+  // Handle successful reject
+  useEffect(() => {
+    if (rejectIncidentMutation.isSuccess) {
+      actionsTakenModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been rejected successfully.',
+      });
+    }
+  }, [rejectIncidentMutation.isSuccess]);
+
   // Handle review error
   useEffect(() => {
     if (reviewIncidentMutation.isError) {
@@ -89,6 +103,20 @@ export const DepartmentIncidentDetails: React.FC = () => {
       });
     }
   }, [reviewIncidentMutation.isError]);
+
+  // Handle reject error
+  useEffect(() => {
+    if (rejectIncidentMutation.isError) {
+      actionsTakenModal.closeModal();
+      const error = rejectIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to reject incident. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [rejectIncidentMutation.isError]);
 
   const handleViewAllComplaints = () => {
     navigate(`/department/incidents/${incidentId}/complaints`);
@@ -130,6 +158,24 @@ export const DepartmentIncidentDetails: React.FC = () => {
     });
   };
 
+  const handleReject = () => {
+    actionsTakenModal.openModal({
+      title: "Reject Incident",
+      confirmText: "Reject",
+      confirmColor: "red",
+      onConfirm: async (actionsTaken: string) => {
+        try {
+          actionsTakenModal.setIsLoading(true);
+          await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        } catch (err) {
+          console.error(err);
+        } finally {
+          actionsTakenModal.setIsLoading(false);
+        }
+      },
+    });
+  };
+
   if (isLoading) {
     return <LoadingIndicator />;
   }
@@ -142,6 +188,11 @@ export const DepartmentIncidentDetails: React.FC = () => {
       </div>
     );
   }
+
+  const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
+  const isSubmitted = incidentStatus === "submitted";
+  const isUnderReview =
+    incidentStatus === "reviewed_by_barangay" || incidentStatus === "reviewed_by_department";
 
     // Check for valid coordinates
     const hasLocation =
@@ -166,6 +217,13 @@ export const DepartmentIncidentDetails: React.FC = () => {
       hearingDisplay = `Hearing Date: ${formatHearingDate(hearingDate)}`;
     }
   }
+
+  const responses = incident.responses ?? [];
+  const sortedResponses = [...responses].sort((a, b) => {
+    const aTime = new Date(a.response_date).getTime();
+    const bTime = new Date(b.response_date).getTime();
+    return bTime - aTime;
+  });
 
   return (
     <div className="space-y-6">
@@ -262,9 +320,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
               {incident.description}
             </p>
           </div>
-        </div>
 
-        <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Additional Details
@@ -306,6 +362,37 @@ export const DepartmentIncidentDetails: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Remarks
+            </h2>
+            {sortedResponses.length === 0 ? (
+              <p className="text-sm text-gray-600 mb-6">No responses yet.</p>
+            ) : (
+              <div className="max-h-64 overflow-y-auto space-y-4 mb-6 pr-1">
+                {sortedResponses.map((response) => (
+                  <div key={response.id} className="rounded-md border border-gray-200 p-3">
+
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                      {response.actions_taken}
+                    </p>
+                    {response.user && (
+                      <p className="text-xs font-semibold text-gray-500 mt-2">
+                        - {response.user?.role === "lgu_official" ? "Local Government Unit" : "Barangay " + incident.barangay?.barangay_name}{" "}
+                      </p>
+                      
+                    )}
+                    <p className="text-xs text-gray-500 mb-1 mt-1 text-right">
+                      {formatDateTime(response.response_date)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="border-t pt-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
@@ -330,14 +417,21 @@ export const DepartmentIncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending}
+          disabled={reviewIncidentMutation.isPending || isUnderReview}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
+          onClick={handleReject}
+          disabled={rejectIncidentMutation.isPending}
+          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
+        </button>
+        <button
           onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending}
+          disabled={resolveIncidentMutation.isPending || isSubmitted}
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}

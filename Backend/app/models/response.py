@@ -13,4 +13,4 @@ class Response(Base):
     updated_at = Column(DateTime, nullable=True)
 
     incident = relationship("IncidentModel", back_populates="responses")
-    responder = relationship("User", back_populates="responses")
+    user = relationship("User", back_populates="responses")

@@ -1,6 +1,7 @@
 import type { Category } from "../general/category";
 import type { BarangayData } from "../barangay/barangayAccount";
 import type { ComplaintCluster } from "./complaintCluster";
+import type { ResponseData } from "./response";
 
 export interface Incident {
   id: number;
@@ -23,4 +24,5 @@ export interface Incident {
   longitude: number;
   latitude: number;
   hearing_date?: string | null;
+  responses?: ResponseData[];
 }

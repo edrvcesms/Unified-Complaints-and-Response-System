@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
-from .complaint_schema import ComplaintWithUserData, IncidentLinkData
+from .complaint_schema import ComplaintWithUserData
+from .response_schema import ResponseSchema
 from .category_schema import CategoryModel
 from .barangay_schema import BarangayModel
 
@@ -38,5 +39,6 @@ class IncidentData(IncidentBaseModel):
     hearing_date: Optional[datetime] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    responses: Optional[List[ResponseSchema]] = None
     class Config:
         from_attributes = True

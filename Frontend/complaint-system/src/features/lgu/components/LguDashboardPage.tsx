@@ -37,6 +37,7 @@ interface WeeklyDataPoint {
   day: string;
   forwarded: number;
   resolved: number;
+  under_review: number;
 }
 
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
@@ -45,20 +46,13 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
   const stats = useMemo(() => ({
     total: incidents.length,
     pending: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'pending' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu'
     ).length,
     underReview: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_lgu'
     ).length,
     resolved: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay'
+      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_lgu'
     ).length,
   }), [incidents]);
 
@@ -78,12 +72,13 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
       const date = new Date();
       date.setDate(today.getDate() - (6 - i));
       const iso = date.toISOString().split("T")[0];
-      const counts = weeklyStats.daily_counts[iso] || { forwarded: 0, resolved: 0 };
+      const counts = weeklyStats.daily_counts[iso] || { forwarded: 0, resolved: 0, under_review: 0 };
 
       return {
         day: dayNames[date.getDay()],
         forwarded: counts.forwarded,
         resolved: counts.resolved,
+        under_review: counts.under_review,
       };
     });
   }, [weeklyStats]);
@@ -122,6 +117,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
             <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
             <Bar dataKey="forwarded" name={t('chart.forwarded')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
             <Bar dataKey="resolved" name={t('chart.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="under_review" name={t('chart.underReview')} fill="#6366f1" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

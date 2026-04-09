@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
+from app.models.response import Response
 from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache, set_cache, get_cache
 from app.utils.logger import logger
@@ -23,12 +24,16 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
             .where(
-                Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value,
+                Complaint.status.in_([ComplaintStatus.FORWARDED_TO_LGU.value, ComplaintStatus.REVIEWED_BY_LGU.value]),
                 IncidentModel.barangay_id == barangay_id
             )
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
+                .selectinload(IncidentModel.responses).selectinload(Response.user),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.attachment),
@@ -66,13 +71,17 @@ async def get_all_forwarded_incidents(db: AsyncSession):
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
-            .where(Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value)
+            .where(Complaint.status.in_([ComplaintStatus.FORWARDED_TO_LGU.value, ComplaintStatus.REVIEWED_BY_LGU.value]))
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment),
+                        .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
+                .selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.attachment),
                 selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.user)
             )
@@ -110,8 +119,8 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
                 func.date(Complaint.created_at) >= week_ago,
                 Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_LGU.value,
-                    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
-                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
+                    ComplaintStatus.REVIEWED_BY_LGU.value,
+                    ComplaintStatus.RESOLVED_BY_LGU.value
                 ])
             )
             .group_by(func.date(Complaint.created_at), Complaint.status)
@@ -123,15 +132,14 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
         for stat in stats:
             date_str = stat.date.isoformat()
             if date_str not in daily_counts:
-                daily_counts[date_str] = {"forwarded": 0, "resolved": 0}
+                daily_counts[date_str] = {"forwarded": 0, "resolved": 0, "under_review": 0}
             
             if stat.status == ComplaintStatus.FORWARDED_TO_LGU.value:
                 daily_counts[date_str]["forwarded"] = stat.count
-            elif stat.status == ComplaintStatus.RESOLVED_BY_BARANGAY.value:
+            elif stat.status == ComplaintStatus.RESOLVED_BY_LGU.value:
                 daily_counts[date_str]["resolved"] = stat.count
-            elif stat.status == ComplaintStatus.RESOLVED_BY_DEPARTMENT.value:
-                daily_counts[date_str]["resolved"] = stat.count
-        
+            elif stat.status == ComplaintStatus.REVIEWED_BY_LGU.value:
+                daily_counts[date_str]["under_review"] = stat.count
         return {"daily_counts": daily_counts}
     
     except HTTPException:

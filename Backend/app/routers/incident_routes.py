@@ -71,11 +71,11 @@ async def review_incident_complaints(response_data: ResponseCreateSchema, incide
 @router.patch("/{incident_id}/reject", status_code=status.HTTP_200_OK)
 async def reject_incident_complaints(response_data: ResponseCreateSchema, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF, UserRole.BARANGAY_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await reject_complaints_by_incident(response_data, incident_id, current_user.id, db)
+    return await reject_complaints_by_incident(incident_id, current_user.id, response_data, db)
 
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
 async def forward_incident_lgu(response_data: ResponseCreateSchema, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

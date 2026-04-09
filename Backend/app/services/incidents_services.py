@@ -7,6 +7,7 @@ from app.models.department_account import DepartmentAccount
 from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
+from app.models.response import Response
 from app.models.incident_complaint import IncidentComplaintModel
 from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
@@ -16,6 +17,7 @@ from app.tasks import send_notifications_task, save_response_task
 from app.utils.caching import delete_cache, set_cache, get_cache
 from app.models.user import User
 from sqlalchemy.orm import selectinload
+from app.utils.cache_invalidator import invalidate_cache
 
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
@@ -46,7 +48,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -89,7 +91,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -149,29 +151,17 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
             .where(Complaint.id.in_(complaint_ids))
             .values(
                 status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                forwarded_at=datetime.utcnow()
+                forwarded_at=datetime.utcnow(),
+                is_rejected_by_lgu=False
             )
         )
         await db.commit()
         
-        await delete_cache("all_complaints")
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"barangay_incidents:{barangay_id}")
-        await delete_cache(f"barangay_{barangay_id}_complaints")
-        await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
-        await delete_cache("all_forwarded_incidents")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache("all_barangays")
-        now = datetime.utcnow()
-        await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
-                await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title="Complaint Forwarded to LGU",
@@ -179,8 +169,6 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                     complaint_id=complaint.id,
                     notification_type="update"
                 )
-                await delete_cache(f"user_notifications:{complaint.user_id}")
-                logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to LGU")
                 
         save_response_task.delay(
             incident_id=incident_id,
@@ -201,8 +189,14 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 complaint_id=None,
                 notification_type="update"
             )
-            await delete_cache(f"user_notifications:{official.id}")
-            logger.info(f"Created notification for LGU official user ID {official.id} about new incident ID {incident.id} being forwarded to LGU")
+            
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in await db.execute(select(Complaint.user_id).where(Complaint.id.in_(complaint_ids)))],
+            barangay_id=barangay_id,
+            incident_ids=[incident_id],
+            include_global=True
+        )
             
             
         return JSONResponse(
@@ -245,25 +239,10 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
         )
         await db.commit()
         
-        await delete_cache("all_complaints")
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"barangay_incidents:{barangay_id}")
-        await delete_cache(f"barangay_{barangay_id}_complaints")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache(f"department_incidents:{department_account_id}")
-        await delete_cache(f"forwarded_barangay_incidents:{barangay_id}")
-        await delete_cache("all_forwarded_incidents")
-        await delete_cache("all_barangays")
-        now = datetime.utcnow()
-        await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
-        
         for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
-                await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title="Complaint Forwarded to Department",
@@ -271,8 +250,6 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                     complaint_id=complaint.id,
                     notification_type="update"
                 )
-                await delete_cache(f"user_notifications:{complaint.user_id}")
-                logger.info(f"Created notification for user ID {complaint.user_id} about complaint ID {complaint.id} being forwarded to department")
                 
         save_response_task.delay(
             incident_id=incident_id,
@@ -294,9 +271,15 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 complaint_id=None,
                 notification_type="update"
             )
-            await delete_cache(f"user_notifications:{incident.department_account.user.id}")
-            logger.info(f"Created notification for department account user ID {incident.department_account.user.id} about new incident ID {incident.id} being forwarded to department")
             
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in await db.execute(select(Complaint.user_id).where(Complaint.id.in_(complaint_ids)))],
+            barangay_id=barangay_id,
+            incident_ids=[incident_id],
+            department_account_id=department_account_id,
+            include_global=True
+        )
             
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -323,7 +306,7 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -362,7 +345,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -391,20 +374,15 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         await db.commit()
         await db.refresh(incident)
         
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"barangay_incidents:{incident.barangay_id}")
-        await delete_cache(f"forwarded_barangay_incidents:{incident.barangay_id}")
-        await delete_cache("all_forwarded_incidents")
-        now = datetime.utcnow()
-        await delete_cache(f"monthly_report_by_barangay:{incident.barangay_id}:{now.month}:{now.year}")
+        await invalidate_cache(
+            incident_ids=[incident_id],
+            barangay_id=incident.barangay_id,
+            department_account_id=incident.department_account_id,
+            include_global=True
+        )
         
-        if incident.department_account_id:
-            await delete_cache(f"department_incidents:{incident.department_account_id}")
-            await delete_cache(f"forwarded_department_incidents:{incident.department_account_id}")
-        
-        logger.info(f"Incident {incident_id} marked as viewed")
         return IncidentData.model_validate(incident, from_attributes=True)
+
     
     except HTTPException:
         raise

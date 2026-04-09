@@ -211,9 +211,9 @@ async def login_user(login_data: LoginData, db: AsyncSession):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
         
-        # if user.role != UserRole.USER:
-        #     logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
-        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
+        if user.role != UserRole.USER:
+            logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
         
 
         logger.info(f"User logged in successfully with email: {login_data.email}")

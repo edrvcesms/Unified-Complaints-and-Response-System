@@ -27,7 +27,7 @@ class ComplaintCreateData(ComplaintBaseModel):
     pass
 
     
-class IncidentData(BaseModel):
+class ResponseData(BaseModel):
     id: int
     responses: Optional[List[ResponseSchema]] = []
 
@@ -37,7 +37,7 @@ class IncidentData(BaseModel):
 class IncidentLinkData(BaseModel):
     id: int
     response_id: Optional[int] = None
-    incident: Optional[IncidentData] = None
+    incident: Optional[ResponseData] = None
 
     class Config:
         from_attributes = True

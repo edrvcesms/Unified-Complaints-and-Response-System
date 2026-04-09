@@ -34,7 +34,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
+      <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 h-[360px] flex flex-col justify-center ">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
         <form
           onSubmit={async (e) => {
@@ -51,7 +51,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           )}
           <label className="block text-lg font-medium text-gray-700 mb-2">Actions Taken</label>
           <textarea
-            className="w-full border text-sm border-gray-300 rounded-md p-2 mb-6 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full border text-sm border-gray-300 rounded-md p-2 mb-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
             rows={3}
             value={actionsTaken}
             onChange={e => setActionsTaken(e.target.value)}

@@ -1,4 +1,4 @@
-import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
+import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
 import { delegateIncidentToLgu } from "../services/delegation/incidentDelegation";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -88,6 +88,21 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
   });
   return mutation;
 };
+
+export const useRejectIncident = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["rejectIncident", incidentId],
+    mutationFn: (payload: { actions_taken: string }) => rejectIncident(incidentId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
+    }
+  });
+  return mutation;
+}
 
 export const useForwardedIncidents = (barangayId: number) => {
   const { data, isLoading, error } = useQuery<Incident[]>({

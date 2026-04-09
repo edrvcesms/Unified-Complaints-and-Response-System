@@ -44,19 +44,19 @@ async def clear_user_cache():
     print(f"✅ Cleared barangay caches for barangays 1-20")
     
     # Clear incident-specific caches
-    incident_ids = range(1, 1001)  # Clear cache for incidents 1-1000
+    incident_ids = range(500, 1500)  # Clear cache for incidents 500-1499
     for incident_id in incident_ids:
         await delete_cache(f"incident:{incident_id}")
         await delete_cache(f"incident_complaints:{incident_id}")
     
-    print(f"✅ Cleared incident caches for incidents 1-1000")
+    print(f"✅ Cleared incident caches for incidents 500-1499")
     
     # Clear complaint-specific caches
-    complaint_ids = range(1, 1001)  # Clear cache for complaints 1-1000
+    complaint_ids = range(900, 2000)  # Clear cache for complaints 900-1999
     for complaint_id in complaint_ids:
         await delete_cache(f"complaint:{complaint_id}")
     
-    print(f"✅ Cleared complaint caches for complaints 1-1000")
+    print(f"✅ Cleared complaint caches for complaints 900-1999")
     
     # Clear global caches
     await delete_cache("all_complaints")

@@ -53,6 +53,18 @@ export const reviewIncident = async (
   }
 };
 
+export const rejectIncident = async (
+  incidentId: number,
+  payload: { actions_taken: string }
+): Promise<void> => {
+  try {
+    await incidentsApi.patch(`/${incidentId}/reject`, payload);
+  } catch (error) {
+    console.error("Error rejecting incident:", error);
+    throw error;
+  }
+};
+
 export const markIncidentAsViewed = async (incidentId: number): Promise<void> => {
   try {
     await incidentsApi.post(`/${incidentId}/mark-viewed`);

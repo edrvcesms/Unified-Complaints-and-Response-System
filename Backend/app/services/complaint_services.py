@@ -2,6 +2,7 @@ import calendar
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
+from app.models.response import Response
 from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
 from app.models.category import Category
@@ -18,6 +19,7 @@ from datetime import datetime
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
+from app.utils.cache_invalidator import invalidate_cache
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
@@ -63,7 +65,7 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         if complaint_cache is not None:
             logger.info(f"Cache hit for complaint ID: {complaint_id}")
             return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
                 ).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
 
@@ -91,11 +93,14 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         
         query = select(Complaint).options(
-            selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses),
             selectinload(Complaint.user), 
             selectinload(Complaint.barangay), 
             selectinload(Complaint.category), 
-            selectinload(Complaint.attachment)
+            selectinload(Complaint.attachment),
+            selectinload(Complaint.incident_links)
+                .selectinload(IncidentComplaintModel.incident)
+                .selectinload(IncidentModel.responses)
+                .selectinload(Response.user)
         )
         
         if barangay_id is not None:
@@ -131,7 +136,7 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
             .options(selectinload(Complaint.user), 
-                     selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses),
+                     selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user),
                      selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
             .order_by(Complaint.created_at.asc())
         )
@@ -229,10 +234,6 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
     return stats
 
 
-# ---------------------------------------------------------------------------
-# MONTHLY  (a specific month of a specific year, grouped by day-of-month)
-# ---------------------------------------------------------------------------
-
 async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSession):
     cache_key = f"complaint_stats:monthly:{barangay_id}:{year}:{month}"
     cached = await get_cache(cache_key)
@@ -294,11 +295,6 @@ async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSe
 
     await set_cache(cache_key, stats, expiration=3600)
     return stats
-
-
-# ---------------------------------------------------------------------------
-# YEARLY  (a specific year, grouped by month)
-# ---------------------------------------------------------------------------
 
 async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
     cache_key = f"complaint_stats:yearly:{barangay_id}:{year}"
@@ -380,9 +376,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             logger.warning(f"Reverse geocoding failed for lat: {complaint_data.latitude}, lon: {complaint_data.longitude}. Storing complaint with 'Unknown Location'.")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not determine location from provided coordinates. Please make sure you pin the location accurately on the map.")
         
-        
-        
-        
         new_complaint = Complaint(
             title=complaint_data.title,
             description=complaint_data.description,
@@ -441,22 +434,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         updated_complaint = result.scalars().first()
 
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
-        
-        await delete_cache(f"user_complaints:{user_id}")
-        await delete_cache("all_complaints")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{updated_complaint.barangay_id}")
-        
-        if updated_complaint.barangay_id:
-            await delete_cache(f"barangay_incidents:{updated_complaint.barangay_id}")
-            await delete_cache(f"barangay_{updated_complaint.barangay_id}_complaints")
-            now = datetime.utcnow()
-            await delete_cache(f"monthly_report_by_barangay:{updated_complaint.barangay_id}:{now.month}:{now.year}")
-            
-        if updated_complaint.incident_links:
-            for link in updated_complaint.incident_links:
-                logger.info(f"Clearing caches for linked incident ID: {link.incident_id}")
-                await delete_cache(f"incident:{link.incident_id}")
-                await delete_cache(f"incident_complaints:{link.incident_id}")
             
         logger.info(f"barangay_account_id: {updated_complaint.barangay_account.id if updated_complaint.barangay_account else None}")
         
@@ -469,8 +446,14 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 notification_type="info"
             )
             logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
-            await delete_cache(f"user_notifications:{updated_complaint.barangay_account.user_id}")
             
+        await invalidate_cache(
+            complaint_ids=[updated_complaint.id],
+            user_ids=[user_id],
+            barangay_id=updated_complaint.barangay_id,
+            incident_ids=[link.incident_id for link in updated_complaint.incident_links] if updated_complaint.incident_links else None,
+            include_global=True
+        )
             
         return ComplaintWithUserData.model_validate(updated_complaint, from_attributes=True)
 
@@ -493,12 +476,16 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
 
-        complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = await db.execute(
+            select(Complaint)
+            .options(selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user))
+            .where(Complaint.id.in_(complaint_ids))
+        )
         complaints = complaints.scalars().all()
         result = await db.execute(select(User).where(User.id == responder_id))
         reviewer = result.scalars().first()
         for complaint in complaints:
-            if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_DEPARTMENT.value]:
+            if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_DEPARTMENT.value, ComplaintStatus.REVIEWED_BY_LGU.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="This incident is already under review"
@@ -507,7 +494,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value)
+            .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value if reviewer.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.REVIEWED_BY_LGU.value)
         )
 
         await db.commit()
@@ -521,26 +508,11 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
-
-        await delete_cache("all_complaints")
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache(f"weekly_forwarded_incidents_stats:{department_account_id}")
-        if department_account_id:
-            await delete_cache(f"department_incidents:{department_account_id}")
-        if barangay_id:
-            await delete_cache(f"barangay_incidents:{barangay_id}")
-            await delete_cache(f"barangay_{barangay_id}_complaints")
-            now = datetime.utcnow()
-            await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
-                await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -548,9 +520,15 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
                     complaint_id=complaint.id,
                     notification_type="complaint_under_review"
                 )
-                await delete_cache(f"user_notifications:{complaint.user_id}")
-                logger.info(f"Notification created for user ID {complaint.user_id} about complaint under review ID: {complaint.id}")
                 
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in complaints],
+            barangay_id=barangay_id,
+            incident_ids=[incident_id],
+            department_account_id=department_account_id,
+            include_global=True
+        )
         
 
         return JSONResponse(
@@ -579,10 +557,14 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
 
-        complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = await db.execute(
+            select(Complaint)
+            .options(selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user))
+            .where(Complaint.id.in_(complaint_ids))
+        )
         complaints = complaints.scalars().all()
         for complaint in complaints:
-            if complaint.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value]:
+            if complaint.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value, ComplaintStatus.RESOLVED_BY_LGU.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This incident is already resolved"
@@ -591,7 +573,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value, resolved_at=datetime.utcnow())
+            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.utcnow())
         )
             
         await db.commit()
@@ -605,28 +587,11 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
-
-        await delete_cache("all_complaints")
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache("all_barangays")
-        
-        if department_account_id:
-            await delete_cache(f"department_incidents:{department_account_id}")
-        
-        if barangay_id:
-            await delete_cache(f"barangay_incidents:{barangay_id}")
-            await delete_cache(f"barangay_{barangay_id}_complaints")
-            now = datetime.utcnow()
-            await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
         
         for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
-                await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title="Complaint Resolved",
@@ -634,8 +599,15 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                     complaint_id=complaint.id,
                     notification_type="success"
                 )
-                await delete_cache(f"user_notifications:{complaint.user_id}")
-                logger.info(f"Notification created for user ID {complaint.user_id} about complaint resolved ID: {complaint.id}")
+                
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in complaints],
+            barangay_id=barangay_id,
+            incident_ids=[incident_id],
+            department_account_id=department_account_id,
+            include_global=True
+        )
                 
 
         return JSONResponse(
@@ -663,29 +635,56 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         if not complaint_ids:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for this incident")
         
-        complaints = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = await db.execute(
+            select(Complaint)
+            .options(selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user))
+            .where(Complaint.id.in_(complaint_ids))
+        )
         complaints = complaints.scalars().all()
         
-        for complaint in complaints:
-            if complaint.is_rejected_by_lgu:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the LGU")
-            if complaint.is_rejected_by_department:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the department")
+        if rejector.role in [UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
             
-        if rejector.role == UserRole.LGU_OFFICIAL:
-            await db.execute(
-                update(Complaint)
-                .where(Complaint.id.in_(complaint_ids))
-                .values(is_rejected_by_lgu=True)
-            )
+            for complaint in complaints:
+                if complaint.is_rejected_by_lgu:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the LGU")
+                if complaint.is_rejected_by_department:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the department")
+                
+            if rejector.role == UserRole.LGU_OFFICIAL:
+                await db.execute(
+                    update(Complaint)
+                    .where(Complaint.id.in_(complaint_ids))
+                    .values(is_rejected_by_lgu=True, status=ComplaintStatus.SUBMITTED.value)
+                )
+                send_notifications_task.delay(
+                    user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
+                    title="The LGU has rejected the complaints under this incident",
+                    message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
+                    complaint_id=complaints[0].id if complaints else None,
+                )
         elif rejector.role == UserRole.DEPARTMENT_STAFF:
             await db.execute(
                 update(Complaint)
                 .where(Complaint.id.in_(complaint_ids))
-                .values(is_rejected_by_department=True)
+                .values(is_rejected_by_department=True, status=ComplaintStatus.FORWARDED_TO_LGU.value)
             )
+            lgu = await db.execute(
+                select(User).where(User.role == UserRole.LGU_OFFICIAL)
+                )
+            lgu = lgu.scalars().first()
+            send_notifications_task.delay(
+                user_id=lgu.id if lgu else None,
+                title="The department has rejected the complaints under this incident",
+                message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
+                complaint_id=complaints[0].id if complaints else None,
+            )
+            
         else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this action.")
+            await db.execute(
+                update(Complaint)
+                .where(Complaint.id.in_(complaint_ids))
+                .values(status=ComplaintStatus.REJECTED.value)
+            )
         
         await db.commit()
         
@@ -698,37 +697,27 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
-        
-        await delete_cache("all_complaints")
-        await delete_cache(f"incident:{incident_id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
-        await delete_cache("all_barangays")
-        if department_account_id:
-            await delete_cache(f"department_incidents:{department_account_id}")
-        if barangay_id:
-            await delete_cache(f"barangay_incidents:{barangay_id}")
-            await delete_cache(f"barangay_{barangay_id}_complaints")
-            now = datetime.utcnow()
-            await delete_cache(f"monthly_report_by_barangay:{barangay_id}:{now.month}:{now.year}")
             
         for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
             result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
             complaint = result.scalars().first()
             if complaint:
-                await delete_cache(f"user_complaints:{complaint.user_id}")
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title="Complaint Rejected",
-                    message=f"Your complaint '{complaint.title}' has been rejected",
+                    message=f"Your complaint '{complaint.title}' has been rejected due to insufficient information or other reasons. Please review the details and consider resubmitting a new complaint.",
                     complaint_id=complaint.id,
                     notification_type="rejected"
                 )
-                await delete_cache(f"user_notifications:{complaint.user_id}")
-                logger.info(f"Notification created for user ID {complaint.user_id} about complaint rejected ID: {complaint.id}")
             
-            
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in complaints],
+            barangay_id=barangay_id,
+            incident_ids=[incident_id],
+            department_account_id=department_account_id,
+            include_global=True
+        )
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "All complaints under this incident have been rejected"}
@@ -736,9 +725,19 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         
     except HTTPException:
         raise
+        
     
     except Exception as e:
+        logger.exception(
+            "Error in reject_complaints_by_incident",
+            extra={
+                "incident_id": incident_id,
+                "rejector_id": rejector_id,
+                "complaint_ids": complaint_ids if "complaint_ids" in locals() else None,
+            },
+        )
         await db.rollback()
+        logger.error(f"Error in reject_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
         
     
@@ -755,7 +754,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
                 selectinload(Complaint.barangay),
                 selectinload(Complaint.category),
                 selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses)
+                .selectinload(IncidentModel.responses).selectinload(Response.user)
             )
             .where(Complaint.user_id == user_id)
             .order_by(Complaint.created_at.asc())
@@ -848,16 +847,14 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 notified_year=datetime.utcnow().strftime("%Y"),
                 hearing_time=normalized_hearing_date.strftime("%I:%M %p")
             )
-
-        await db.commit()
-        await delete_cache(f"incident_complaints:{incident_id}")
-        
-        await delete_cache(f"user_complaints:{user.id}")
-        await delete_cache(f"user_notifications:{user.id}")
-        await delete_cache(f"incident_complaints:{incident_id}")
-        await delete_cache(f"incident:{incident_id}")
-        for complaint_id in complaint_ids:
-            await delete_cache(f"complaint:{complaint_id}")
+            
+        await invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=[complaint.user_id for complaint in complaints],
+            barangay_id=complaint.barangay_id if complaint.barangay_id else None,
+            incident_ids=[incident_id],
+            include_global=False
+        )
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,

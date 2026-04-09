@@ -24,7 +24,7 @@ export interface Complaint {
   latitude?: number;
 }
 
-export type ComplaintStatus = "submitted" | "under_review" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay";
+export type ComplaintStatus = "submitted" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
 
 export type ActivePage = "dashboard" | "complaints" | "complaint_details";
 

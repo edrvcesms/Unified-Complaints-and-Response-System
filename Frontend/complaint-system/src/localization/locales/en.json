@@ -173,7 +173,8 @@
   },
   "chart": {
     "forwarded": "Forwarded",
-    "resolved": "Resolved"
+    "resolved": "Resolved",
+    "underReview": "Under Review"
   },
   "incidents": {
     "manage": "Manage Incidents",
@@ -196,7 +197,8 @@
       "relatedComplaints": "Related Complaints",
       "viewAllComplaints": "View All Complaints",
       "backToIncidents": "Back to Incidents",
-      "totalComplaints": "Total Complaints"
+      "totalComplaints": "Total Complaints",
+      "remarks": "Remarks"
     }
   },
   "complaint": {

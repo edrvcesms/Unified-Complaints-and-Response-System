@@ -5,6 +5,7 @@ interface DailyCounts {
   [date: string]: {
     forwarded: number;
     resolved: number;
+    under_review: number;
   };
 }
 

@@ -7,13 +7,14 @@ import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing } from '../../../hooks/useIncidents';
+import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing, useRejectIncident } from '../../../hooks/useIncidents';
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
+import type { ComplaintStatus } from '../../../types/complaints/complaint';
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -25,6 +26,7 @@ export const IncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const forwardToLguMutation = useForwardIncidentToLgu(Number(incidentId));
+  const rejectIncidentMutation = useRejectIncident(Number(incidentId));
   const notifyHearingMutation = useNotifyHearing();
   const [hearingDate, setHearingDate] = useState('');
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
@@ -82,6 +84,18 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [forwardToLguMutation.isSuccess]);
 
+  // Handle successful reject
+  useEffect(() => {
+    if (rejectIncidentMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'The incident has been rejected successfully.',
+      });
+    }
+  }, [rejectIncidentMutation.isSuccess]);
+
   // Handle successful hearing notification
   useEffect(() => {
     if (notifyHearingMutation.isSuccess) {
@@ -138,6 +152,20 @@ export const IncidentDetails: React.FC = () => {
     }
   }, [forwardToLguMutation.isError]);
 
+  // Handle reject error
+  useEffect(() => {
+    if (rejectIncidentMutation.isError) {
+      confirmationModal.closeModal();
+      const error = rejectIncidentMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to reject incident. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [rejectIncidentMutation.isError]);
+
   // Handle hearing notification error
   useEffect(() => {
     if (notifyHearingMutation.isError) {
@@ -177,7 +205,7 @@ export const IncidentDetails: React.FC = () => {
       confirmText: "Confirm",
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string) => {
-        try{
+        try {
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
         } catch (err) {
@@ -206,6 +234,20 @@ export const IncidentDetails: React.FC = () => {
           actionsTakenModal.setIsLoading(false); // ✅ always runs
         }
       }
+    });
+  };
+
+  const handleReject = () => {
+    actionsTakenModal.openModal({
+      title: "Reject Incident",
+      description: "Please provide the reason for rejecting this incident. This will be recorded and visible to complainants.",
+      confirmText: "Reject",
+      confirmColor: "red",
+      onConfirm: async (actionsTaken: string) => {
+        actionsTakenModal.setIsLoading(true);
+        await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        actionsTakenModal.setIsLoading(false);
+      },
     });
   };
 
@@ -262,12 +304,24 @@ export const IncidentDetails: React.FC = () => {
     !isNaN(incident.latitude) &&
     !isNaN(incident.longitude);
 
+  const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
+  const isSubmitted = incidentStatus === "submitted";
+  const isUnderReview =
+    incidentStatus === "reviewed_by_barangay" || incidentStatus === "reviewed_by_department";
+
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
     typeof incidentHearingDateRaw === "string"
       ? incidentHearingDateRaw.trim() || null
       : incidentHearingDateRaw;
   const hasScheduledHearingDate = Boolean(incidentHearingDate);
+
+  const responses = incident.responses ?? [];
+  const sortedResponses = [...responses].sort((a, b) => {
+    const aTime = new Date(a.response_date).getTime();
+    const bTime = new Date(b.response_date).getTime();
+    return bTime - aTime;
+  });
 
   // Helper to format hearing date as 'Month day, Year at Time'
   const formatHearingDate = (dateString: string) => {
@@ -342,16 +396,16 @@ export const IncidentDetails: React.FC = () => {
                   )}
                 </div>
               </div>
-      {/* Map Modal */}
-      {hasLocation && (
-        <MapModal
-          open={isMapOpen}
-          onClose={() => setIsMapOpen(false)}
-          latitude={incident.latitude}
-          longitude={incident.longitude}
-          incidentTitle={incident.title}
-        />
-      )}
+              {/* Map Modal */}
+              {hasLocation && (
+                <MapModal
+                  open={isMapOpen}
+                  onClose={() => setIsMapOpen(false)}
+                  latitude={incident.latitude}
+                  longitude={incident.longitude}
+                  incidentTitle={incident.title}
+                />
+              )}
 
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">
@@ -385,9 +439,6 @@ export const IncidentDetails: React.FC = () => {
               {incident.description}
             </p>
           </div>
-        </div>
-
-        <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               {t('incidents.details.additionalDetails')}
@@ -418,6 +469,38 @@ export const IncidentDetails: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+        
+
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {t('incidents.details.remarks')}
+            </h2>
+            {sortedResponses.length === 0 ? (
+              <p className="text-sm text-gray-600 mb-6">No responses yet.</p>
+            ) : (
+              <div className="max-h-64 overflow-y-auto space-y-4 mb-6 pr-1">
+                {sortedResponses.map((response) => (
+                  <div key={response.id} className="rounded-md border border-gray-200 p-3">
+
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                      {response.actions_taken}
+                    </p>
+                    {response.user && (
+                      <p className="text-xs font-semibold text-gray-500 mt-2">
+                        - {response.user?.role === "lgu_official" ? "Local Government Unit" : "Barangay " + incident.barangay?.barangay_name}{" "}
+                      </p>
+                      
+                    )}
+                    <p className="text-xs text-gray-500 mb-1 mt-1 text-right">
+                      {formatDateTime(response.response_date)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="border-t pt-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
@@ -442,21 +525,28 @@ export const IncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending}
+          disabled={isUnderReview}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
           onClick={handleForwardToLgu}
-          disabled={forwardToLguMutation.isPending}
+          disabled={forwardToLguMutation.isPending || isSubmitted}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
         </button>
         <button
+          onClick={handleReject}
+          disabled={rejectIncidentMutation.isPending}
+          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
+        </button>
+        <button
           onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending}
+          disabled={resolveIncidentMutation.isPending || isSubmitted}
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
@@ -484,7 +574,7 @@ export const IncidentDetails: React.FC = () => {
         {hasScheduledHearingDate ? (
           <button
             onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending}
+            disabled={notifyHearingMutation.isPending || isSubmitted}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {notifyHearingMutation.isPending ? "Notifying..." : "Reschedule Hearing Date"}
@@ -492,7 +582,7 @@ export const IncidentDetails: React.FC = () => {
         ) : (
           <button
             onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending}
+            disabled={notifyHearingMutation.isPending || isSubmitted}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}

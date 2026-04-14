@@ -7,15 +7,15 @@ module.exports = {
    theme: {
     extend: {
       colors: {
-        // Primary Colors - Main brand color (Green)
+        // Primary Colors - Main brand color (#346739) and its lighter/darker shades
        primary: {
           50:  '#F0FDF4',  // was success-50
           100: '#DCFCE7',
           200: '#BBF7D0',
           300: '#86EFAC',
           400: '#4ADE80',
-          500: '#22C55E',  // was success-500
-          600: '#16A34A',  // was success-600
+          500: '#346739',  // was success-500
+          600: '#346739',  // was success-600
           700: '#15803D',
           800: '#166534',
           900: '#14532D',

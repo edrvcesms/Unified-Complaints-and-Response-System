@@ -8,7 +8,7 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories
 from fastapi import status
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate
 
@@ -62,6 +62,36 @@ async def create_lgu_account_route(request: Request, lgu_data: LGUAccountCreate,
 async def verify_user_account_route(request: Request, user_id: int, db: AsyncSession = Depends(get_async_db)):
     try:
         return await verify_user_account(user_id, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+
+@router.get("/unverified-users", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_unverified_users_route(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_all_unverified_users(current_user, db, page=page, page_size=page_size)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+
+@router.get("/categories", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_categories_route(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_all_categories(current_user, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

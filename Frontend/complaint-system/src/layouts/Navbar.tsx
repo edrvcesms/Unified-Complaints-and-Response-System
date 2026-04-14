@@ -23,6 +23,7 @@ const ROLES = {
   barangay_official: "Barangay Official",
   lgu_official: "LGU Official",
   department_staff: "Department Staff",
+  superadmin: "Super Admin",
 }
 
 

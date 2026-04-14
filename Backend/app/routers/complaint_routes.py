@@ -5,7 +5,7 @@ from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.complaint_schema import ComplaintCreateData
 from app.dependencies.rate_limiter import limiter
-from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, user_complaints_statistics, get_weekly_stats, get_monthly_stats, get_yearly_stats
+from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, user_complaints_statistics, get_weekly_stats, get_monthly_stats, get_yearly_stats, get_geometric_location_details
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.models.user import User
@@ -23,6 +23,13 @@ async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_a
 @limiter.limit("50/minute")
 async def weekly_complaint_stats(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_weekly_stats(current_user.barangay_account.barangay_id, db)
+
+
+@router.get("/location-details", status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")
+async def get_location_details(request: Request, latitude: float, longitude: float, barangay_name: str, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_geometric_location_details(latitude, longitude, barangay_name)
+
 
 @router.get("/monthly/{year}/{month}", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")

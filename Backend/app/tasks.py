@@ -129,7 +129,7 @@ def send_email_task(self, subject: str, recipient: str, body: str):
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
     subject = f"OTP Code ({purpose})"
-    body = render_template("otp_email.html", {"otp": otp, "purpose": purpose})
+    body = render_template("email_otp.html", {"otp": otp, "purpose": purpose})
     send_email_task.delay(subject, recipient, body)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)

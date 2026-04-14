@@ -465,6 +465,14 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.error(f"Error in submit_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+async def get_geometric_location_details(latitude: float, longitude: float, barangay_name: str):
+    try:
+        location = await reverse_geocode(latitude, longitude, barangay_name)
+        return location
+    except Exception as e:
+        logger.error(f"Error in get_geometric_location_details: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
 async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
     try:
         result = await db.execute(

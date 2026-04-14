@@ -18,8 +18,8 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => {
   <button
     type="submit"
     disabled={isLoading}
-    className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
-      text-white font-semibold text-sm tracking-wide shadow-md transition duration-200 cursor-pointer
+    className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg
+      text-white font-semibold text-base tracking-wide shadow-md transition duration-200 cursor-pointer
       ${isLoading
         ? "bg-primary-400 cursor-not-allowed"
         : "bg-primary-700 hover:bg-primary-800 active:scale-[0.98]"

@@ -1,9 +1,11 @@
 import { Route, Routes } from "react-router-dom"
 import { LoginPage } from "./features/authentication/pages/Login"
+import { SuperAdminLoginPage } from "./features/authentication/pages/SuperAdminLogin"
+import { ForgotPasswordPage } from "./features/authentication/pages/ForgotPassword"
 import { Dashboard } from "./features/barangay/pages/Dashboard"
 import { useAuthStore } from "./store/authStore"
 import { NetworkProvider } from "./context/NetworkContext"
-import { BarangayRoute, LguRoute, DepartmentRoute, AuthRoutes } from "./routes/ProtectedRoutes"
+import { BarangayRoute, LguRoute, DepartmentRoute, AuthRoutes, SuperAdminRoute } from "./routes/ProtectedRoutes"
 import { NotFound } from "./features/general/NotFound"
 import { useEffect } from "react"
 import LoadingIndicator from "./features/general/LoadingIndicator"
@@ -11,6 +13,7 @@ import Navbar from "./layouts/Navbar"
 import DashboardLayout from "./layouts/BarangayDashboardLayout"
 import LguDashboardLayout from "./layouts/LguDashboardLayout"
 import DepartmentDashboardLayout from "./layouts/DepartmentDashboardLayout"
+import SuperAdminDashboardLayout from "./layouts/SuperAdminDashboardLayout"
 import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
@@ -29,6 +32,7 @@ import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayRepo
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
+import { SuperAdminAccounts, SuperAdminCategories, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 
 function App() {
 
@@ -93,9 +97,20 @@ function App() {
             </Route>
           </Route>
 
+          {/* Super Admin Routes */}
+          <Route element={<SuperAdminRoute />}>
+            <Route path="/superadmin/*" element={<SuperAdminDashboardLayout />}>
+              <Route path="accounts" element={<SuperAdminAccounts />} />
+              <Route path="categories" element={<SuperAdminCategories />} />
+              <Route path="verify-users" element={<SuperAdminVerifyUsers />} />
+            </Route>
+          </Route>
+
           {/* Auth Routes (Login) */}
           <Route element={<AuthRoutes />}>
             <Route path="/officials-login" element={<LoginPage />} />
+            <Route path="/superadmin-login" element={<SuperAdminLoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
           {/* 404 Not Found */}

@@ -1,4 +1,4 @@
-from shapely.geometry import shape, Point
+from shapely.geometry import mapping, shape, Point
 import json
 import os
 
@@ -20,19 +20,14 @@ for feature in geo_data["features"]:
         "name": name,
         "geometry": geom
     })
-
 def get_barangay(lat: float, lng: float):
     point = Point(lng, lat)
+
     for brgy in barangay_polygons:
-        if brgy["geometry"].intersects(point):
-            return brgy["name"]
+        if brgy["geometry"].contains(point):
+            return {
+                "name": brgy["name"],
+                "geometry": mapping(brgy["geometry"])  # 👈 IMPORTANT
+            }
+
     return None
-
-# Test
-test_coords = [
-    (14.470134997303694, 121.42548940702612),
-    (14.547934392699075, 121.42213048838994),
-]
-
-for lat, lng in test_coords:
-    print(get_barangay(lat, lng))

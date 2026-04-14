@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             departmentData = data.departmentAccountData;
         }
 
-        const validRoles: UserRole[] = ['barangay_official', 'lgu_official', 'department_staff'];
+        const validRoles: UserRole[] = ['barangay_official', 'lgu_official', 'department_staff', 'superadmin'];
         const isValidRole = role && validRoles.includes(role);
 
         set({

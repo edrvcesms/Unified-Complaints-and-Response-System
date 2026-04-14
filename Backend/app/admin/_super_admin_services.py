@@ -11,7 +11,7 @@ from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentAccountCreate, LGUAccountCreate
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.core.security import hash_password
 from datetime import datetime
 from app.constants.roles import UserRole
@@ -19,6 +19,76 @@ from app.core.config import settings
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
+async def get_all_unverified_users(current_user: User, db: AsyncSession, page: int = 1, page_size: int = 10):
+    try: 
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+        
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+        
+        safe_page = max(page, 1)
+        safe_page_size = min(max(page_size, 1), 50)
+        offset = (safe_page - 1) * safe_page_size
+
+        total_result = await db.execute(
+            select(func.count()).select_from(User).where(
+                User.is_verified == False,
+                User.role == UserRole.USER.value
+            )
+        )
+        total = total_result.scalar() or 0
+
+        result = await db.execute(
+            select(User)
+            .where(User.is_verified == False, User.role == UserRole.USER.value)
+            .order_by(User.created_at.desc())
+            .offset(offset)
+            .limit(safe_page_size)
+        )
+        unverified_users = result.scalars().all()
+
+        items = [
+            {
+                "id": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role,
+                "created_at": user.created_at,
+                "is_verified": user.is_verified,
+            }
+            for user in unverified_users
+        ]
+
+        return {
+            "items": items,
+            "total": total,
+            "page": safe_page,
+            "page_size": safe_page_size,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_all_categories(current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(select(Category).order_by(Category.created_at.desc()))
+        categories = result.scalars().all()
+        return categories
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+        
 
 async def create_barangay_account(barangay_data: BarangayAccountCreate, db: AsyncSession) -> BarangayWithUserData:
     

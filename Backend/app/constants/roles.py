@@ -5,4 +5,5 @@ class UserRole(str, Enum):
     BARANGAY_OFFICIAL = "barangay_official"
     LGU_OFFICIAL = "lgu_official"
     DEPARTMENT_STAFF = "department_staff"
+    SUPERADMIN = "superadmin"
     

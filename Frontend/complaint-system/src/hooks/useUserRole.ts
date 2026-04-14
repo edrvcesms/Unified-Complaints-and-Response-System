@@ -12,8 +12,9 @@ export const useUserRole = () => {
   const isBarangayOfficial = userRole === 'barangay_official';
   const isLguOfficial = userRole === 'lgu_official';
   const isDepartmentStaff = userRole === 'department_staff';
+  const isSuperAdmin = userRole === 'superadmin';
   
-  const isValidRole = isBarangayOfficial || isLguOfficial || isDepartmentStaff;
+  const isValidRole = isBarangayOfficial || isLguOfficial || isDepartmentStaff || isSuperAdmin;
   const hasInvalidRole = !isValidRole;
 
   const getUserData = () => {
@@ -42,6 +43,9 @@ export const useUserRole = () => {
     if (isLguOfficial) {
       return 'LGU Official';
     }
+    if (isSuperAdmin) {
+      return 'Super Admin';
+    }
     return 'User';
   };
 
@@ -50,6 +54,7 @@ export const useUserRole = () => {
     isBarangayOfficial,
     isLguOfficial,
     isDepartmentStaff,
+    isSuperAdmin,
     isAuthenticated,
     isValidRole,
     hasInvalidRole,

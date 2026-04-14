@@ -308,6 +308,48 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
         logger.error(f"Error during login for {login_data.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
 
+async def superadmin_login(login_data: LoginData, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).where(User.email == login_data.email))
+        user = result.scalars().first()
+
+        if not user:
+            logger.warning(f"Login attempt with unregistered email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if not decrypt_password(login_data.password, user.hashed_password):
+            logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+        if user.role != UserRole.SUPERADMIN:
+            logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
+
+        logger.info(f"Super admin logged in successfully with email: {login_data.email}")
+
+        refresh_token = create_refresh_token(data={"user_id": user.id})
+        access_token = create_access_token(data={"user_id": user.id})
+
+        response = JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=jsonable_encoder({
+                "message": "Login successful",
+                "access_token": access_token,
+                "refresh_token": refresh_token if user.role == UserRole.USER else None,
+                "role": user.role
+            })
+        )
+
+        await set_cookies(response, refresh_token=refresh_token)
+        return response
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error during login for {login_data.email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
+
 async def refresh_access_token(request: Request, db: AsyncSession):
     try:
         refresh_token = request.cookies.get("refresh_token")

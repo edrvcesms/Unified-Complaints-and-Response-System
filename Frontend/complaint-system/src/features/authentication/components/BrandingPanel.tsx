@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import StaMariaLogo from "../../../assets/StaMariaLogo.jpg";;
+import StaMariaLogo from "../../../assets/StaMariaLogo.jpg";
+import municipal_hall from "../../../assets/municipal_hall.jpg";
 
 export const BrandingPanel: React.FC = () => {
   const { t } = useTranslation();
@@ -7,8 +8,14 @@ export const BrandingPanel: React.FC = () => {
   return (
   <div
     className="hidden lg:flex lg:w-1/2 flex-col items-center justify-center relative overflow-hidden"
-    style={{ background: "linear-gradient(160deg, #4CAF50 0%, #45a049 60%, #388E3C 100%)" }} // green gradient background
+    style={{
+      backgroundImage: `url(${municipal_hall})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    }}
   >
+    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
     <div className="relative z-10 flex flex-col items-center text-center px-12 space-y-6">
       <div className="w-56 h-56 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white">
@@ -20,19 +27,19 @@ export const BrandingPanel: React.FC = () => {
       </div>
 
       <div className="text-white space-y-2">
-        <p className="text-xs uppercase tracking-widest font-semibold text-primary-200">
+        <p className="text-xs uppercase tracking-widest font-semibold text-white-200">
           {t('appInfo.country')}
         </p>
         <h1 className="text-3xl font-extrabold leading-tight tracking-tight drop-shadow">
           {t('appInfo.municipality')}
         </h1>
-        <h2 className="text-xl font-semibold text-primary-200">
+        <h2 className="text-xl font-semibold text-white-200">
           {t('appInfo.systemName')}
         </h2>
-        <div className="w-16 h-1 bg-white mx-auto rounded-full mt-3" />
+        <div className="w-40 h-1 bg-white mx-auto rounded-full mt-3" />
       </div>
 
-      <p className="text-primary-50 text-sm leading-relaxed max-w-xs">
+      <p className="text-primary-50 text-s leading-relaxed max-w-xs">
         {t('appInfo.systemDescription')}
       </p>
     </div>

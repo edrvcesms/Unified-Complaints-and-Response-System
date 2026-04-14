@@ -574,12 +574,12 @@ export const LguAnnouncements: React.FC = () => {
                         {announcement.media.length > 0 && (
                           <div className="mt-3 flex flex-wrap gap-2">
                             {announcement.media.slice(0, 3).map((media) => (
-                              <div key={media.id} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                              <div key={media.id} className="relative w-48 h-48 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
                                 <MediaThumbnail url={media.media_url} type={media.media_type} />
                               </div>
                             ))}
                             {announcement.media.length > 3 && (
-                              <div className="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                              <div className="w-48 h-48 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
                                 <span className="text-sm font-medium text-gray-600">
                                   +{announcement.media.length - 3}
                                 </span>

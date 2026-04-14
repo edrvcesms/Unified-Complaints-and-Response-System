@@ -2,34 +2,25 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import type { LoginFormErrors, LoginRequestData } from "../types/auth/login";
-import { loginAccount } from "../services/authentication/auth";
+import { loginSuperAdmin } from "../services/authentication/auth";
 import { validateEmail, validatePassword } from "../utils/validators";
 
-export const useLoginForm = () => {
+export const useSuperAdminLoginForm = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "", role: "official" });
+  const [formData, setFormData] = useState<LoginRequestData>({
+    email: "",
+    password: "",
+    role: "superadmin",
+  });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: LoginRequestData) => loginAccount(data),
-    onSuccess: (data) => {
-      console.log("Login successful");
-      const role = data?.role;
-      if (role === 'lgu_official') {
-        navigate("/lgu/dashboard");
-        return;
-      }
-      if (role === 'department_staff') {
-        navigate("/department/dashboard");
-        return;
-      }
-      if (role === 'superadmin') {
-        navigate("/superadmin/dashboard");
-        return;
-      }
-      navigate("/dashboard");
+    mutationFn: (data: LoginRequestData) => loginSuperAdmin(data),
+    onSuccess: () => {
+      console.log("Super admin login successful");
+      navigate("/superadmin/dashboard");
     },
     onError: (error: any) => {
       console.error("Login error:", error);
@@ -55,7 +46,7 @@ export const useLoginForm = () => {
       const validationErrors: LoginFormErrors = {};
       const emailError = validateEmail(formData);
       const passwordError = validatePassword(formData);
-      
+
       if (emailError) Object.assign(validationErrors, emailError);
       if (passwordError) Object.assign(validationErrors, passwordError);
 

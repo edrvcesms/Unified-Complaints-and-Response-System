@@ -32,7 +32,6 @@ async def resend_otp(request: Request, email: ResendOtpData, db: AsyncSession = 
 @router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")
 async def login(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
-    await verify_turnstile(login_data.turnstile_token, request)
     return await login_user(login_data, db)
 
 @router.post("/officials-login", status_code=status.HTTP_200_OK)

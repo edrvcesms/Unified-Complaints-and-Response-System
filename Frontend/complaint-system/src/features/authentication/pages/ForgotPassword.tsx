@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
@@ -6,6 +6,7 @@ import { BrandingPanel } from "../components/BrandingPanel";
 import { MobileHeader } from "../components/Mobileheader";
 import { AlertBanner } from "../components/AlertBanner";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { PasswordInput } from "../components/PasswordInputs";
 import { LanguageSwitcher } from "../../general/LanguageSwitcher";
 import { createNewPassword, requestResetPassword, verifyResetPasswordOtp } from "../../../services/authentication/auth";
 import { validateEmail, validatePassword } from "../../../utils/validators";
@@ -42,6 +43,10 @@ export const ForgotPasswordPage: React.FC = () => {
 	const [formData, setFormData] = useState<FormState>(defaultFormState);
 	const [errors, setErrors] = useState<FormErrors>({});
 	const [infoMessage, setInfoMessage] = useState<string>("");
+	const [showNewPassword, setShowNewPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const otpLength = 6;
+	const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
 	const requestMutation = useMutation({
 		mutationFn: () => requestResetPassword({ email: formData.email.trim() }),
@@ -98,7 +103,7 @@ export const ForgotPasswordPage: React.FC = () => {
 			setErrors({ otp: "Verification code is required." });
 			return false;
 		}
-		if (formData.otp.trim().length < 4) {
+		if (formData.otp.trim().length < otpLength) {
 			setErrors({ otp: "Please enter a valid verification code." });
 			return false;
 		}
@@ -126,6 +131,38 @@ export const ForgotPasswordPage: React.FC = () => {
 		const { name, value } = e.target;
 		setFormData((prev) => ({ ...prev, [name]: value }));
 		setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
+	};
+
+	const handleOtpChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value.replace(/\D/g, "");
+		const nextChar = value.slice(-1);
+		setFormData((prev) => {
+			const nextOtp = prev.otp.padEnd(otpLength, " ").split("");
+			nextOtp[index] = nextChar;
+			return { ...prev, otp: nextOtp.join("").trimEnd() };
+		});
+		setErrors((prev) => ({ ...prev, otp: undefined, general: undefined }));
+		if (nextChar && index < otpLength - 1) {
+			otpRefs.current[index + 1]?.focus();
+		}
+	};
+
+	const handleOtpKeyDown = (index: number) => (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Backspace") {
+			if (!formData.otp[index] && index > 0) {
+				otpRefs.current[index - 1]?.focus();
+			}
+		}
+	};
+
+	const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+		e.preventDefault();
+		const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, otpLength);
+		if (!digits) return;
+		setFormData((prev) => ({ ...prev, otp: digits }));
+		setErrors((prev) => ({ ...prev, otp: undefined, general: undefined }));
+		const nextIndex = Math.min(digits.length, otpLength - 1);
+		otpRefs.current[nextIndex]?.focus();
 	};
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -231,22 +268,33 @@ export const ForgotPasswordPage: React.FC = () => {
 									<label htmlFor="otp" className="block text-sm font-semibold text-gray-700">
 										{t("auth.otpLabel")}
 									</label>
-									<input
+									<div
 										id="otp"
-										name="otp"
-										type="text"
-										autoComplete="one-time-code"
-										value={formData.otp}
-										onChange={handleChange}
-										placeholder={t("auth.otpPlaceholder")}
-										maxLength={8}
-										className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
-											focus:outline-none focus:ring-2 transition
-											${errors.otp
-												? "border-red-400 bg-red-50 focus:ring-red-300"
-												: "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
-											}`}
-									/>
+										className="grid grid-cols-6 gap-2"
+										onPaste={handleOtpPaste}
+									>
+										{Array.from({ length: otpLength }).map((_, index) => (
+											<input
+												key={index}
+												ref={(el) => {
+													otpRefs.current[index] = el;
+												}}
+												type="text"
+												inputMode="numeric"
+												autoComplete="one-time-code"
+												value={formData.otp[index] ?? ""}
+												onChange={handleOtpChange(index)}
+												onKeyDown={handleOtpKeyDown(index)}
+												maxLength={1}
+												className={`h-12 w-full rounded-lg border text-center text-lg font-semibold text-gray-800
+													focus:outline-none focus:ring-2 transition
+													${errors.otp
+														? "border-red-400 bg-red-50 focus:ring-red-300"
+														: "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
+													}`}
+											/>
+										))}
+									</div>
 									{errors.otp && <ErrorMessage id="otp-error" message={errors.otp} />}
 								</div>
 							)}
@@ -257,20 +305,17 @@ export const ForgotPasswordPage: React.FC = () => {
 										<label htmlFor="new_password" className="block text-sm font-semibold text-gray-700">
 											{t("auth.newPassword")}
 										</label>
-										<input
+										<PasswordInput
 											id="new_password"
 											name="new_password"
-											type="password"
-											autoComplete="new-password"
 											value={formData.new_password}
+											showPassword={showNewPassword}
+											hasError={!!errors.new_password}
 											onChange={handleChange}
+											onToggle={() => setShowNewPassword((prev) => !prev)}
+											autoComplete="new-password"
 											placeholder={t("auth.passwordPlaceholder")}
-											className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
-												focus:outline-none focus:ring-2 transition
-												${errors.new_password
-													? "border-red-400 bg-red-50 focus:ring-red-300"
-													: "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
-												}`}
+											maxLength={128}
 										/>
 										{errors.new_password && <ErrorMessage id="new-password-error" message={errors.new_password} />}
 									</div>
@@ -279,20 +324,17 @@ export const ForgotPasswordPage: React.FC = () => {
 										<label htmlFor="confirm_new_password" className="block text-sm font-semibold text-gray-700">
 											{t("auth.confirmPassword")}
 										</label>
-										<input
+										<PasswordInput
 											id="confirm_new_password"
 											name="confirm_new_password"
-											type="password"
-											autoComplete="new-password"
 											value={formData.confirm_new_password}
+											showPassword={showConfirmPassword}
+											hasError={!!errors.confirm_new_password}
 											onChange={handleChange}
+											onToggle={() => setShowConfirmPassword((prev) => !prev)}
+											autoComplete="new-password"
 											placeholder={t("auth.confirmPassword")}
-											className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
-												focus:outline-none focus:ring-2 transition
-												${errors.confirm_new_password
-													? "border-red-400 bg-red-50 focus:ring-red-300"
-													: "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
-												}`}
+											maxLength={128}
 										/>
 										{errors.confirm_new_password && <ErrorMessage id="confirm-password-error" message={errors.confirm_new_password} />}
 									</div>

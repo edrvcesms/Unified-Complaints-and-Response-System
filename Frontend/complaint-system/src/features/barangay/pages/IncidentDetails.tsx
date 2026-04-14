@@ -430,6 +430,30 @@ export const IncidentDetails: React.FC = () => {
                   </p>
                 </div>
               </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                  <AlertCircle className="text-slate-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">{t('incidents.details.firstReported')}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {formatDateTime(incident.first_reported_at)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
+                  <AlertCircle className="text-slate-600" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500">{t('incidents.details.lastReported')}</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {formatDateTime(incident.last_reported_at)}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -438,37 +462,6 @@ export const IncidentDetails: React.FC = () => {
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
               {incident.description}
             </p>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t('incidents.details.additionalDetails')}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.firstReported')}</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatDateTime(incident.first_reported_at)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Severity Score</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {incident.severity_score}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">{t('incidents.details.lastReported')}</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {formatDateTime(incident.last_reported_at)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Status</p>
-                <p className="text-sm font-medium text-gray-900 capitalize">
-                  {incident.status.replace("_", " ")}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
         

@@ -8,6 +8,9 @@ interface PasswordInputProps {
   hasError: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onToggle: () => void;
+  autoComplete?: string;
+  placeholder?: string;
+  maxLength?: number;
 }
 
 const EyeIcon = () => (
@@ -33,6 +36,9 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   hasError,
   onChange,
   onToggle,
+  autoComplete,
+  placeholder,
+  maxLength,
 }) => {
   const { t } = useTranslation();
   
@@ -42,11 +48,11 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       id={id}
       name={name}
       type={showPassword ? "text" : "password"}
-      autoComplete="current-password"
+      autoComplete={autoComplete ?? "current-password"}
       value={value}
       onChange={onChange}
-      placeholder={t('auth.passwordPlaceholder')}
-      maxLength={128}
+      placeholder={placeholder ?? t('auth.passwordPlaceholder')}
+      maxLength={maxLength ?? 128}
       aria-describedby={hasError ? `${id}-error` : undefined}
       aria-invalid={hasError}
       className={`w-full px-4 py-3 pr-11 rounded-lg border text-base text-gray-800 placeholder-gray-400

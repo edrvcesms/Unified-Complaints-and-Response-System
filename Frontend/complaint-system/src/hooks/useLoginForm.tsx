@@ -8,7 +8,12 @@ import { validateEmail, validatePassword } from "../utils/validators";
 export const useLoginForm = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<LoginRequestData>({ email: "", password: "", role: "official" });
+  const [formData, setFormData] = useState<LoginRequestData>({
+    email: "",
+    password: "",
+    role: "official",
+    turnstile_token: "",
+  });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
@@ -64,6 +69,11 @@ export const useLoginForm = () => {
         return;
       }
 
+      if (!formData.turnstile_token) {
+        setErrors({ turnstile: "Please complete the Turnstile challenge." });
+        return;
+      }
+
       mutate(formData);
     } catch (error) {
       console.error("Validation error:", error);
@@ -77,6 +87,13 @@ export const useLoginForm = () => {
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
 
+  const handleTurnstileToken = (token?: string) => {
+    setFormData((prev) => ({ ...prev, turnstile_token: token || "" }));
+    if (errors.turnstile) {
+      setErrors((prev) => ({ ...prev, turnstile: undefined }));
+    }
+  };
+
   return {
     formData,
     errors,
@@ -86,5 +103,6 @@ export const useLoginForm = () => {
     handleSubmit,
     handleForgotPassword,
     togglePasswordVisibility,
+    handleTurnstileToken,
   };
 };

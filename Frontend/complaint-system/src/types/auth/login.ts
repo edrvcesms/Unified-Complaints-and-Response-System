@@ -5,11 +5,13 @@ export interface LoginRequestData {
   role: string;
   email: string;
   password: string;
+  turnstile_token?: string;
 }
 
 export interface LoginFormErrors {
   email?: string;
   password?: string;
+  turnstile?: string;
   general?: string;
 }
 

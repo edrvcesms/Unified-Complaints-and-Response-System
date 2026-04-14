@@ -12,6 +12,7 @@ export const useSuperAdminLoginForm = () => {
     email: "",
     password: "",
     role: "superadmin",
+    turnstile_token: "",
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -55,6 +56,11 @@ export const useSuperAdminLoginForm = () => {
         return;
       }
 
+      if (!formData.turnstile_token) {
+        setErrors({ turnstile: "Please complete the Turnstile challenge." });
+        return;
+      }
+
       mutate(formData);
     } catch (error) {
       console.error("Validation error:", error);
@@ -68,6 +74,13 @@ export const useSuperAdminLoginForm = () => {
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
 
+  const handleTurnstileToken = (token?: string) => {
+    setFormData((prev) => ({ ...prev, turnstile_token: token || "" }));
+    if (errors.turnstile) {
+      setErrors((prev) => ({ ...prev, turnstile: undefined }));
+    }
+  };
+
   return {
     formData,
     errors,
@@ -77,5 +90,6 @@ export const useSuperAdminLoginForm = () => {
     handleSubmit,
     handleForgotPassword,
     togglePasswordVisibility,
+    handleTurnstileToken,
   };
 };

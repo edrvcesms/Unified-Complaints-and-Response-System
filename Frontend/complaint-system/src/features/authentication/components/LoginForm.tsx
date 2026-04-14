@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Turnstile } from "@marsidev/react-turnstile";
 import { AlertBanner } from "./AlertBanner";
 import { ErrorMessage } from "./ErrorMessage";
 import { PasswordInput } from "./PasswordInputs";
@@ -12,6 +13,8 @@ interface LoginFormProps {
   isLoading: boolean;
   title?: string;
   subtitle?: string;
+  turnstileToken?: string;
+  onTurnstileToken?: (token?: string) => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onForgotPassword: () => void;
@@ -25,6 +28,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   isLoading,
   title,
   subtitle,
+  onTurnstileToken,
   onChange,
   onSubmit,
   onForgotPassword,
@@ -33,6 +37,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { t } = useTranslation();
   const titleText = title ?? t('auth.officialLogin');
   const subtitleText = subtitle ?? t('auth.signinInstruction');
+  const siteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY || "").trim();
   
   return (
   <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-100 p-10 space-y-6">
@@ -93,6 +98,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           {t('auth.forgotPassword')}
         </button>
       </div>
+
+      {siteKey && (
+        <div className="space-y-2 flex flex-col items-center">
+          <Turnstile
+            siteKey={siteKey}
+            options={{ theme: "light", appearance: "always" }}
+            onSuccess={(token) => onTurnstileToken?.(token)}
+            onExpire={() => onTurnstileToken?.(undefined)}
+            onError={() => onTurnstileToken?.(undefined)}
+          />
+          {errors.turnstile && <ErrorMessage id="turnstile-error" message={errors.turnstile} />}
+        </div>
+      )}
 
       <SubmitButton isLoading={isLoading} />
     </form>

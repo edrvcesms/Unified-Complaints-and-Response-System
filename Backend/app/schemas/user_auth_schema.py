@@ -20,6 +20,7 @@ class LoginData(UserAuthModel):
 
     role: str
     password: str
+    turnstile_token: str | None = None
 
 
 

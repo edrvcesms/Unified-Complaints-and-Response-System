@@ -35,3 +35,4 @@ kombu
 google-genai
 apscheduler
 asgiref
+httpx

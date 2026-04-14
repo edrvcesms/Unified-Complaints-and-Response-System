@@ -16,6 +16,7 @@ from app.core.security import hash_password
 from datetime import datetime
 from app.constants.roles import UserRole
 from app.core.config import settings
+from app.utils.caching import delete_cache
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -249,5 +250,6 @@ async def verify_user_account(user_id: int, db: AsyncSession):
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    await delete_cache(f"user_profile:{user_id}")
     
     return {"message": f"User account with ID {user_id} has been verified."}

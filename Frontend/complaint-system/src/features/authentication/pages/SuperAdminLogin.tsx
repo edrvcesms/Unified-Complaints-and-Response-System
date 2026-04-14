@@ -16,6 +16,7 @@ export const SuperAdminLoginPage: React.FC = () => {
     handleSubmit,
     handleForgotPassword,
     togglePasswordVisibility,
+    handleTurnstileToken,
   } = useSuperAdminLoginForm();
 
   return (
@@ -40,6 +41,7 @@ export const SuperAdminLoginPage: React.FC = () => {
           onTogglePassword={togglePasswordVisibility}
           title={t('auth.superAdminLogin')}
           subtitle={t('auth.superAdminLoginInstruction')}
+          onTurnstileToken={handleTurnstileToken}
         />
 
         <p className="mt-6 text-xs text-gray-400 text-center">

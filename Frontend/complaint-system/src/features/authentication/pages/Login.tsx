@@ -16,6 +16,7 @@ export const LoginPage: React.FC = () => {
     handleSubmit,
     handleForgotPassword,
     togglePasswordVisibility,
+    handleTurnstileToken,
   } = useLoginForm();
 
   return (
@@ -38,6 +39,7 @@ export const LoginPage: React.FC = () => {
           onSubmit={handleSubmit}
           onForgotPassword={handleForgotPassword}
           onTogglePassword={togglePasswordVisibility}
+          onTurnstileToken={handleTurnstileToken}
         />
 
         <p className="mt-6 text-xs text-gray-400 text-center">

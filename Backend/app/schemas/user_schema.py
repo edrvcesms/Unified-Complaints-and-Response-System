@@ -38,6 +38,7 @@ class UserData(UserBase):
     gender: Optional[str] = None
     barangay: Optional[str] = None
     full_address: Optional[str] = None
+    is_verified: Optional[bool] = None
     zip_code: Optional[str] = None
     latitude: Optional[str] = None
     longitude: Optional[str] = None

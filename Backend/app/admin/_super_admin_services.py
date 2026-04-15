@@ -17,6 +17,7 @@ from datetime import datetime
 from app.constants.roles import UserRole
 from app.core.config import settings
 from app.utils.caching import delete_cache
+from typing import Optional
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -60,6 +61,67 @@ async def get_all_unverified_users(current_user: User, db: AsyncSession, page: i
                 "is_verified": user.is_verified,
             }
             for user in unverified_users
+        ]
+
+        return {
+            "items": items,
+            "total": total,
+            "page": safe_page,
+            "page_size": safe_page_size,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+async def get_all_users(
+    current_user: User,
+    db: AsyncSession,
+    page: int = 1,
+    page_size: int = 10,
+    is_verified: Optional[bool] = None,
+):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        safe_page = max(page, 1)
+        safe_page_size = min(max(page_size, 1), 50)
+        offset = (safe_page - 1) * safe_page_size
+
+        filters = [User.role == UserRole.USER.value]
+        if is_verified is not None:
+            filters.append(User.is_verified == is_verified)
+
+        total_result = await db.execute(
+            select(func.count()).select_from(User).where(*filters)
+        )
+        total = total_result.scalar() or 0
+
+        result = await db.execute(
+            select(User)
+            .where(*filters)
+            .order_by(User.created_at.desc())
+            .offset(offset)
+            .limit(safe_page_size)
+        )
+        users = result.scalars().all()
+
+        items = [
+            {
+                "id": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role,
+                "created_at": user.created_at,
+                "is_verified": user.is_verified,
+            }
+            for user in users
         ]
 
         return {

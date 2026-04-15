@@ -21,7 +21,7 @@ export const useSuperAdminLoginForm = () => {
     mutationFn: (data: LoginRequestData) => loginSuperAdmin(data),
     onSuccess: () => {
       console.log("Super admin login successful");
-      navigate("/superadmin/dashboard");
+      navigate("/superadmin/accounts");
     },
     onError: (error: any) => {
       console.error("Login error:", error);

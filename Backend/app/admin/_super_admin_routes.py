@@ -8,9 +8,10 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users
 from fastapi import status
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate
+from typing import Optional
 
 router = APIRouter()
 
@@ -78,6 +79,24 @@ async def get_unverified_users_route(
 ):
     try:
         return await get_all_unverified_users(current_user, db, page=page, page_size=page_size)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+
+
+@router.get("/users", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_users_route(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+    is_verified: Optional[bool] = None,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_all_users(current_user, db, page=page, page_size=page_size, is_verified=is_verified)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

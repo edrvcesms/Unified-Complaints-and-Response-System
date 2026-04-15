@@ -100,6 +100,7 @@ function App() {
           {/* Super Admin Routes */}
           <Route element={<SuperAdminRoute />}>
             <Route path="/superadmin/*" element={<SuperAdminDashboardLayout />}>
+              <Route index element={<SuperAdminAccounts />} />
               <Route path="accounts" element={<SuperAdminAccounts />} />
               <Route path="categories" element={<SuperAdminCategories />} />
               <Route path="verify-users" element={<SuperAdminVerifyUsers />} />

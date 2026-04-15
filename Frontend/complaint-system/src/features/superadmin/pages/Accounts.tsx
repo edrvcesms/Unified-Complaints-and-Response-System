@@ -6,6 +6,7 @@ import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateEmail, validatePassword, validateTitle } from "../../../utils/validators";
 import type { LoginRequestData } from "../../../types/auth/login";
+import { Building2, Landmark, ShieldCheck, type LucideIcon } from "lucide-react";
 
 interface BarangayFormData {
   barangay_name: string;
@@ -28,6 +29,8 @@ interface LguFormData {
   email: string;
   password: string;
 }
+
+type AccountType = "barangay" | "department" | "lgu";
 
 const buildEmailValidator = (email: string) =>
   validateEmail({ email, password: "", role: "official" } as LoginRequestData);
@@ -53,9 +56,32 @@ const FieldError: React.FC<{ message?: string }> = ({ message }) => (
   message ? <p className="mt-1 text-xs text-red-600">{message}</p> : null
 );
 
+const AccountTypeCard: React.FC<{
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  iconWrapperClassName: string;
+  iconClassName: string;
+  onClick: () => void;
+}> = ({ title, description, icon: Icon, iconWrapperClassName, iconClassName, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="rounded-xl border border-gray-200 bg-white p-5 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-md"
+  >
+    <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${iconWrapperClassName}`}>
+      <Icon className={`h-9 w-9 ${iconClassName}`} aria-hidden="true" />
+    </div>
+    <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+    <p className="mt-1 text-sm text-gray-600">{description}</p>
+    <p className="mt-4 text-xs font-semibold text-green-700">Choose this account type</p>
+  </button>
+);
+
 export const SuperAdminAccounts: React.FC = () => {
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: "", message: "" });
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
+  const [selectedAccountType, setSelectedAccountType] = useState<AccountType | null>(null);
 
   const [barangayData, setBarangayData] = useState<BarangayFormData>({
     barangay_name: "",
@@ -235,235 +261,278 @@ export const SuperAdminAccounts: React.FC = () => {
         description="Create and manage accounts for barangays, departments, and LGU officials."
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SectionCard
-          title="Create Barangay Account"
-          description="Provide barangay details and login credentials."
-        >
-          <form onSubmit={handleBarangaySubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-medium text-gray-600">Barangay name</label>
-              <input
-                name="barangay_name"
-                value={barangayData.barangay_name}
-                onChange={(e) => {
-                  setBarangayData((prev) => ({ ...prev, barangay_name: e.target.value }));
-                  setBarangayErrors((prev) => ({ ...prev, barangay_name: "" }));
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                placeholder="Barangay name"
-              />
-              <FieldError message={barangayErrors.barangay_name} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Address</label>
-              <input
-                name="barangay_address"
-                value={barangayData.barangay_address}
-                onChange={(e) => {
-                  setBarangayData((prev) => ({ ...prev, barangay_address: e.target.value }));
-                  setBarangayErrors((prev) => ({ ...prev, barangay_address: "" }));
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                placeholder="Barangay address"
-              />
-              <FieldError message={barangayErrors.barangay_address} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Contact number</label>
-              <input
-                name="barangay_contact_number"
-                value={barangayData.barangay_contact_number}
-                onChange={(e) => {
-                  setBarangayData((prev) => ({ ...prev, barangay_contact_number: e.target.value }));
-                  setBarangayErrors((prev) => ({ ...prev, barangay_contact_number: "" }));
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                placeholder="Barangay contact number"
-              />
-              <FieldError message={barangayErrors.barangay_contact_number} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Barangay email</label>
-              <input
-                type="email"
-                name="barangay_email"
-                value={barangayData.barangay_email}
-                onChange={(e) => {
-                  setBarangayData((prev) => ({ ...prev, barangay_email: e.target.value }));
-                  setBarangayErrors((prev) => ({ ...prev, barangay_email: "" }));
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                placeholder="barangay@email.com"
-              />
-              <FieldError message={barangayErrors.barangay_email} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={barangayData.password}
-                onChange={(e) => {
-                  setBarangayData((prev) => ({ ...prev, password: e.target.value }));
-                  setBarangayErrors((prev) => ({ ...prev, password: "" }));
-                }}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                placeholder="At least 6 characters"
-              />
-              <FieldError message={barangayErrors.password} />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Latitude (optional)</label>
-                <input
-                  type="number"
-                  name="latitude"
-                  value={barangayData.latitude}
-                  onChange={(e) => setBarangayData((prev) => ({ ...prev, latitude: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="14.1142"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Longitude (optional)</label>
-                <input
-                  type="number"
-                  name="longitude"
-                  value={barangayData.longitude}
-                  onChange={(e) => setBarangayData((prev) => ({ ...prev, longitude: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="121.4319"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={barangayMutation.isPending}
-              className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
-            >
-              {barangayMutation.isPending ? "Creating..." : "Create barangay account"}
-            </button>
-          </form>
-        </SectionCard>
-
-        <div className="space-y-6">
-          <SectionCard
+      {!selectedAccountType && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <AccountTypeCard
+            title="Create Barangay Account"
+            description="Set up a barangay profile with contact details and login credentials."
+            icon={Landmark}
+            iconWrapperClassName="bg-green-100"
+            iconClassName="text-green-700"
+            onClick={() => setSelectedAccountType("barangay")}
+          />
+          <AccountTypeCard
             title="Create Department Account"
-            description="Add a department and staff login credentials."
-          >
-            <form onSubmit={handleDepartmentSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Department name</label>
-                <input
-                  name="department_name"
-                  value={departmentData.department_name}
-                  onChange={(e) => {
-                    setDepartmentData((prev) => ({ ...prev, department_name: e.target.value }));
-                    setDepartmentErrors((prev) => ({ ...prev, department_name: "" }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="Department name"
-                />
-                <FieldError message={departmentErrors.department_name} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Description (optional)</label>
-                <textarea
-                  name="description"
-                  value={departmentData.description}
-                  onChange={(e) => setDepartmentData((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  rows={3}
-                  placeholder="Department responsibilities"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={departmentData.email}
-                  onChange={(e) => {
-                    setDepartmentData((prev) => ({ ...prev, email: e.target.value }));
-                    setDepartmentErrors((prev) => ({ ...prev, email: "" }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="department@email.com"
-                />
-                <FieldError message={departmentErrors.email} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={departmentData.password}
-                  onChange={(e) => {
-                    setDepartmentData((prev) => ({ ...prev, password: e.target.value }));
-                    setDepartmentErrors((prev) => ({ ...prev, password: "" }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="At least 6 characters"
-                />
-                <FieldError message={departmentErrors.password} />
-              </div>
-              <button
-                type="submit"
-                disabled={departmentMutation.isPending}
-                className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
-              >
-                {departmentMutation.isPending ? "Creating..." : "Create department"}
-              </button>
-            </form>
-          </SectionCard>
-
-          <SectionCard
+            description="Register a department and assign its official account credentials."
+            icon={Building2}
+            iconWrapperClassName="bg-blue-100"
+            iconClassName="text-blue-700"
+            onClick={() => setSelectedAccountType("department")}
+          />
+          <AccountTypeCard
             title="Create LGU Account"
-            description="Add a new LGU official login."
-          >
-            <form onSubmit={handleLguSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={lguData.email}
-                  onChange={(e) => {
-                    setLguData((prev) => ({ ...prev, email: e.target.value }));
-                    setLguErrors((prev) => ({ ...prev, email: "" }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="lgu@email.com"
-                />
-                <FieldError message={lguErrors.email} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={lguData.password}
-                  onChange={(e) => {
-                    setLguData((prev) => ({ ...prev, password: e.target.value }));
-                    setLguErrors((prev) => ({ ...prev, password: "" }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                  placeholder="At least 6 characters"
-                />
-                <FieldError message={lguErrors.password} />
-              </div>
-              <button
-                type="submit"
-                disabled={lguMutation.isPending}
-                className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
-              >
-                {lguMutation.isPending ? "Creating..." : "Create LGU account"}
-              </button>
-            </form>
-          </SectionCard>
+            description="Create an LGU official account with secure login details."
+            icon={ShieldCheck}
+            iconWrapperClassName="bg-amber-100"
+            iconClassName="text-amber-700"
+            onClick={() => setSelectedAccountType("lgu")}
+          />
         </div>
-      </div>
+      )}
+
+      {selectedAccountType && (
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setSelectedAccountType(null)}
+            className="text-sm font-semibold text-green-700 hover:text-green-800"
+          >
+            ← Change account type
+          </button>
+
+          {selectedAccountType === "barangay" && (
+            <SectionCard
+              title="Create Barangay Account"
+              description="Provide barangay details and login credentials."
+            >
+              <form onSubmit={handleBarangaySubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Barangay name</label>
+                  <input
+                    name="barangay_name"
+                    value={barangayData.barangay_name}
+                    onChange={(e) => {
+                      setBarangayData((prev) => ({ ...prev, barangay_name: e.target.value }));
+                      setBarangayErrors((prev) => ({ ...prev, barangay_name: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="Barangay name"
+                  />
+                  <FieldError message={barangayErrors.barangay_name} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Address</label>
+                  <input
+                    name="barangay_address"
+                    value={barangayData.barangay_address}
+                    onChange={(e) => {
+                      setBarangayData((prev) => ({ ...prev, barangay_address: e.target.value }));
+                      setBarangayErrors((prev) => ({ ...prev, barangay_address: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="Barangay address"
+                  />
+                  <FieldError message={barangayErrors.barangay_address} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Contact number</label>
+                  <input
+                    name="barangay_contact_number"
+                    value={barangayData.barangay_contact_number}
+                    onChange={(e) => {
+                      setBarangayData((prev) => ({ ...prev, barangay_contact_number: e.target.value }));
+                      setBarangayErrors((prev) => ({ ...prev, barangay_contact_number: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="Barangay contact number"
+                  />
+                  <FieldError message={barangayErrors.barangay_contact_number} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Barangay email</label>
+                  <input
+                    type="email"
+                    name="barangay_email"
+                    value={barangayData.barangay_email}
+                    onChange={(e) => {
+                      setBarangayData((prev) => ({ ...prev, barangay_email: e.target.value }));
+                      setBarangayErrors((prev) => ({ ...prev, barangay_email: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="barangay@email.com"
+                  />
+                  <FieldError message={barangayErrors.barangay_email} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={barangayData.password}
+                    onChange={(e) => {
+                      setBarangayData((prev) => ({ ...prev, password: e.target.value }));
+                      setBarangayErrors((prev) => ({ ...prev, password: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="At least 6 characters"
+                  />
+                  <FieldError message={barangayErrors.password} />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Latitude (optional)</label>
+                    <input
+                      type="number"
+                      name="latitude"
+                      value={barangayData.latitude}
+                      onChange={(e) => setBarangayData((prev) => ({ ...prev, latitude: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                      placeholder="14.1142"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600">Longitude (optional)</label>
+                    <input
+                      type="number"
+                      name="longitude"
+                      value={barangayData.longitude}
+                      onChange={(e) => setBarangayData((prev) => ({ ...prev, longitude: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                      placeholder="121.4319"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={barangayMutation.isPending}
+                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
+                >
+                  {barangayMutation.isPending ? "Creating..." : "Create barangay account"}
+                </button>
+              </form>
+            </SectionCard>
+          )}
+
+          {selectedAccountType === "department" && (
+            <SectionCard
+              title="Create Department Account"
+              description="Add a department and staff login credentials."
+            >
+              <form onSubmit={handleDepartmentSubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Department name</label>
+                  <input
+                    name="department_name"
+                    value={departmentData.department_name}
+                    onChange={(e) => {
+                      setDepartmentData((prev) => ({ ...prev, department_name: e.target.value }));
+                      setDepartmentErrors((prev) => ({ ...prev, department_name: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="Department name"
+                  />
+                  <FieldError message={departmentErrors.department_name} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
+                  <textarea
+                    name="description"
+                    value={departmentData.description}
+                    onChange={(e) => setDepartmentData((prev) => ({ ...prev, description: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    rows={3}
+                    placeholder="Department responsibilities"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={departmentData.email}
+                    onChange={(e) => {
+                      setDepartmentData((prev) => ({ ...prev, email: e.target.value }));
+                      setDepartmentErrors((prev) => ({ ...prev, email: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="department@email.com"
+                  />
+                  <FieldError message={departmentErrors.email} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={departmentData.password}
+                    onChange={(e) => {
+                      setDepartmentData((prev) => ({ ...prev, password: e.target.value }));
+                      setDepartmentErrors((prev) => ({ ...prev, password: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="At least 6 characters"
+                  />
+                  <FieldError message={departmentErrors.password} />
+                </div>
+                <button
+                  type="submit"
+                  disabled={departmentMutation.isPending}
+                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
+                >
+                  {departmentMutation.isPending ? "Creating..." : "Create department"}
+                </button>
+              </form>
+            </SectionCard>
+          )}
+
+          {selectedAccountType === "lgu" && (
+            <SectionCard
+              title="Create LGU Account"
+              description="Add a new LGU official login."
+            >
+              <form onSubmit={handleLguSubmit} className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={lguData.email}
+                    onChange={(e) => {
+                      setLguData((prev) => ({ ...prev, email: e.target.value }));
+                      setLguErrors((prev) => ({ ...prev, email: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="lgu@email.com"
+                  />
+                  <FieldError message={lguErrors.email} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600">Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={lguData.password}
+                    onChange={(e) => {
+                      setLguData((prev) => ({ ...prev, password: e.target.value }));
+                      setLguErrors((prev) => ({ ...prev, password: "" }));
+                    }}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+                    placeholder="At least 6 characters"
+                  />
+                  <FieldError message={lguErrors.password} />
+                </div>
+                <button
+                  type="submit"
+                  disabled={lguMutation.isPending}
+                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
+                >
+                  {lguMutation.isPending ? "Creating..." : "Create LGU account"}
+                </button>
+              </form>
+            </SectionCard>
+          )}
+        </div>
+      )}
 
       <SuccessModal
         isOpen={successModal.isOpen}

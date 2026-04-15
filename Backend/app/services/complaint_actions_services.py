@@ -145,7 +145,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
             if complaint:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
-                    title="Complaint Resolved",
+                    title=complaint.title,
                     message=f"Your complaint '{complaint.title}' has been resolved",
                     complaint_id=complaint.id,
                     notification_type="success"
@@ -182,6 +182,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         complaint_ids = result.scalars().all()
         result = await db.execute(select(User).where(User.id == rejector_id))
         rejector = result.scalars().first()
+        rejected_by = rejector.role.replace("_", " ").title()
         
         if not complaint_ids:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for this incident")
@@ -192,6 +193,14 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
             .where(Complaint.id.in_(complaint_ids))
         )
         complaints = complaints.scalars().all()
+        
+        
+        if rejector.role == UserRole.LGU_OFFICIAL:
+            notification_type = "rejected_by_lgu"
+        elif rejector.role == UserRole.DEPARTMENT_STAFF:
+           notification_type = "rejected_by_department"
+        else:
+           notification_type = "rejected_by_barangay"
         
         if rejector.role in [UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
             
@@ -259,10 +268,10 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
             if complaint:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
-                    title="Complaint Rejected",
-                    message=f"Your complaint '{complaint.title}' has been rejected due to insufficient information or other reasons. Please review the details and consider resubmitting a new complaint.",
+                    title=complaint.title,
+                    message=f"Your complaint regarding on '{complaint.title}' has been rejected by the {rejected_by} due to insufficient information or other reasons. Please review the details and consider resubmitting a new complaint.",
                     complaint_id=complaint.id,
-                    notification_type="rejected"
+                    notification_type=notification_type
                 )
             
         await invalidate_cache(

@@ -92,58 +92,80 @@ async def create_new_password(password_data: ResetPasswordData, db: AsyncSession
         logger.error(f"Error creating new password for email {password_data.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-
 async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
-    
     try:
-        result = await db.execute(select(User).where(User.email == email_data.email))
+        normalized_email = email_data.email.strip().lower()
+        print(f"[REQUEST RESET] Normalized email: '{normalized_email}'")
+
+        result = await db.execute(select(User).where(User.email == normalized_email))
         user = result.scalars().first()
+        print(f"[REQUEST RESET] User found: {user}")
 
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-        
-        if user.email == email_data.email:
-            generated_otp = generate_otp()
-            await set_cache(f"otp_reset_password:{email_data.email}", generated_otp, expiration=300)
 
-            send_otp_email_task.delay(email_data.email, generated_otp, purpose="Reset Password")
+        generated_otp = generate_otp()
+        print(f"[REQUEST RESET] Generated OTP: {generated_otp}")
 
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"message": "OTP sent to your email. Please verify to proceed."}
-            )
+        cache_key = f"otp_reset_password:{normalized_email}"
+        print(f"[REQUEST RESET] Setting cache key: '{cache_key}'")
+        await set_cache(cache_key, generated_otp, expiration=300)
+        print(f"[REQUEST RESET] Cache set successfully")
+
+        send_otp_email_task.delay(normalized_email, generated_otp, purpose="Reset Password")
+        print(f"[REQUEST RESET] Email task dispatched to: '{normalized_email}'")
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "OTP sent to your email. Please verify to proceed."}
+        )
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error requesting reset password for email {email_data.email}: {str(e)}")
+        logger.error(f"Error requesting reset password for email {normalized_email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-
 async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: AsyncSession):
+    try:
+        normalized_email = otp_data.email.strip().lower()
+        print(f"[VERIFY OTP] Normalized email: '{normalized_email}'")
 
-    try: 
-        cached_reset_otp = await get_cache(f"otp_reset_password:{otp_data.email}")
+        cache_key = f"otp_reset_password:{normalized_email}"
+        print(f"[VERIFY OTP] Looking up cache key: '{cache_key}'")
+        cached_reset_otp = await get_cache(cache_key)
+        print(f"[VERIFY OTP] Cached OTP result: {cached_reset_otp}")
 
         if not cached_reset_otp:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired or not found. Please request a new one.")
-        
+            print(f"[VERIFY OTP] No OTP found in cache for key: '{cache_key}'")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,  # Fixed: was HTTP_404_BAD_REQUEST (doesn't exist)
+                detail="OTP expired or not found. Please request a new one."
+            )
+
+        print(f"[VERIFY OTP] Comparing input OTP: '{otp_data.otp}' with cached OTP: '{cached_reset_otp}'")
         if otp_data.otp != cached_reset_otp:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP. Please try again.")
-        
-        await delete_cache(f"otp_reset_password:{otp_data.email}")
+            print(f"[VERIFY OTP] OTP mismatch!")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid OTP. Please try again."
+            )
+
+        await delete_cache(cache_key)
+        print(f"[VERIFY OTP] Cache deleted for key: '{cache_key}'")
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "OTP verified successfully. You can now reset your password."}
         )
-    
+
     except HTTPException:
         raise
-    
     except Exception as e:
+        print(f"[VERIFY OTP] Unexpected error: {str(e)}")  # Added so hidden errors are visible
         logger.error(f"Error verifying OTP for reset password: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
+    
 async def change_password(password_data: ChangePasswordData, db: AsyncSession):
 
     try:

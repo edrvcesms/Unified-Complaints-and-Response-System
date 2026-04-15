@@ -46,7 +46,7 @@ interface DashboardPageProps {
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm">
+    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-base">
       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -82,7 +82,7 @@ function PeriodSelector({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Period tabs */}
-      <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white text-sm">
+      <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white text-base">
         {(["weekly", "monthly", "yearly"] as Period[]).map((p) => (
           <button
             key={p}
@@ -103,7 +103,7 @@ function PeriodSelector({
         <select
           value={month}
           onChange={(e) => onMonthChange(Number(e.target.value))}
-          className="text-sm rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           {MONTHS.map((name, idx) => (
             <option key={idx + 1} value={idx + 1}>{name}</option>
@@ -116,7 +116,7 @@ function PeriodSelector({
         <select
           value={year}
           onChange={(e) => onYearChange(Number(e.target.value))}
-          className="text-sm rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           {years.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -138,16 +138,16 @@ function StatusChart({ data }: StatusChartProps) {
     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
       <BarChart data={data} barSize={18} barGap={4}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
           cursor={{ fill: "#f9fafb" }}
         />
-        <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
         <Bar dataKey="submitted" name="Submitted" fill="#eab308" radius={[4, 4, 0, 0]} />
         <Bar dataKey="under_review" name="Under Review" fill="#6366f1" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="forwarded" name="Forwarded" fill="#f97316" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="forwarded" name="Forwarded to LGU" fill="#f97316" radius={[4, 4, 0, 0]} />
         <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -166,7 +166,7 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-400">
+      <div className="flex items-center justify-center h-full text-base text-gray-400">
         No category data for this period.
       </div>
     );
@@ -193,9 +193,9 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
         />
-        <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -209,7 +209,7 @@ interface CategoryBarChartProps {
 function CategoryBarChart({ data, categoryNames }: CategoryBarChartProps) {
   if (categoryNames.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-400">
+      <div className="flex items-center justify-center h-full text-base text-gray-400">
         No category data for this period.
       </div>
     );
@@ -219,13 +219,13 @@ function CategoryBarChart({ data, categoryNames }: CategoryBarChartProps) {
     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
       <BarChart data={data} barSize={14} barGap={2}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+        <YAxis tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
         <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
           cursor={{ fill: "#f9fafb" }}
         />
-        <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
         {categoryNames.map((name, i) => (
           <Bar
             key={name}
@@ -321,10 +321,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-gray-900">
           {t("dashboard.title")}
         </h1>
-        <p className="text-sm text-gray-600 mt-1">{t("dashboard.subtitle")}</p>
+        <p className="text-base text-gray-600 mt-1">{t("dashboard.subtitle")}</p>
       </div>
 
       {/* Stat Cards */}
@@ -347,16 +347,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Control row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-gray-700">
+            <h2 className="text-base font-semibold text-gray-700">
               Activity Overview
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-sm text-gray-500 mt-0.5">
               Complaint trends by status and category
             </p>
           </div>
           <div className="flex items-center gap-2">
             {isFetching && !statsLoading && (
-              <span className="text-xs text-gray-400 animate-pulse">
+              <span className="text-sm text-gray-400 animate-pulse">
                 Refreshing…
               </span>
             )}
@@ -386,7 +386,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <SkeletonChart />
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
-            <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-4">
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
               Complaints by Status
             </h3>
             <div className="w-full min-w-0 h-60 sm:h-64">
@@ -402,7 +402,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <SkeletonPieChart />
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
-              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 Total by Category
               </h3>
               <div className="w-full min-w-0 h-60 sm:h-64">
@@ -418,7 +418,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <SkeletonChart />
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
-              <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 Category Trend
               </h3>
               <div className="w-full min-w-0 h-60 sm:h-64">
@@ -435,10 +435,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* Recent Complaints table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-4 sm:px-5 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h2 className="text-sm font-semibold text-gray-700">
+          <h2 className="text-base font-semibold text-gray-700">
             {t("dashboard.recentComplaints")}
           </h2>
-          <span className="text-xs text-gray-500">
+          <span className="text-sm text-gray-500">
             {complaints.length} {t("dashboard.columns.total").toLowerCase()}
           </span>
         </div>
@@ -457,10 +457,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-gray-900 mb-1">
+            <p className="text-base font-medium text-gray-900 mb-1">
               {t("dashboard.noRecentActivities")}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm text-gray-500">
               {t("dashboard.noRecentActivitiesMessage")}
             </p>
           </div>
@@ -469,16 +469,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
                     {t("dashboard.columns.id")}
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
                     {t("dashboard.columns.title")}
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">
                     {t("dashboard.columns.category")}
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
                     {t("dashboard.columns.status")}
                   </th>
                 </tr>
@@ -486,15 +486,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <tbody className="divide-y divide-gray-100">
                 {recent.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-gray-500">
+                    <td className="px-5 py-3 font-mono text-sm text-gray-500">
                       #{c.id}
                     </td>
-                    <td className="px-5 py-3 text-gray-900 font-medium text-sm">
+                    <td className="px-5 py-3 text-gray-900 font-medium text-base">
                       <div className="truncate max-w-xs sm:max-w-sm">
                         {c.title}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">
+                    <td className="px-5 py-3 text-gray-600 text-base hidden md:table-cell">
                       {formatCategoryName(c.category?.category_name)}
                     </td>
                     <td className="px-5 py-3">
@@ -565,7 +565,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${className}`}
+      className={`inline-flex px-2 py-0.5 rounded-full text-sm font-semibold ${className}`}
     >
       {label}
     </span>

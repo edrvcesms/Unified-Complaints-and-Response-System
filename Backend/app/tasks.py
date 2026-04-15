@@ -15,8 +15,14 @@ from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from sqlalchemy.orm import selectinload
 from app.models.incident_complaint import IncidentComplaintModel
 from app.database.database import AsyncSessionLocal
-from app.utils.cloudinary import upload_multiple_files_to_cloudinary, delete_from_cloudinary, delete_multiple_from_cloudinary
+from app.utils.cloudinary import (
+    upload_multiple_files_to_cloudinary,
+    delete_from_cloudinary,
+    delete_multiple_from_cloudinary,
+    extract_public_id_from_url,
+)
 from app.utils.caching import delete_cache
+from app.utils.cache_invalidator import invalidate_cache
 from app.core.email_config import conf
 from sqlalchemy import select
 from app.utils.logger import logger
@@ -259,6 +265,7 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
 
                 db.add_all(media_records)
                 await db.commit()
+                await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
 
             return urls
 
@@ -285,12 +292,69 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
                     os.rmdir(temp_dir)
             except:
                 pass
+            
+            await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+            logger.info(f"Enqueued upload task for {len(files_data)} media files and invalidated relevant caches")
 
     try:
         return run_async(_run())
     except Exception as e:
         logger.error(f"Announcement media upload failed: {e}")
         raise self.retry(exc=e)  
+    
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def delete_announcement_media_task(self, public_ids, announcement_id: int, uploader_id: int):
+
+    async def _run():
+        if isinstance(public_ids, str):
+            ids = [public_ids]
+        else:
+            ids = public_ids
+            
+        logger.info(f"uploader_id={uploader_id} requested deletion of {len(ids)} media files for announcement_id={announcement_id}")
+
+        logger.info(f"delete_announcement_media_task received {len(ids)} public_id(s) for announcement_id={announcement_id}")
+        logger.debug(f"delete_announcement_media_task ids (sample): {ids[:5]}")
+
+        normalized_ids = []
+        for media_id in ids:
+            if isinstance(media_id, str) and media_id.startswith("http"):
+                extracted = extract_public_id_from_url(media_id)
+                if extracted:
+                    normalized_ids.append(extracted)
+                else:
+                    logger.warning(f"Failed to extract public_id from URL: {media_id}")
+            else:
+                normalized_ids.append(media_id)
+
+        if len(normalized_ids) != len(ids):
+            logger.info(
+                f"Normalized {len(normalized_ids)} public_id(s) for announcement_id={announcement_id}"
+            )
+
+        results = await delete_multiple_from_cloudinary(normalized_ids)
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                AnnouncementMedia.__table__.delete()
+                .where(AnnouncementMedia.media_url.in_(ids))
+                .where(AnnouncementMedia.announcement_id == announcement_id)
+            )
+            await db.commit()
+
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+        logger.info(f"uploader_id={uploader_id} deletion task completed for announcement_id={announcement_id} with {sum(results)} successes and {len(results) - sum(results)} failures")
+
+        return {
+            "deleted": sum(results),
+            "failed": len(results) - sum(results),
+        }
+
+    try:
+        return run_async(_run())
+    except Exception as e:
+        logger.error(f"Delete failed: {e}")
+        raise self.retry(exc=e)
         
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def upload_event_media_task(self, files_data, event_id: int):
@@ -330,6 +394,7 @@ def upload_event_media_task(self, files_data, event_id: int):
 
                 db.add_all(media_records)
                 await db.commit()
+                await invalidate_cache(event_ids=[event_id])
 
             return urls
 
@@ -357,10 +422,65 @@ def upload_event_media_task(self, files_data, event_id: int):
             except:
                 pass
 
+            await invalidate_cache(event_ids=[event_id])
+
     try:
         return run_async(_run())
     except Exception as e:
         logger.error(f"Event media upload failed: {e}")
+        raise self.retry(exc=e)
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def delete_event_media_task(self, public_ids, event_id: int):
+
+    async def _run():
+        if isinstance(public_ids, str):
+            ids = [public_ids]
+        else:
+            ids = public_ids
+
+        logger.info(f"event_id={event_id} requested deletion of {len(ids)} media files")
+        logger.info(f"delete_event_media_task received {len(ids)} public_id(s) for event_id={event_id}")
+        logger.debug(f"delete_event_media_task ids (sample): {ids[:5]}")
+
+        normalized_ids = []
+        for media_id in ids:
+            if isinstance(media_id, str) and media_id.startswith("http"):
+                extracted = extract_public_id_from_url(media_id)
+                if extracted:
+                    normalized_ids.append(extracted)
+                else:
+                    logger.warning(f"Failed to extract public_id from URL: {media_id}")
+            else:
+                normalized_ids.append(media_id)
+
+        if len(normalized_ids) != len(ids):
+            logger.info(f"Normalized {len(normalized_ids)} public_id(s) for event_id={event_id}")
+
+        results = await delete_multiple_from_cloudinary(normalized_ids)
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(
+                EventMedia.__table__.delete()
+                .where(EventMedia.media_url.in_(ids))
+                .where(EventMedia.event_id == event_id)
+            )
+            await db.commit()
+
+        await invalidate_cache(event_ids=[event_id])
+        logger.info(
+            f"event_id={event_id} deletion task completed with {sum(results)} successes and {len(results) - sum(results)} failures"
+        )
+
+        return {
+            "deleted": sum(results),
+            "failed": len(results) - sum(results),
+        }
+
+    try:
+        return run_async(_run())
+    except Exception as e:
+        logger.error(f"Event media delete failed: {e}")
         raise self.retry(exc=e)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -372,7 +492,24 @@ def delete_cloudinary_media_task(self, public_ids):
         else:
             ids = public_ids
 
-        results = await delete_multiple_from_cloudinary(ids)
+        logger.info(f"delete_cloudinary_media_task received {len(ids)} public_id(s)")
+        logger.debug(f"delete_cloudinary_media_task ids (sample): {ids[:5]}")
+
+        normalized_ids = []
+        for media_id in ids:
+            if isinstance(media_id, str) and media_id.startswith("http"):
+                extracted = extract_public_id_from_url(media_id)
+                if extracted:
+                    normalized_ids.append(extracted)
+                else:
+                    logger.warning(f"Failed to extract public_id from URL: {media_id}")
+            else:
+                normalized_ids.append(media_id)
+
+        if len(normalized_ids) != len(ids):
+            logger.info(f"Normalized {len(normalized_ids)} public_id(s) for delete_cloudinary_media_task")
+
+        results = await delete_multiple_from_cloudinary(normalized_ids)
 
         return {
             "deleted": sum(results),
@@ -536,6 +673,14 @@ def cluster_complaint_task(self, complaint_data: dict):
                             )
 
             await db.commit()
+
+            await invalidate_cache(
+                complaint_ids=[cluster_data.complaint_id],
+                user_ids=[cluster_data.user_id],
+                barangay_id=cluster_data.barangay_id,
+                incident_ids=[result.incident_id],
+                include_global=True,
+            )
             return result
 
     result = run_async(_run())

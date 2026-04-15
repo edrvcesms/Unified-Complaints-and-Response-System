@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import type { Incident } from "../../../types/complaints/incident";
-import { useWeeklyForwardedIncidentsStats } from "../../../hooks/useStats";
+import { useWeeklyForwardedIncidentsStats, useComplaintCountsByBarangayCategory } from "../../../hooks/useStats";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
@@ -22,8 +22,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, ic
       <span className={color}>{icon}</span>
     </div>
     <div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-600 font-medium mt-0.5">{label}</p>
+      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      <p className="text-base text-gray-600 font-medium mt-0.5">{label}</p>
     </div>
   </div>
 );
@@ -42,6 +42,7 @@ interface WeeklyDataPoint {
 
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
   const { t } = useTranslation();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const stats = useMemo(() => ({
     total: incidents.length,
@@ -61,6 +62,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     .slice(0, 5);
 
   const { stats: weeklyStats } = useWeeklyForwardedIncidentsStats();
+  const { stats: categoryStats, isLoading: isCategoryLoading } = useComplaintCountsByBarangayCategory();
 
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
     if (!weeklyStats?.daily_counts) return [];
@@ -83,11 +85,53 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     });
   }, [weeklyStats]);
 
+  const CATEGORY_COLORS = [
+    "#0ea5e9",
+    "#22c55e",
+    "#f97316",
+    "#8b5cf6",
+    "#e11d48",
+    "#14b8a6",
+    "#f59e0b",
+    "#6366f1",
+    "#10b981",
+    "#ef4444"
+  ];
+
+  const categoryChart = useMemo(() => {
+    if (!categoryStats) return { data: [], series: [] as { key: string; label: string; color: string }[] };
+
+    const isAll = selectedCategory === "all";
+    const activeCategory = categoryStats.categories.find(
+      (category) => String(category.id) === selectedCategory
+    );
+
+    const series = (isAll ? categoryStats.categories : activeCategory ? [activeCategory] : []).map(
+      (category, index) => ({
+        key: `cat_${category.id}`,
+        label: formatCategoryName(category.name),
+        color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+      })
+    );
+
+    const data = categoryStats.data.map((barangay) => {
+      const row: Record<string, string | number> = { barangay: barangay.barangay_name };
+      barangay.categories.forEach((category) => {
+        if (isAll || String(category.category_id) === selectedCategory) {
+          row[`cat_${category.category_id}`] = category.count;
+        }
+      });
+      return row;
+    });
+
+    return { data, series };
+  }, [categoryStats, selectedCategory]);
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.lgu.title')}</h1>
-        <p className="text-sm text-gray-600 mt-1">{t('dashboard.lgu.description')}</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('dashboard.lgu.title')}</h1>
+        <p className="text-base text-gray-600 mt-1">{t('dashboard.lgu.description')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -105,16 +149,16 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
+          <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-            <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }} cursor={{ fill: "#f9fafb" }} />
-            <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+            <XAxis dataKey="day" tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }} cursor={{ fill: "#f9fafb" }} />
+            <Legend wrapperStyle={{ fontSize: "14px", paddingTop: "12px" }} />
             <Bar dataKey="forwarded" name={t('chart.forwarded')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
             <Bar dataKey="resolved" name={t('chart.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
             <Bar dataKey="under_review" name={t('chart.underReview')} fill="#6366f1" radius={[4, 4, 0, 0]} />
@@ -122,10 +166,64 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
         </ResponsiveContainer>
       </div>
 
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.categoryBreakdownTitle')}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.categoryBreakdownDescription')}</p>
+          </div>
+          <label className="text-sm text-gray-600 flex items-center gap-2">
+            <span>{t('dashboard.lgu.categoryFilterLabel')}</span>
+            <select
+              className="border border-gray-200 rounded-md px-2 py-1 text-sm text-gray-700 bg-white"
+              value={selectedCategory}
+              onChange={(event) => setSelectedCategory(event.target.value)}
+            >
+              <option value="all">{t('dashboard.lgu.categoryFilterAll')}</option>
+              {(categoryStats?.categories || []).map((category) => (
+                <option key={category.id} value={String(category.id)}>
+                  {formatCategoryName(category.name)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {isCategoryLoading ? (
+          <div className="h-60 bg-gray-100 rounded animate-pulse" />
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={categoryChart.data} barSize={20} barGap={4} margin={{ left: 8, right: 8, bottom: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis
+                dataKey="barangay"
+                tick={{ fontSize: 14, fill: "#9ca3af" }}
+                axisLine={false}
+                tickLine={false}
+                angle={-25}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }} cursor={{ fill: "#f9fafb" }} />
+              <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }} />
+              {categoryChart.series.map((series) => (
+                <Bar
+                  key={series.key}
+                  dataKey={series.key}
+                  name={series.label}
+                  stackId="total"
+                  fill={series.color}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.lgu.recentTitle')}</h2>
-          <span className="text-xs text-gray-500">{incidents.length} {t('stats.total').toLowerCase()}</span>
+          <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.recentTitle')}</h2>
+          <span className="text-sm text-gray-500">{incidents.length} {t('stats.total').toLowerCase()}</span>
         </div>
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -138,22 +236,22 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.id')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.title')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">{t('table.headers.barangay')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">{t('table.headers.category')}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.status')}</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.id')}</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.title')}</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">{t('table.headers.barangay')}</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">{t('table.headers.category')}</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('table.headers.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {recent.map(incident => (
                   <tr key={incident.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-gray-500">#{incident.id}</td>
-                    <td className="px-5 py-3 text-gray-900 font-medium text-sm truncate max-w-40">{incident.title}</td>
-                    <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">{incident.barangay?.barangay_name}</td>
-                    <td className="px-5 py-3 text-gray-600 text-sm hidden lg:table-cell">{formatCategoryName(incident.category?.category_name)}</td>
+                    <td className="px-5 py-3 font-mono text-sm text-gray-500">#{incident.id}</td>
+                    <td className="px-5 py-3 text-gray-900 font-medium text-base truncate max-w-40">{incident.title}</td>
+                    <td className="px-5 py-3 text-gray-600 text-base hidden md:table-cell">{incident.barangay?.barangay_name}</td>
+                    <td className="px-5 py-3 text-gray-600 text-base hidden lg:table-cell">{formatCategoryName(incident.category?.category_name)}</td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-sm font-semibold
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "bg-orange-100 text-orange-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "bg-primary-100 text-primary-800" : ""}

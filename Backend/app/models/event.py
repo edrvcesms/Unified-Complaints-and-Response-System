@@ -1,6 +1,7 @@
 from app.database.database import Base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 class Event(Base):
     __tablename__ = 'events'
@@ -10,5 +11,7 @@ class Event(Base):
     description = Column(String)
     date = Column(DateTime)
     location = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     media = relationship("EventMedia", back_populates="event", cascade="all, delete-orphan")

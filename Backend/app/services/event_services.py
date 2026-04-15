@@ -7,10 +7,11 @@ from app.models.event import Event
 from app.utils.logger import logger
 from typing import List, Optional
 from app.schemas.event_schema import EventCreate, EventData
-from app.tasks import upload_event_media_task, delete_multiple_from_cloudinary, delete_cloudinary_media_task
-from app.utils.cloudinary import extract_public_id_from_url
+from app.tasks import upload_event_media_task, delete_event_media_task
 import tempfile
 from app.utils.caching import set_cache, get_cache, delete_cache
+from app.utils.cache_invalidator import invalidate_cache
+from datetime import datetime
 import os
 
 allowed_event_media_types = ["image/jpeg", "image/png", "video/mp4"]
@@ -27,7 +28,12 @@ async def get_events(db: AsyncSession):
                 for e in events_cache
             ]
 
-        result = await db.execute(select(Event).options(selectinload(Event.media)))
+        result = await db.execute(
+            select(Event)
+            .options(selectinload(Event.media))
+            .where(Event.date >= datetime.utcnow())
+            .order_by(Event.date.asc())
+        )
         events = result.scalars().all()
         event_data = [EventData.model_validate(event, from_attributes=True) for event in events]
         serialized_events = [event.model_dump_json() for event in event_data]
@@ -156,16 +162,11 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
             if media_to_delete:
                 logger.info(f"Deleting {len(media_to_delete)} event media files not in keep list")
 
-                public_ids_to_delete = []
                 for old_media in media_to_delete:
-                    public_id = extract_public_id_from_url(old_media.media_url)
-                    if public_id:
-                        public_ids_to_delete.append(public_id)
                     await db.delete(old_media)
 
-                if public_ids_to_delete:
-                    delete_cloudinary_media_task.delay(public_ids_to_delete)
-                    logger.info(f"Queued {len(public_ids_to_delete)} event media files for Cloudinary deletion")
+                delete_event_media_task.delay([media.media_url for media in media_to_delete], event_id=event.id)
+                logger.info(f"Queued {len(media_to_delete)} event media files for Cloudinary deletion")
 
                 await db.flush()
 
@@ -173,6 +174,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
         event.description = event_data.description
         event.date = event_data.date
         event.location = event_data.location
+        event.updated_at = datetime.utcnow()
 
         await db.commit()
 
@@ -210,8 +212,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
                     detail=f"Error processing media files: {str(e)}",
                 )
                 
-        await delete_cache("events_cache")
-        await delete_cache(f"event_{event_id}")
+        await invalidate_cache(event_ids=[event_id])
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -230,22 +231,20 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
     
 async def delete_event(event_id: int, db: AsyncSession):
     try:
-        result = await db.execute(select(Event).where(Event.id == event_id))
+        result = await db.execute(select(Event).options(selectinload(Event.media)).where(Event.id == event_id))
         event = result.scalars().first()
         
         if not event:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
         
         media_urls = [media.media_url for media in event.media]
-        public_ids = [extract_public_id_from_url(url) for url in media_urls]
-        
-        await delete_multiple_from_cloudinary(public_ids)
+        if media_urls:
+            delete_event_media_task.delay(media_urls, event_id=event_id)
         
         await db.delete(event)
         await db.commit()
         
-        await delete_cache("events_cache")
-        await delete_cache(f"event_{event_id}")
+        await invalidate_cache(event_ids=[event_id])
         
         return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Event deleted successfully"})
         

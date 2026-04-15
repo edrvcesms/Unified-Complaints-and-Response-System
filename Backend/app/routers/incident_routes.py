@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Form
 from datetime import datetime
 from app.dependencies.rate_limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.incidents_services import assign_incident_to_department, get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed
+from app.services.incidents_services import get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed
 from app.dependencies.auth_dependency import get_current_user
-from app.services.complaint_services import get_complaints_by_incident, resolve_complaints_by_incident, review_complaints_by_incident, notify_user_for_hearing, reject_complaints_by_incident
-from app.services.incidents_services import forward_incident_to_lgu, assign_incident_to_department, get_incidents_forwarded_to_department
+from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing
+from app.services.incidents_services import forward_incident_to_lgu
+from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident
+from app.services.lgu_services import assign_incident_to_department
+from app.services.department_services import get_incidents_forwarded_to_department
 from app.dependencies.db_dependency import get_async_db
 from app.constants.roles import UserRole
 from app.schemas.response_schema import ResponseCreateSchema

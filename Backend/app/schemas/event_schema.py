@@ -7,6 +7,8 @@ class EventBase(BaseModel):
     description: Optional[str] = None
     date: datetime
     location: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
 class EventCreate(EventBase):
     pass

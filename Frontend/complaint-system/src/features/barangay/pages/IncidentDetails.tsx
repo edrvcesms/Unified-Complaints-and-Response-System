@@ -79,7 +79,7 @@ export const IncidentDetails: React.FC = () => {
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
-        message: 'The incident has been delegated to LGU successfully.',
+        message: 'The incident has been endorsed to LGU successfully.',
       });
     }
   }, [forwardToLguMutation.isSuccess]);
@@ -143,7 +143,7 @@ export const IncidentDetails: React.FC = () => {
     if (forwardToLguMutation.isError) {
       confirmationModal.closeModal();
       const error = forwardToLguMutation.error as any;
-      const errorMessage = error?.response?.data?.detail || 'Failed to delegate incident to LGU. Please try again.';
+      const errorMessage = error?.response?.data?.detail || 'Failed to endorse incident to LGU. Please try again.';
       setErrorModal({
         isOpen: true,
         title: 'Error',
@@ -220,7 +220,7 @@ export const IncidentDetails: React.FC = () => {
   const handleForwardToLgu = () => {
     actionsTakenModal.openModal({
       title: "Escalate to LGU",
-      description: "Please provide any relevant notes or instructions for the LGU when delegating this incident.",
+      description: "Please provide any relevant notes or instructions for the LGU when endorsing this incident.",
       confirmText: "Escalate",
       confirmColor: "blue",
       onConfirm: async (actionsTaken: string) => {

@@ -12,9 +12,7 @@ import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { useReviewIncident, useResolveIncident, useRejectIncident, useNotifyHearing } from '../../../hooks/useIncidents';
 import { useAllDepartments } from "../../../hooks/useDepartment";
 import { DepartmentSelectionModal } from "../components/DepartmentSelectionModal";
-import { ConfirmationModal } from "../../general/ConfirmationModal";
-import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { delegateIncidentToDepartment } from "../../../services/delegation/incidentDelegation";
+import { endorseIncidentToDepartment } from "../../../services/endorsement/incidentEndorsement";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/Toast";
 import { queryClient } from "../../../main";
@@ -31,10 +29,8 @@ export const LguIncidentDetails: React.FC = () => {
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
   const { departments, isLoading: isDepartmentsLoading } = useAllDepartments();
   const { toasts, showToast } = useToast();
-  const confirmationModal = useConfirmationModal();
 
   const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<{ id: number; name: string } | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
@@ -136,19 +132,22 @@ export const LguIncidentDetails: React.FC = () => {
   const handleDepartmentSelect = (departmentAccountId: number) => {
     const department = departments?.find(d => d.department_account?.id === departmentAccountId);
     if (department) {
-      setSelectedDepartment({
-        id: departmentAccountId,
-        name: department.department_name,
-      });
       setIsDepartmentModalOpen(false);
-      // Open confirmation modal
-      confirmationModal.openModal({
-        title: 'Confirm Assignment',
-        message: `Are you sure you want to assign this incident to ${department.department_name}?`,
-        confirmText: 'Confirm',
-        confirmColor: 'blue',
-        onConfirm: async () => {
-          await handleConfirmAssignment(departmentAccountId);
+
+      actionsTakenModal.openModal({
+        title: `Assign to ${department.department_name}`,
+        description: "Please provide any relevant notes or instructions for the department when assigning this incident.",
+        confirmText: "Assign",
+        confirmColor: "blue",
+        onConfirm: async (actionsTaken: string) => {
+          try {
+            actionsTakenModal.setIsLoading(true);
+            await handleConfirmAssignment(departmentAccountId, actionsTaken);
+          } catch (err) {
+            console.error(err);
+          } finally {
+            actionsTakenModal.setIsLoading(false);
+          }
         },
       });
     }
@@ -158,6 +157,7 @@ export const LguIncidentDetails: React.FC = () => {
   const handleResolve = () => {
     actionsTakenModal.openModal({
       title: "Resolve Incident",
+      description: "Please describe the actions taken to resolve this incident. This will be recorded and visible to complainants.",
       confirmText: "Resolve",
       confirmColor: "green",
       onConfirm: async (actionsTaken: string) => {
@@ -176,6 +176,7 @@ export const LguIncidentDetails: React.FC = () => {
   const handleReview = () => {
     actionsTakenModal.openModal({
       title: "Mark for Review",
+      description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
       confirmText: "Confirm",
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string) => {
@@ -192,6 +193,7 @@ export const LguIncidentDetails: React.FC = () => {
   const handleReject = () => {
     actionsTakenModal.openModal({
       title: "Reject Incident",
+      description: "Please provide the reason for rejecting this incident. This will be recorded and visible to complainants.",
       confirmText: "Reject",
       confirmColor: "red",
       onConfirm: async (actionsTaken: string) => {
@@ -255,10 +257,10 @@ export const LguIncidentDetails: React.FC = () => {
     }
   };
 
-  const handleConfirmAssignment = async (departmentAccountId: number) => {
+  const handleConfirmAssignment = async (departmentAccountId: number, actionsTaken: string) => {
     setIsAssigning(true);
     try {
-      await delegateIncidentToDepartment(Number(incidentId), departmentAccountId);
+      await endorseIncidentToDepartment(Number(incidentId), departmentAccountId, { actions_taken: actionsTaken });
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["incidentDetails", Number(incidentId)] });
@@ -270,7 +272,7 @@ export const LguIncidentDetails: React.FC = () => {
         title: ''
       });
 
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
 
       // Navigate back to incidents list after a short delay
       setTimeout(() => {
@@ -284,7 +286,7 @@ export const LguIncidentDetails: React.FC = () => {
         message: 'Failed to assign incident. Please try again.',
         title: ''
       });
-      confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
     } finally {
       setIsAssigning(false);
     }
@@ -527,7 +529,7 @@ export const LguIncidentDetails: React.FC = () => {
                   Assign to Designated Department
                 </button>
                 <p className="text-sm text-gray-600 mt-2">
-                  Delegate this incident to a specific department for handling.
+                  Endorse this incident to a specific department for handling.
                 </p>
               </div>
             )}
@@ -642,22 +644,12 @@ export const LguIncidentDetails: React.FC = () => {
       <ActionsTakenModal
         isOpen={actionsTakenModal.isOpen}
         title={actionsTakenModal.title}
+        description={actionsTakenModal.description}
         confirmText={actionsTakenModal.confirmText}
         confirmColor={actionsTakenModal.confirmColor as any}
         onConfirm={actionsTakenModal.onConfirm}
         onCancel={actionsTakenModal.closeModal}
         isLoading={actionsTakenModal.isLoading}
-      />
-
-      <ConfirmationModal
-        isOpen={confirmationModal.isOpen}
-        title={confirmationModal.title}
-        message={confirmationModal.message}
-        confirmText={confirmationModal.confirmText}
-        confirmColor={confirmationModal.confirmColor}
-        onConfirm={confirmationModal.confirm}
-        onCancel={confirmationModal.closeModal}
-        isLoading={confirmationModal.isLoading || isAssigning}
       />
 
       <ToastContainer toasts={toasts} />

@@ -4,6 +4,8 @@ export interface Event {
   description: string | null;
   date: Date;
   location: string | null;
+  created_at: Date;
+  updated_at: Date;
   media: EventMedia[];
 }
 

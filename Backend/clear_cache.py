@@ -18,6 +18,10 @@ async def clear_user_cache():
         # Clear user complaints cache
         await delete_cache(f"user_complaints:{user_id}")
         await delete_cache(f"user_notifications:{user_id}")
+        await delete_cache(f"announcements_by_uploader:{user_id}")
+        await delete_cache(f"all_announcements") 
+        await delete_cache(f"events_cache")
+        await delete_cache(f"event_{user_id}")
     
     print(f"✅ Cleared user caches for users 1-100")
     
@@ -27,8 +31,12 @@ async def clear_user_cache():
         # Clear complaint caches
         await delete_cache(f"barangay_{barangay_id}_complaints")
         
-        # Clear weekly stats
-        await delete_cache(f"weekly_complaint_stats_by_barangay:{barangay_id}")
+        # Clear complaint stats
+        await delete_cache(f"complaint_stats:weekly:{barangay_id}")
+        for year in range(2024, 2027):  # Clear stats for 2024-2026
+            await delete_cache(f"complaint_stats:yearly:{barangay_id}:{year}")
+            for month in range(1, 13):
+                await delete_cache(f"complaint_stats:monthly:{barangay_id}:{year}:{month}")
         
         # Clear incidents cache (correct key from services)
         await delete_cache(f"barangay_incidents:{barangay_id}")
@@ -66,6 +74,7 @@ async def clear_user_cache():
     print(f"✅ Cleared global caches")
     
     print("\n✅ All cache entries cleared!")
+    
     
 
 if __name__ == "__main__":

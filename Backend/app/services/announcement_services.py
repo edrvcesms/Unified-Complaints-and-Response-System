@@ -8,7 +8,8 @@ from app.models.announcements import Announcement
 from app.models.announcement_media import AnnouncementMedia
 import tempfile
 from app.schemas.announcement_schema import AnnouncementCreate, AnnouncementOut
-from app.tasks import upload_announcement_media_task, delete_cloudinary_media_task
+from app.utils.cache_invalidator import invalidate_cache
+from app.tasks import upload_announcement_media_task, delete_cloudinary_media_task, delete_announcement_media_task
 from app.utils.logger import logger
 from app.models.user import User
 from app.utils.caching import get_cache, set_cache, delete_cache
@@ -182,6 +183,12 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Failed to enqueue media upload task"
                     )
+                    
+                if medias:
+                    await invalidate_cache(
+                        announcement_uploader_id=uploader_id,
+                        announcement_id=new_announcement.id
+                    )
 
             except HTTPException:
                 raise
@@ -234,23 +241,13 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
             )
         
         if announcement.media:
-            media_to_delete = [media for media in announcement.media if media.id not in keep_media_ids]
-            if media_to_delete:
-                logger.info(f"Deleting {len(media_to_delete)} media files not in keep list")
-                
-                public_ids_to_delete = []
-                for old_media in media_to_delete:
-                    public_id = extract_public_id_from_url(old_media.media_url)
-                    if public_id:
-                        public_ids_to_delete.append(public_id)
-                    await db.delete(old_media)
-                
-                if public_ids_to_delete:
-                    delete_cloudinary_media_task.delay(public_ids_to_delete)
-                    logger.info(f"Queued {len(public_ids_to_delete)} files for Cloudinary deletion")
-                
-                await db.flush()
-                logger.info(f"Deleted {len(media_to_delete)} old media files, keeping {len(keep_media_ids)} existing media")
+            for media in announcement.media:
+                if media.id not in keep_media_ids:
+                    delete_announcement_media_task.delay(
+                        media.media_url,
+                        announcement_id=announcement.id,
+                        uploader_id=uploader_id
+                    )
         
         announcement.title = announcement_data.title
         announcement.content = announcement_data.content
@@ -288,6 +285,10 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
                     )
                     
                 logger.info(f"Enqueued upload task for {len(files_data)} new media files")
+                
+                if medias:
+                    await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
+                    logger.info(f"Invalidated relevant caches after enqueuing media upload task")
 
             except HTTPException:
                 raise
@@ -338,23 +339,22 @@ async def delete_announcement(announcement_id: int, uploader_id: int, db: AsyncS
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have permission to delete this announcement"
             )
-        
-        if announcement.media:
-            logger.info(f"Deleting {len(announcement.media)} media files from Cloudinary for announcement {announcement_id}")
+        deleted = delete_announcement_media_task.delay(
+            [media.media_url for media in announcement.media],
+            announcement_id=announcement.id,
+            uploader_id=uploader_id
+        )
+        if deleted:
+            await db.delete(announcement)
+            await db.commit()
+            await db.flush()
+            logger.info(f"Announcement {announcement_id} deleted from database, media deletion task enqueued")
             
-            public_ids_to_delete = []
-            for media in announcement.media:
-                public_id = extract_public_id_from_url(media.media_url)
-                if public_id:
-                    public_ids_to_delete.append(public_id)
+        if not deleted:
+            logger.warning(f"Failed to enqueue media deletion task for announcement {announcement_id}")
             
-            if public_ids_to_delete:
-                delete_cloudinary_media_task.delay(public_ids_to_delete)
-                logger.info(f"Queued {len(public_ids_to_delete)} files for Cloudinary deletion")
-        
-        await db.delete(announcement)
-        await db.commit()
         logger.info(f"Announcement {announcement_id} and its media deleted successfully")
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
         return {"detail": "Announcement deleted successfully"}
     
     except HTTPException:

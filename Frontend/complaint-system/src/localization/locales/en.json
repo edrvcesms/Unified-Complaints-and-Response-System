@@ -158,7 +158,11 @@
       "resolved": "Resolved",
       "weeklyTitle": "Weekly Activity",
       "weeklyDescription": "Incidents forwarded and resolved in the last 7 days",
-      "recentTitle": "Recent Forwarded Incidents"
+      "recentTitle": "Recent Forwarded Incidents",
+      "categoryBreakdownTitle": "Complaints by Barangay and Category",
+      "categoryBreakdownDescription": "Total complaints per category for each barangay",
+      "categoryFilterLabel": "Category",
+      "categoryFilterAll": "All categories"
     },
     "dept": {
       "title": "Department Dashboard",

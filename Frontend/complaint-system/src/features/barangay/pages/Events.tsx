@@ -30,11 +30,30 @@ const defaultFormState: EventForm = {
   location: "",
 };
 
+const getVideoMimeType = (mediaType: string, mediaUrl: string) => {
+  if (mediaType?.includes("/")) {
+    return mediaType;
+  }
+
+  const loweredUrl = mediaUrl.toLowerCase();
+  if (loweredUrl.endsWith(".webm")) {
+    return "video/webm";
+  }
+  if (loweredUrl.endsWith(".mov")) {
+    return "video/quicktime";
+  }
+  if (loweredUrl.endsWith(".mkv")) {
+    return "video/x-matroska";
+  }
+
+  return "video/mp4";
+};
+
 const EventMediaPreview: React.FC<{ mediaUrl: string; mediaType: string; className?: string }> = ({ mediaUrl, mediaType, className = "" }) => {
   if (mediaType?.startsWith("video")) {
     return (
       <video className={`w-full h-full object-cover ${className}`} controls muted preload="metadata">
-        <source src={mediaUrl} type={mediaType} />
+        <source src={mediaUrl} type={getVideoMimeType(mediaType, mediaUrl)} />
       </video>
     );
   }

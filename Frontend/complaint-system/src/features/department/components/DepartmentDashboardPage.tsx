@@ -23,8 +23,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, color, bg, border, ic
       <span className={color}>{icon}</span>
     </div>
     <div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-600 font-medium mt-0.5">{label}</p>
+      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      <p className="text-base text-gray-600 font-medium mt-0.5">{label}</p>
     </div>
   </div>
 );
@@ -90,8 +90,8 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.dept.title')}</h1>
-        <p className="text-sm text-gray-600 mt-1">{t('dashboard.dept.description')}</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('dashboard.dept.title')}</h1>
+        <p className="text-base text-gray-600 mt-1">{t('dashboard.dept.description')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -137,20 +137,20 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
         <div className="mb-4">
-          <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.dept.weeklyTitle')}</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('dashboard.dept.weeklyDescription')}</p>
+          <h2 className="text-base font-semibold text-gray-700">{t('dashboard.dept.weeklyTitle')}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.dept.weeklyDescription')}</p>
         </div>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
             <XAxis 
               dataKey="day" 
-              tick={{ fontSize: 11, fill: "#9ca3af" }} 
+              tick={{ fontSize: 15, fill: "#9ca3af" }} 
               axisLine={false} 
               tickLine={false} 
             />
             <YAxis 
-              tick={{ fontSize: 11, fill: "#9ca3af" }} 
+              tick={{ fontSize: 15, fill: "#9ca3af" }} 
               axisLine={false} 
               tickLine={false} 
             />
@@ -158,11 +158,11 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
               contentStyle={{ 
                 borderRadius: "8px", 
                 border: "1px solid #e5e7eb", 
-                fontSize: "12px" 
+                fontSize: "14px" 
               }} 
               cursor={{ fill: "#f9fafb" }} 
             />
-            <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
+            <Legend wrapperStyle={{ fontSize: "14px", paddingTop: "12px" }} />
             <Bar dataKey="forwarded" name="Assigned" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -171,8 +171,8 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Recent Assigned Incidents</h2>
-          <span className="text-xs text-gray-500">{incidents.length} total</span>
+          <h2 className="text-base font-semibold text-gray-700">Recent Assigned Incidents</h2>
+          <span className="text-sm text-gray-500">{incidents.length} total</span>
         </div>
         {isLoading ? (
           <div className="p-6 space-y-3">
@@ -187,36 +187,36 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-gray-900 mb-1">No Assigned Incidents</p>
-            <p className="text-xs text-gray-500">There are currently no incidents assigned to your department.</p>
+            <p className="text-base font-medium text-gray-900 mb-1">No Assigned Incidents</p>
+            <p className="text-sm text-gray-500">There are currently no incidents assigned to your department.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ID</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Title</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">Barangay</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Category</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">ID</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">Title</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">Barangay</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden lg:table-cell">Category</th>
+                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {recent.map(incident => (
                   <tr key={incident.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-gray-500">#{incident.id}</td>
-                    <td className="px-5 py-3 text-gray-900 font-medium text-sm truncate max-w-40">
+                    <td className="px-5 py-3 font-mono text-sm text-gray-500">#{incident.id}</td>
+                    <td className="px-5 py-3 text-gray-900 font-medium text-base truncate max-w-40">
                       {incident.title}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-sm hidden md:table-cell">
+                    <td className="px-5 py-3 text-gray-600 text-base hidden md:table-cell">
                       {incident.barangay?.barangay_name}
                     </td>
-                    <td className="px-5 py-3 text-gray-600 text-sm hidden lg:table-cell">
+                    <td className="px-5 py-3 text-gray-600 text-base hidden lg:table-cell">
                       {formatCategoryName(incident.category?.category_name)}
                     </td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-sm font-semibold
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || 
                           incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' 

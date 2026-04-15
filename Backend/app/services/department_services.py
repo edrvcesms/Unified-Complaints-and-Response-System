@@ -12,6 +12,8 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.utils.logger import logger
 from datetime import datetime, timedelta
+from app.utils.caching import set_cache, get_cache, delete_cache
+from app.models.response import Response
 
 
 async def get_all_departments(db: AsyncSession):
@@ -180,4 +182,48 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
     
     except Exception as e:
         logger.error(f"Error in weekly_forwarded_incidents_stats: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+
+  
+async def get_incidents_forwarded_to_department(department_account_id: int, db: AsyncSession):
+    try:
+        department_incidents = await get_cache(f"department_incidents:{department_account_id}")
+        if department_incidents is not None:
+            logger.info(f"Cache hit for department account ID: {department_account_id}")
+            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in department_incidents]
+        
+        result = await db.execute(
+            select(IncidentModel)
+            .where(IncidentModel.department_account_id == department_account_id)
+            .options(
+                selectinload(IncidentModel.category),
+                selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.attachment),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
+            )
+            .order_by(IncidentModel.first_reported_at.asc())
+        )
+        
+        incidents = result.scalars().all()
+        logger.info(f"Found {len(incidents)} incidents forwarded to department account ID: {department_account_id}")
+        incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        await set_cache(f"department_incidents:{department_account_id}", incidents_data, expiration=3600)
+        return incidents_data
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error in get_incidents_forwarded_to_department: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

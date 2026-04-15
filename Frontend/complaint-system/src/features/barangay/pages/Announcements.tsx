@@ -26,6 +26,25 @@ import {
 import { validateTitle, validateDescription } from "../../../utils/validators";
 import type { Announcement } from "../../../types/general/announcement";
 
+const getVideoMimeType = (mediaType: string, mediaUrl: string) => {
+  if (mediaType.includes("/")) {
+    return mediaType;
+  }
+
+  const loweredUrl = mediaUrl.toLowerCase();
+  if (loweredUrl.endsWith(".webm")) {
+    return "video/webm";
+  }
+  if (loweredUrl.endsWith(".mov")) {
+    return "video/quicktime";
+  }
+  if (loweredUrl.endsWith(".mkv")) {
+    return "video/x-matroska";
+  }
+
+  return "video/mp4";
+};
+
 // Media Thumbnail Component with loading and error states
 const MediaThumbnail: React.FC<{ url: string; type: string }> = ({ url, type }) => {
   const [loading, setLoading] = useState(true);
@@ -34,9 +53,9 @@ const MediaThumbnail: React.FC<{ url: string; type: string }> = ({ url, type }) 
 
   if (type.startsWith('video')) {
     return (
-      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-        <Video className="w-8 h-8 text-gray-400" />
-      </div>
+      <video className="w-full h-full object-cover" controls preload="metadata">
+        <source src={url} type={getVideoMimeType(type, url)} />
+      </video>
     );
   }
 

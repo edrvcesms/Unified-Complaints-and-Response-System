@@ -401,6 +401,8 @@ class ClusterComplaintUseCase:
             last_reported_at=now,
             latitude=data.latitude,
             longitude=data.longitude,
+            has_new_complaints=True,
+            new_complaint_count=1,
         )
         created = await self._incident_repo.create(incident)
 

@@ -4,6 +4,7 @@ from fastapi import UploadFile
 from app.utils.logger import logger
 from typing import List
 import uuid
+from urllib.parse import unquote
 
 def _detect_resource_type(filename: str) -> str:
     ext = filename.split(".")[-1].lower()
@@ -47,39 +48,56 @@ async def upload_multiple_files_to_cloudinary(files: List[UploadFile], folder: s
     tasks = [limited_upload(f) for f in files]
     return await asyncio.gather(*tasks)
 
+async def _destroy_with_retry(public_id: str, resource_type: str, max_attempts: int = 3) -> dict:
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return await asyncio.to_thread(sync_destroy, public_id, resource_type=resource_type)
+        except Exception as e:
+            logger.warning(
+                f"Cloudinary delete failed (attempt {attempt}/{max_attempts}) for {public_id} as {resource_type}: {type(e).__name__}: {e}"
+            )
+            if attempt < max_attempts:
+                await asyncio.sleep(1.5 * attempt)
+            else:
+                raise
+
 async def delete_from_cloudinary(public_id: str) -> bool:
     """
     Delete a file from Cloudinary. Tries multiple resource types if needed.
     """
     try:
+        decoded_public_id = unquote(public_id)
+        if decoded_public_id != public_id:
+            logger.info(f"Decoded public_id for deletion: {public_id} -> {decoded_public_id}")
+
         # Try to detect resource type from public_id path
         resource_type = "image"  # Default to image
-        if "video" in public_id or any(ext in public_id.lower() for ext in ["mp4", "mov", "avi"]):
+        if "video" in decoded_public_id or any(ext in decoded_public_id.lower() for ext in ["mp4", "mov", "avi"]):
             resource_type = "video"
         
-        logger.info(f"Attempting to delete {public_id} as {resource_type}")
-        result = await asyncio.to_thread(sync_destroy, public_id, resource_type=resource_type)
+        logger.info(f"Attempting to delete {decoded_public_id} as {resource_type}")
+        result = await _destroy_with_retry(decoded_public_id, resource_type)
         
         if result.get("result") == "ok":
-            logger.info(f"Successfully deleted {public_id}")
+            logger.info(f"Successfully deleted {decoded_public_id}")
             return True
         elif result.get("result") == "not found":
             # Try other resource types
-            logger.warning(f"File {public_id} not found as {resource_type}, trying other types")
+            logger.warning(f"File {decoded_public_id} not found as {resource_type}, trying other types")
             for alt_type in ["video", "image", "raw"]:
                 if alt_type == resource_type:
                     continue
                 try:
-                    result = await asyncio.to_thread(sync_destroy, public_id, resource_type=alt_type)
+                    result = await _destroy_with_retry(decoded_public_id, alt_type)
                     if result.get("result") == "ok":
-                        logger.info(f"Successfully deleted {public_id} as {alt_type}")
+                        logger.info(f"Successfully deleted {decoded_public_id} as {alt_type}")
                         return True
                 except Exception:
                     pass
-            logger.error(f"Could not delete {public_id} with any resource type")
+            logger.error(f"Could not delete {decoded_public_id} with any resource type")
             return False
         else:
-            logger.error(f"Unexpected result deleting {public_id}: {result}")
+            logger.error(f"Unexpected result deleting {decoded_public_id}: {result}")
             return False
     except Exception as e:
         logger.error(f"Exception while deleting {public_id} from Cloudinary: {type(e).__name__}: {e}")
@@ -114,6 +132,7 @@ def extract_public_id_from_url(url: str) -> str:
                 path_after_upload = path_parts[1]
         
         public_id = path_after_upload.rsplit('.', 1)[0]
+        public_id = unquote(public_id)
         
         return public_id
     except Exception as e:

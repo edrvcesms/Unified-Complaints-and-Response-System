@@ -20,6 +20,7 @@ class User(Base):
     barangay = Column(String, nullable=True)
     zip_code = Column(String, nullable=True)
     push_token = Column(String, nullable=True)
+    push_notifications_enabled = Column(Boolean, default=False)
     full_address = Column(String, nullable=True)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)

@@ -165,6 +165,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
         
 async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
     try:
+        print(f"Resend OTP requested for {email.email}")
         await delete_cache(f"otp:{email.email}")
         result = await db.execute(select(User).where(User.email == email.email))
         existing_user = result.scalars().first()

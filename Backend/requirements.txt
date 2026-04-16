@@ -36,3 +36,4 @@ google-genai
 apscheduler
 asgiref
 httpx
+openai

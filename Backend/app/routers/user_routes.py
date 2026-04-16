@@ -6,7 +6,7 @@ from app.models.user import User
 from app.services.user_services import request_reset_password, save_push_token, set_push_notifications, verify_otp_reset_password, change_password, get_user_by_id, update_user_location, forgot_password, create_new_password
 from app.dependencies.auth_dependency import get_current_user
 from app.schemas.user_schema import ResetPasswordData, UserLocationData, UserPersonalData, VerifyEmailData, VerifyResetPasswordOTPData, ChangePasswordData
-from app.schemas.push_token_schema import SavePushTokenRequest
+from app.schemas.push_token_schema import PushNotificationRequest, SavePushTokenRequest
 router = APIRouter()
 
 @router.get("/profile", status_code=status.HTTP_200_OK)
@@ -56,15 +56,14 @@ async def save_token(
      return await save_push_token(db=db, user_id=current_user.id, token=payload.token)
  
 
+
 @router.post("/enable-push-notifications", status_code=200)
 async def enable_push_notifications(
     request: Request,
-    enabled: bool,
+    body: PushNotificationRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
-    return await set_push_notifications(db=db, user_id=current_user.id, enabled=enabled)
-
-
+    return await set_push_notifications(db=db, user_id=current_user.id, enabled=body.enabled)
     
       

@@ -39,7 +39,7 @@ from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import
 from app.domain.repository.incident_repository import IncidentRepository
 from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from dotenv import load_dotenv
-
+from app.utils.push_notifications import send_push_notification
 from app.domain.infrastracture.service.chatbot_service import ChatbotService
 from app.domain.chatbot.rag_service import RAGService, RAGResponse
 from app.domain.IEmbeddingService.vector_store.pinecone_rag_repository import PineconeRAGVectorRepository
@@ -135,6 +135,26 @@ def send_email_task(self, subject: str, recipient: str, body: str):
         logger.error(f"Email failed: {e}")
         raise self.retry(exc=e)
 
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def send_push_notification_task(self, token: str, enabled: bool, title: str = None, body: str = "", data: dict = None, sound: str = "default", expo_token: str = None):
+    try:
+        result = send_push_notification(
+            token=token,
+            enabled=enabled,
+            title=title,
+            body=body,
+            data=data or {},
+            sound=sound,
+            expo_token=expo_token,
+        )
+        if not result["success"]:
+            logger.error(f"Push notification failed: {result}")
+        else:
+            logger.info(f"Push notification sent successfully: {result}")
+    except Exception as e:
+        logger.error(f"Push notification task failed: {e}")
+        raise self.retry(exc=e)
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):

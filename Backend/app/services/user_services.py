@@ -247,10 +247,11 @@ async def save_push_token(db: AsyncSession, user_id: int, token: str) -> User:
 
         user.push_token = token
         user.push_notifications_enabled = True  # auto-enable when token exists
-
+       
         await db.commit()
         await db.refresh(user)
-
+        
+        await delete_cache(f"user_profile:{user_id}")
         return user
 
     except ValueError:
@@ -277,7 +278,8 @@ async def set_push_notifications(
 
     await db.commit()
     await db.refresh(user)
-
+    
+    await delete_cache(f"user_profile:{user_id}")
     return user
 
 

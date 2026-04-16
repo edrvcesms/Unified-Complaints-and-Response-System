@@ -9,12 +9,12 @@ from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from app.utils.cache_invalidator import invalidate_cache
-from app.tasks import save_response_task, send_notifications_task
+from app.tasks import save_response_task, send_notifications_task, send_push_notification_task
 from fastapi.responses import JSONResponse
 from app.utils.logger import logger
 from app.constants.roles import UserRole
 from datetime import datetime
-
+from app.utils.push_notifications import send_push_notification
 
 async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
     try:
@@ -61,15 +61,27 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         department_account_id = first_complaint.department_account_id if first_complaint else None
         
         for complaint_id in complaint_ids:
-            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-            complaint = result.scalars().first()
-            if complaint:
+            result = await db.execute(
+                select(Complaint, User)
+                .join(User, User.id == Complaint.user_id)
+                .where(Complaint.id == complaint_id)
+            )
+            row = result.first()
+            if row:
+                complaint, complaint_user = row
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
                     message=f"Your complaint about '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
                     notification_type="complaint_under_review"
+                )
+                send_push_notification_task.delay(
+                    token=complaint_user.push_token,
+                    enabled=complaint_user.push_notifications_enabled,
+                    title=complaint.title,
+                    body=f"Your complaint about '{complaint.title}' is now under review",
+                    data={"complaint_id": complaint.id, "notification_type": "complaint_under_review"},
                 )
                 
         await invalidate_cache(
@@ -80,7 +92,6 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
             department_account_id=department_account_id,
             include_global=True
         )
-        
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -140,9 +151,13 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         department_account_id = first_complaint.department_account_id if first_complaint else None
         
         for complaint_id in complaint_ids:
-            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
+            result = await db.execute(
+                select(Complaint)
+                .options(selectinload(Complaint.user))
+                .where(Complaint.id == complaint_id)
+            )
             complaint = result.scalars().first()
-            if complaint:
+            if complaint and complaint.user:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -150,6 +165,14 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                     complaint_id=complaint.id,
                     notification_type="success"
                 )
+                send_push_notification_task.delay(
+                    token=complaint.user.push_token,
+                    enabled=complaint.user.push_notifications_enabled,
+                    title="Complaint Resolved",
+                    body=f"Your complaint regarding on '{complaint.title}' has been resolved.",
+                    data={"complaint_id": complaint.id}
+                )
+
                 
         await invalidate_cache(
             complaint_ids=complaint_ids,
@@ -159,7 +182,6 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
             department_account_id=department_account_id,
             include_global=True
         )
-                
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -173,6 +195,8 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+
+
 async def reject_complaints_by_incident(incident_id: int, rejector_id: int, response_data: ResponseCreateSchema, db: AsyncSession):
     try:
         result = await db.execute(
@@ -263,9 +287,13 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         department_account_id = first_complaint.department_account_id if first_complaint else None
             
         for complaint_id in complaint_ids:
-            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
+            result = await db.execute(
+                select(Complaint)
+                .options(selectinload(Complaint.user))
+                .where(Complaint.id == complaint_id)
+            )
             complaint = result.scalars().first()
-            if complaint:
+            if complaint and complaint.user:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -273,6 +301,13 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                     complaint_id=complaint.id,
                     notification_type=notification_type
                 )
+                send_push_notification_task.delay(
+    token=complaint.user.push_token,
+    enabled=complaint.user.push_notifications_enabled,
+    title="Complaint Rejected",
+    body=f"Your complaint regarding '{complaint.title}' has been rejected by the {rejected_by}.",
+    data={"complaint_id": complaint.id}
+)
             
         await invalidate_cache(
             complaint_ids=complaint_ids,
@@ -303,5 +338,3 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         await db.rollback()
         logger.error(f"Error in reject_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-        
-    

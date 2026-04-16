@@ -27,6 +27,7 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> UserData:
         
         user_data = UserData.model_validate(user, from_attributes=True)
         await set_cache(f"user_profile:{user_id}", user_data.model_dump_json(), expiration=3600)
+        print(user_data)
         return user_data
     
     except HTTPException:
@@ -234,25 +235,50 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
 
 
 
-
-async def save_push_token(db: AsyncSession, user_id: str, token: str) -> User:
+async def save_push_token(db: AsyncSession, user_id: int, token: str) -> User:
     try:
-        user = db.query(User).filter(User.id == user_id).first()
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalars().first()
 
         if not user:
             raise ValueError(f"User with id '{user_id}' not found.")
 
         user.push_token = token
+        user.push_notifications_enabled = True  # auto-enable when token exists
 
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
 
         return user
+
     except ValueError:
         raise
     except Exception as e:
-        db.rollback()
-        raise Exception(f"Failed to save push token for user '{user_id}': {e}") from e
+        await db.rollback()
+        raise Exception(
+            f"Failed to save push token for user '{user_id}': {e}"
+        ) from e
+
+
+async def set_push_notifications(
+    db: AsyncSession, user_id: int, enabled: bool
+) -> User:
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user = result.scalars().first()
+
+    if not user:
+        raise ValueError("User not found")
+
+    user.push_notifications_enabled = enabled
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user
 
 
 async def send_push_notification(

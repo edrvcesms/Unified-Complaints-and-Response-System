@@ -31,7 +31,7 @@ class UserData(UserBase):
     last_login: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-
+    push_notifications_enabled: Optional[bool] = False
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = None

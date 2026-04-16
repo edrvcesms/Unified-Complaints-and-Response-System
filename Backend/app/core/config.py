@@ -23,6 +23,7 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY")
     EXPO_PUSH_URL = os.getenv("EXPO_PUSH_URL")
     TURNSTILE_SECRET_KEY: str = os.getenv("TURNSTILE_SECRET_KEY") or os.getenv("RECAPTCHA_SITE_KEY")
+    OPEN_AI_API_KEY: str = os.getenv("OPEN_AI_API_KEY")
     
 
 settings = Settings()

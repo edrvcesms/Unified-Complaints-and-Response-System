@@ -59,29 +59,4 @@ class RAGService:
         )
         return RAGResponse(answer=answer, sources=context_chunks, is_grounded=True)
 
-    async def index_chunk(
-        self,
-        chunk_id: str,
-        embedding: List[float],
-        text: str,
-        source: str,
-        metadata: Optional[dict] = None,
-    ) -> None:
-        await self._vector_repo.upsert_chunk(
-            chunk_id=chunk_id,
-            embedding=embedding,
-            text=text,
-            source=source,
-            metadata=metadata or {},
-        )
-        logger.info(f"Indexed chunk '{chunk_id}' | source='{source}'")
-
-    async def remove_chunk(self, chunk_id: str) -> None:
-        await self._vector_repo.delete_chunk(chunk_id)
-        logger.info(f"Removed chunk '{chunk_id}'")
-
-    async def remove_source(self, source: str) -> None:
-        chunks = await self._vector_repo.fetch_chunks_by_source(source)
-        for chunk in chunks:
-            await self._vector_repo.delete_chunk(chunk.chunk_id)
-        logger.info(f"Removed {len(chunks)} chunks for source '{source}'")
+ 

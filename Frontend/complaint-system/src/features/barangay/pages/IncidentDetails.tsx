@@ -14,6 +14,7 @@ import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
+import { isAbortError } from "../../../utils/axiosException";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 
 export const IncidentDetails: React.FC = () => {
@@ -129,6 +130,9 @@ export const IncidentDetails: React.FC = () => {
     if (reviewIncidentMutation.isError) {
       confirmationModal.closeModal();
       const error = reviewIncidentMutation.error as any;
+      if (isAbortError(error)) {
+        return;
+      }
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
         isOpen: true,
@@ -136,7 +140,7 @@ export const IncidentDetails: React.FC = () => {
         message: errorMessage,
       });
     }
-  }, [reviewIncidentMutation.isError]);
+  }, [reviewIncidentMutation.error, reviewIncidentMutation.isError]);
 
   // Handle forward to LGU error
   useEffect(() => {
@@ -199,6 +203,7 @@ export const IncidentDetails: React.FC = () => {
   };
 
   const handleReview = () => {
+    const abortController = new AbortController();
     actionsTakenModal.openModal({
       title: "Mark for Review",
       description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
@@ -207,12 +212,21 @@ export const IncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string) => {
         try {
           actionsTakenModal.setIsLoading(true);
-          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+          await reviewIncidentMutation.mutateAsync({
+            actions_taken: actionsTaken,
+            signal: abortController.signal,
+          });
         } catch (err) {
-          console.error(err);
+          if (!isAbortError(err)) {
+            console.error(err);
+          }
         } finally {
           actionsTakenModal.setIsLoading(false);
         }
+      },
+      onCancel: () => {
+        abortController.abort();
+        reviewIncidentMutation.reset();
       },
     });
   };
@@ -315,6 +329,7 @@ export const IncidentDetails: React.FC = () => {
       ? incidentHearingDateRaw.trim() || null
       : incidentHearingDateRaw;
   const hasScheduledHearingDate = Boolean(incidentHearingDate);
+  const showNewComplaintBadge = Boolean(incident.has_new_complaints) || Number(incident.new_complaint_count ?? 0) > 0;
 
   const responses = incident.responses ?? [];
   const sortedResponses = [...responses].sort((a, b) => {
@@ -502,9 +517,16 @@ export const IncidentDetails: React.FC = () => {
                 </h3>
                 <button
                   onClick={handleViewAllComplaints}
-                  className="px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  className="relative px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
                   {t('incidents.details.viewAllComplaints')}
+                  {showNewComplaintBadge && (
+                    <span
+                      className="absolute -top-2 -right-2 h-5 px-2 bg-red-500 text-white text-[15px] font-bold rounded-full flex items-center justify-center"
+                    >
+                      New
+                    </span>
+                  )}
                 </button>
               </div>
               <p className="text-sm text-gray-600">
@@ -553,7 +575,7 @@ export const IncidentDetails: React.FC = () => {
         confirmText={actionsTakenModal.confirmText}
         confirmColor={actionsTakenModal.confirmColor as any}
         onConfirm={actionsTakenModal.onConfirm}
-        onCancel={actionsTakenModal.closeModal}
+        onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
       />
 

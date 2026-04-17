@@ -13,6 +13,26 @@ export const useNotifications = () => {
 
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: number) => markNotificationAsRead(notificationId),
+    onMutate: async (notificationId: number) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+
+      const previousNotifications = queryClient.getQueryData<Notification[]>(['notifications']);
+
+      queryClient.setQueryData<Notification[]>(['notifications'], (currentNotifications) =>
+        (currentNotifications ?? []).map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
+
+      return { previousNotifications };
+    },
+    onError: (_error, _notificationId, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(['notifications'], context.previousNotifications);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
@@ -20,6 +40,25 @@ export const useNotifications = () => {
 
   const markAllAsReadMutation = useMutation({
     mutationFn: () => markAllNotificationsAsRead(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+
+      const previousNotifications = queryClient.getQueryData<Notification[]>(['notifications']);
+
+      queryClient.setQueryData<Notification[]>(['notifications'], (currentNotifications) =>
+        (currentNotifications ?? []).map((notification) => ({
+          ...notification,
+          is_read: true,
+        }))
+      );
+
+      return { previousNotifications };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(['notifications'], context.previousNotifications);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }

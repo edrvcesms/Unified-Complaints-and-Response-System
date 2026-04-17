@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from app.database.database import Base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
@@ -9,6 +10,6 @@ class EventMedia(Base):
     event_id = Column(Integer, ForeignKey('events.id'))
     media_url = Column(String)
     media_type = Column(String)
-    uploaded_at = Column(DateTime)
+    uploaded_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc)   )
     
     event = relationship("Event", back_populates="media")

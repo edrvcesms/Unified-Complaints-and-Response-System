@@ -7,6 +7,7 @@ import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import { formatHearingDate, isHearingDatePast } from "../../../utils/hearingDateUtils";
+import { isAbortError } from "../../../utils/axiosException";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
@@ -95,6 +96,9 @@ export const DepartmentIncidentDetails: React.FC = () => {
     if (reviewIncidentMutation.isError) {
       actionsTakenModal.closeModal();
       const error = reviewIncidentMutation.error as any;
+      if (isAbortError(error)) {
+        return;
+      }
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
         isOpen: true,
@@ -102,7 +106,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         message: errorMessage,
       });
     }
-  }, [reviewIncidentMutation.isError]);
+  }, [reviewIncidentMutation.error, reviewIncidentMutation.isError]);
 
   // Handle reject error
   useEffect(() => {
@@ -141,6 +145,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   };
 
   const handleReview = () => {
+    const abortController = new AbortController();
     actionsTakenModal.openModal({
       title: "Mark for Review",
       confirmText: "Confirm",
@@ -148,12 +153,21 @@ export const DepartmentIncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string) => {
         try {
           actionsTakenModal.setIsLoading(true);
-          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+          await reviewIncidentMutation.mutateAsync({
+            actions_taken: actionsTaken,
+            signal: abortController.signal,
+          });
         } catch (err) {
-          console.error(err);
+          if (!isAbortError(err)) {
+            console.error(err);
+          }
         } finally {
           actionsTakenModal.setIsLoading(false);
         }
+      },
+      onCancel: () => {
+        abortController.abort();
+        reviewIncidentMutation.reset();
       },
     });
   };
@@ -437,7 +451,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         confirmText={actionsTakenModal.confirmText}
         confirmColor={actionsTakenModal.confirmColor as any}
         onConfirm={actionsTakenModal.onConfirm}
-        onCancel={actionsTakenModal.closeModal}
+        onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
       />
 

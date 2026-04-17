@@ -13,7 +13,9 @@
     "logout": "Logout",
     "confirmLogout": "Are you sure you want to logout?",
     "notifications": "Notifications",
+    "notificationsPageSubtitle": "See all of your latest notification updates.",
     "markAllRead": "Mark all as read",
+    "viewAllNotifications": "View all Notifications",
     "loadingNotifications": "Loading notifications...",
     "noNotifications": "No notifications yet",
     "noNotificationsMessage": "You'll see updates here when they arrive"
@@ -89,7 +91,8 @@
     "resolved": "Resolved",
     "forwarded": "Forwarded",
     "unknown": "Unknown",
-    "pending": "Pending"
+    "pending": "Pending",
+    "rejected": "Rejected"
   },
   "stats": {
     "total": "Total",
@@ -147,7 +150,11 @@
     "statuses": {
       "submitted": "Submitted",
       "underReview": "Under Review",
-      "resolved": "Resolved"
+      "resolved": "Resolved",
+      "forwarded": "Forwarded",
+      "reviewedByBarangay": "Reviewed by Barangay",
+      "reviewedByDepartment": "Reviewed by Department",
+        "rejected": "Rejected"
     },
     "lgu": {
       "title": "LGU Dashboard",

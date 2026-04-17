@@ -33,6 +33,7 @@ import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminVerifyUsers } from "./features/superadmin/pages"
+import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 
 function App() {
 
@@ -65,6 +66,7 @@ function App() {
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="events" element={<EventsPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
 
@@ -82,6 +84,7 @@ function App() {
               <Route path="monthly-reports/:barangayId" element={<MonthlyReportDetails />} />
               <Route path="monthly-reports/:barangayId/category/:categoryName" element={<CategoryIncidents />} />
               <Route path="announcements" element={<LguAnnouncements />} />
+              <Route path="notifications" element={<NotificationsPage />} />
               {/* Additional LGU routes can be added here */}
             </Route>
           </Route>
@@ -94,6 +97,7 @@ function App() {
               <Route path="incidents/:incidentId" element={<DepartmentIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<DepartmentIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<DepartmentComplaintDetails />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
 
@@ -104,6 +108,7 @@ function App() {
               <Route path="accounts" element={<SuperAdminAccounts />} />
               <Route path="categories" element={<SuperAdminCategories />} />
               <Route path="verify-users" element={<SuperAdminVerifyUsers />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
 

@@ -1,8 +1,4 @@
 import { useAuthStore } from "../../store/authStore";
-import {
-  finishNetworkFetchLog,
-  startNetworkFetchLog,
-} from "../../utils/fetchLogger";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -57,9 +53,6 @@ export class NotificationService {
   }
 
   private async connectWithFetch(url: string, token: string) {
-    const requestTracker = startNetworkFetchLog("GET", url, "fetch");
-    let hasLoggedResult = false;
-
     try {
       const response = await fetch(url, {
         headers: {
@@ -70,27 +63,12 @@ export class NotificationService {
       });
 
       if (!response.ok) {
-        finishNetworkFetchLog(requestTracker, {
-          status: response.status,
-          error: new Error(`HTTP error! status: ${response.status}`),
-        });
-        hasLoggedResult = true;
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       if (!response.body) {
-        finishNetworkFetchLog(requestTracker, {
-          status: response.status,
-          error: new Error("No response body"),
-        });
-        hasLoggedResult = true;
         throw new Error('No response body');
       }
-
-      finishNetworkFetchLog(requestTracker, {
-        status: response.status,
-      });
-      hasLoggedResult = true;
 
       this.reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -132,11 +110,6 @@ export class NotificationService {
       processStream();
 
     } catch (error) {
-      if (!hasLoggedResult) {
-        finishNetworkFetchLog(requestTracker, {
-          error,
-        });
-      }
       console.error("Fetch connection error:", error);
       this.eventSource = null;
       this.reader = null;

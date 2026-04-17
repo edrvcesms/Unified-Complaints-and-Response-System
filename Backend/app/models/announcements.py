@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.database import Base
 
 class Announcement(Base):
@@ -11,8 +11,8 @@ class Announcement(Base):
     barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True)
     title = Column(String, nullable=False)
     content = Column(String, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=True, default=datetime.now(timezone.utc))
 
     uploader = relationship("User", back_populates="announcements")
     barangay_account = relationship("BarangayAccount", back_populates="announcements")

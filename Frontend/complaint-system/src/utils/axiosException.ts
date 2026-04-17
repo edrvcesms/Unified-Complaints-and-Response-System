@@ -27,3 +27,8 @@ export const handleAxiosError = (error: unknown): string => {
 
   return (error as Error)?.message || "Something went wrong.";
 };
+
+export const isAbortError = (error: unknown): boolean => {
+  const axiosError = error as AxiosError;
+  return axiosError?.code === "ERR_CANCELED" || axiosError?.name === "CanceledError";
+};

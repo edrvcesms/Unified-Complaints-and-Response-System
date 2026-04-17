@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.database.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
@@ -13,7 +15,7 @@ class Notification(Base):
     notification_type = Column(String, nullable=False)
     channel = Column(String, nullable=False)
     is_read = Column(Boolean, default=False)
-    sent_at = Column(DateTime, nullable=False)
+    sent_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="notifications")
     complaint = relationship("Complaint", back_populates="notifications")

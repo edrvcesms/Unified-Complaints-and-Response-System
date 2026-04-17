@@ -5,7 +5,7 @@ These are purely persistence models. Domain entities are separate.
 Mapping between ORM models and domain entities happens in the repository layer.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.database import Base
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime,
@@ -30,7 +30,7 @@ class IncidentModel(Base):
     lgu_account_id = Column(Integer, ForeignKey("user.id"), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    hearing_date = Column(DateTime, nullable=True)
+    hearing_date = Column(DateTime(timezone=True), nullable=True)
     
     last_expiry_notif_user_id = Column(Integer, nullable=True, default=None)
     last_expiry_notif_checkpoint = Column(Integer, nullable=True, default=None)
@@ -45,13 +45,13 @@ class IncidentModel(Base):
     # Category-specific merge window in hours (set at incident creation)
     time_window_hours = Column(Float, nullable=False, default=24.0)
 
-    first_reported_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    last_reported_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    first_reported_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    last_reported_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+
     # New complaint tracking
     has_new_complaints = Column(Boolean, nullable=False, default=False)
     new_complaint_count = Column(Integer, nullable=False, default=0)
-    last_viewed_at = Column(DateTime, nullable=True)
+    last_viewed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     responses = relationship("Response", back_populates="incident", cascade="all, delete-orphan")
@@ -60,6 +60,7 @@ class IncidentModel(Base):
     category = relationship("Category", back_populates="incidents")
     department_account = relationship("DepartmentAccount", back_populates="incidents")
     lgu_account = relationship("User", back_populates="incidents")
+    post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="incident", cascade="all, delete-orphan")
     __table_args__ = (
         # Composite index for the most common query pattern:
         # "Find active incidents in this barangay + category"

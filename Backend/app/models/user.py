@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
@@ -32,9 +32,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_administrator = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
-    last_login = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=True)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=True)
 
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
     department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)
@@ -46,3 +46,4 @@ class User(Base):
     app_feedbacks = relationship("AppFeedback", back_populates="user", cascade="all, delete-orphan")
     incidents = relationship("IncidentModel", back_populates="lgu_account", cascade="all, delete-orphan")
     responses = relationship("Response", back_populates="user", cascade="all, delete-orphan")
+    post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="user", cascade="all, delete-orphan")

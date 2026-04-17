@@ -6,6 +6,11 @@ import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
 import type { Complaint } from "../types/complaints/complaint";
 
+type ReviewIncidentPayload = {
+  actions_taken: string;
+  signal?: AbortSignal;
+};
+
 export const useIncidents = () => {
   const { data, isLoading, error } = useQuery<Incident[]>({
     queryKey: ["incidents"],
@@ -65,7 +70,8 @@ export const useResolveIncident = (incidentId: number) => {
 export const useReviewIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["reviewIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string }) => reviewIncident(incidentId, payload),
+    mutationFn: (payload: ReviewIncidentPayload) =>
+      reviewIncident(incidentId, { actions_taken: payload.actions_taken }, payload.signal),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });

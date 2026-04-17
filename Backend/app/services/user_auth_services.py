@@ -436,15 +436,25 @@ async def refresh_access_token(request: Request, db: AsyncSession):
 
 async def logout_user(request: Request):
     try:
-        cookies = request.cookies.get("refresh_token") or request.cookies.get("access_token")
-        if not cookies:
+        token = request.cookies.get("refresh_token") or request.cookies.get("access_token")
+        if not token:
             logger.warning("Logout attempt with missing authentication cookies.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No authentication cookies found. Are you sure you're logged in?"
             )
-        
-        await delete_cache(f"user_data:{request.cookies.get('user_id')}")
+
+        user_id = request.cookies.get("user_id")
+        if not user_id:
+            try:
+                payload = verify_token(token)
+                user_id = payload.get("user_id")
+            except JWTError:
+                user_id = None
+
+        if user_id:
+            await delete_cache(f"user_data:{user_id}")
+            await delete_cache(f"auth_user:{user_id}")
         logger.info("User logged out successfully and cache cleared.")
         response = JSONResponse(
             status_code=status.HTTP_200_OK,

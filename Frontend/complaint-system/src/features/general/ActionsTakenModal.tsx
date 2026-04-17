@@ -35,7 +35,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 h-[360px] flex flex-col justify-center ">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -47,7 +47,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           }}
         >
           {description && (
-            <p className="text-sm text-gray-600 mb-3">{description}</p>
+            <p className="text-sm text-gray-600 mb-2">{description}</p>
           )}
           <label className="block text-lg font-medium text-gray-700 mb-2">Actions Taken</label>
           <textarea
@@ -63,7 +63,6 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
             <button
               type="button"
               onClick={onCancel}
-              disabled={isLoading}
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel

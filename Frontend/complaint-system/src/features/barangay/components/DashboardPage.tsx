@@ -529,7 +529,7 @@ function StatusBadge({ status }: { status: string }) {
       className: "bg-primary-100 text-primary-800",
     },
     reviewed_by_barangay: {
-      label: t("dashboard.statuses.underReview"),
+      label: t("dashboard.statuses.reviewedByBarangay"),
       className: "bg-primary-100 text-primary-800",
     },
     reviewed_by_department: {
@@ -555,6 +555,10 @@ function StatusBadge({ status }: { status: string }) {
     resolved_by_department: {
       label: t("dashboard.statuses.resolved"),
       className: "bg-green-100 text-green-800",
+    },
+    rejected: {
+      label: t("dashboard.statuses.rejected"),
+      className: "bg-red-100 text-red-800",
     },
   };
 

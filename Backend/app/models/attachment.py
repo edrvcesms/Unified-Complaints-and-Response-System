@@ -1,6 +1,6 @@
 from app.database.database import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 
 class Attachment(Base):
@@ -14,7 +14,7 @@ class Attachment(Base):
     file_type = Column(String, nullable=False)
     file_size = Column(Integer, nullable=False)
     storage_path = Column(String, nullable=True)
-    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    uploaded_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
 
     complaint = relationship("Complaint", back_populates="attachment")
     uploader = relationship("User", back_populates="attachment")

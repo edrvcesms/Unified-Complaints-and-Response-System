@@ -7,6 +7,7 @@ interface ActionsTakenModalState {
   confirmText: string;
   confirmColor: "red" | "green" | "yellow" | "blue";
   onConfirm: (actionsTaken: string) => void;
+  onCancel?: () => void;
   isLoading: boolean;
 }
 
@@ -18,6 +19,7 @@ export function useActionsTakenModal() {
     confirmText: "",
     confirmColor: "green",
     onConfirm: () => {},
+    onCancel: undefined,
     isLoading: false,
   });
 
@@ -27,12 +29,14 @@ export function useActionsTakenModal() {
       confirmText,
       confirmColor = "green",
       onConfirm,
+      onCancel,
       description,
     }: {
       title: string;
       confirmText: string;
       confirmColor?: "red" | "green" | "yellow" | "blue";
       onConfirm: (actionsTaken: string) => void;
+      onCancel?: () => void;
       description?: string;
     }) => {
       setState((prev) => ({
@@ -42,6 +46,7 @@ export function useActionsTakenModal() {
         confirmText,
         confirmColor,
         onConfirm,
+        onCancel,
         description,
       }));
     },
@@ -55,6 +60,17 @@ export function useActionsTakenModal() {
       isLoading: false,
     }));
   }, []);
+
+  const cancelModal = useCallback(() => {
+    if (state.onCancel) {
+      state.onCancel();
+    }
+    setState((prev) => ({
+      ...prev,
+      isOpen: false,
+      isLoading: false,
+    }));
+  }, [state.onCancel]);
 
   const setIsLoading = useCallback((value: boolean) => {
     setState((prev) => ({
@@ -74,6 +90,7 @@ export function useActionsTakenModal() {
     setIsLoading,
     openModal,
     closeModal,
+    cancelModal,
     onConfirm: state.onConfirm, // ✅ unchanged API
   };
 }

@@ -1,6 +1,6 @@
 from app.database.database import Base
 from sqlalchemy import Column, Float, Integer, String, DateTime
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 
 class Barangay(Base):
@@ -13,9 +13,9 @@ class Barangay(Base):
     barangay_email = Column(String, unique=True, index=True, nullable=False)
     longitude = Column(Float, nullable=True)
     latitude = Column(Float, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=True)
-    
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=True, default=datetime.now(timezone.utc))
+
     barangay_account = relationship("BarangayAccount", back_populates="barangay", uselist=False)
     complaint = relationship("Complaint", back_populates="barangay")
     incidents = relationship("IncidentModel", back_populates="barangay")

@@ -43,10 +43,11 @@ export const resolveIncident = async (
 
 export const reviewIncident = async (
   incidentId: number,
-  payload: { actions_taken: string }
+  payload: { actions_taken: string },
+  signal?: AbortSignal
 ): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/review`, payload);
+    await incidentsApi.patch(`/${incidentId}/review`, payload, { signal });
   } catch (error) {
     console.error("Error reviewing incident:", error);
     throw error;

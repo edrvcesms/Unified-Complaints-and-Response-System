@@ -906,7 +906,15 @@ def cluster_complaint_task(self, complaint_data: dict):
 
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def send_notifications_task(self, user_id: int, title: str, message: str, complaint_id: int = None, notification_type: str = "info"):
+def send_notifications_task(
+    self,
+    user_id: int,
+    title: str,
+    message: str,
+    complaint_id: int = None,
+    notification_type: str = "info",
+    event: str = None,
+):
 
     async def _run():
         async with AsyncSessionLocal() as db:
@@ -934,11 +942,11 @@ def send_notifications_task(self, user_id: int, title: str, message: str, compla
                     "complaint_id": complaint_id,
                     "notification_type": notification_type,
                 },
-                event=notification_type,
+                event=event or notification_type,
             )
             
     run_async(_run())
-    
+
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def save_response_task(self, incident_id: int, responder_id: int, actions_taken: str):

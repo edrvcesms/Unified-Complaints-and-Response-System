@@ -12,7 +12,9 @@
     "logout": "Logout",
     "confirmLogout": "Sure ka na ba na gusto mo mag-logout?",
     "notifications": "Notifications",
+    "notificationsPageSubtitle": "Tingnan ang lahat ng pinakabagong notification updates mo.",
     "markAllRead": "Mark all as read",
+    "viewAllNotifications": "View all Notifications",
     "loadingNotifications": "Loading notifications...",
     "noNotifications": "No notifications yet",
     "noNotificationsMessage": "Makikita mo dito ang mga updates"

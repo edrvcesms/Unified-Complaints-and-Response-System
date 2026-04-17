@@ -428,7 +428,14 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
 
     try:
-        result = await db.execute(select(BarangayAccount).options(selectinload(BarangayAccount.barangay)).where(BarangayAccount.id == complaint_data.barangay_account_id))
+        resolved_barangay_account_id = complaint_data.barangay_account_id
+        if not resolved_barangay_account_id:
+            fallback_account_result = await db.execute(
+                select(BarangayAccount.id).where(BarangayAccount.barangay_id == complaint_data.barangay_id)
+            )
+            resolved_barangay_account_id = fallback_account_result.scalar_one_or_none()
+
+        result = await db.execute(select(BarangayAccount).options(selectinload(BarangayAccount.barangay)).where(BarangayAccount.id == resolved_barangay_account_id))
         barangay_account = result.scalar_one_or_none()
 
 
@@ -450,7 +457,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             latitude=complaint_data.latitude,
             longitude=complaint_data.longitude,
             barangay_id=complaint_data.barangay_id,
-            barangay_account_id=complaint_data.barangay_account_id,
+            barangay_account_id=resolved_barangay_account_id,
             category_id=complaint_data.category_id,
             status=ComplaintStatus.SUBMITTED.value,
             user_id=user_id,
@@ -510,7 +517,8 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 title="New Complaint Submitted",
                 message=f"New complaint submitted: {updated_complaint.title}",
                 complaint_id=updated_complaint.id,
-                notification_type="info"
+                notification_type="info",
+                event="new_complaint"
             )
             logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
             

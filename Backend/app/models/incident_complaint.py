@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app.database.database import Base
 
 from sqlalchemy import (
@@ -20,7 +20,7 @@ class IncidentComplaintModel(Base):
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
     complaint_id = Column(Integer, ForeignKey("complaint.id"), nullable=False, index=True)
     similarity_score = Column(Float, nullable=False)
-    linked_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    linked_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
 
    
     incident = relationship("IncidentModel", back_populates="complaint_clusters")

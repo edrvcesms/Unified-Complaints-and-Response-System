@@ -16,6 +16,7 @@ import { endorseIncidentToDepartment } from "../../../services/endorsement/incid
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/Toast";
 import { queryClient } from "../../../main";
+import { isAbortError } from "../../../utils/axiosException";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
@@ -98,6 +99,9 @@ export const LguIncidentDetails: React.FC = () => {
     if (reviewIncidentMutation.isError) {
       actionsTakenModal.closeModal();
       const error = reviewIncidentMutation.error as any;
+      if (isAbortError(error)) {
+        return;
+      }
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
         isOpen: true,
@@ -105,7 +109,7 @@ export const LguIncidentDetails: React.FC = () => {
         message: errorMessage,
       });
     }
-  }, [reviewIncidentMutation.isError]);
+  }, [reviewIncidentMutation.error, reviewIncidentMutation.isError]);
 
   useEffect(() => {
     if (rejectIncidentMutation.isError) {
@@ -174,6 +178,7 @@ export const LguIncidentDetails: React.FC = () => {
   };
 
   const handleReview = () => {
+    const abortController = new AbortController();
     actionsTakenModal.openModal({
       title: "Mark for Review",
       description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
@@ -182,10 +187,19 @@ export const LguIncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string) => {
         try {
           actionsTakenModal.setIsLoading(true);
-          await reviewIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+          await reviewIncidentMutation.mutateAsync({
+            actions_taken: actionsTaken,
+            signal: abortController.signal,
+          });
         } catch (err) {
-          console.error(err);
+          if (!isAbortError(err)) {
+            console.error(err);
+          }
         } finally { actionsTakenModal.setIsLoading(false); }
+      },
+      onCancel: () => {
+        abortController.abort();
+        reviewIncidentMutation.reset();
       },
     });
   };
@@ -648,7 +662,7 @@ export const LguIncidentDetails: React.FC = () => {
         confirmText={actionsTakenModal.confirmText}
         confirmColor={actionsTakenModal.confirmColor as any}
         onConfirm={actionsTakenModal.onConfirm}
-        onCancel={actionsTakenModal.closeModal}
+        onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
       />
 

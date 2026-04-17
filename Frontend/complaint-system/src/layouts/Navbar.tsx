@@ -11,8 +11,7 @@ import { useNotifications as useNotificationData } from "../hooks/useNotificatio
 import { useToast } from "../hooks/useToast";
 import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
-import { queryClient } from "../main";
-import { formatTimeAgo } from "../utils/dateUtils";
+import { formatDateTime, formatTimeAgo } from "../utils/dateUtils";
 
 
 interface NavbarProps {
@@ -46,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
   const confirmationModal = useConfirmationModal();
   const { notifications, isLoading, markAsRead, markAllAsRead, refetch } = useNotificationData();
-  const { toasts, showToast } = useToast();
+  const { toasts } = useToast();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
@@ -55,6 +54,37 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   // Just show toast and refetch when query is invalidated by DashboardLayout
 
   const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
+  const previewNotifications = (notifications ?? []).slice(0, 5);
+  const isRejectNotification = (notification: Notification) => notification.notification_type === "reject";
+
+  const getNotificationsPagePath = () => {
+    if (userRole === "barangay_official") {
+      return "/dashboard/notifications";
+    }
+    if (userRole === "lgu_official") {
+      return "/lgu/notifications";
+    }
+    if (userRole === "department_staff") {
+      return "/department/notifications";
+    }
+    if (userRole === "superadmin") {
+      return "/superadmin/notifications";
+    }
+    return "/dashboard/notifications";
+  };
+
+  const getComplaintPath = (complaintId: number) => {
+    if (userRole === "barangay_official") {
+      return `/dashboard/incidents/complaints/${complaintId}`;
+    }
+    if (userRole === "lgu_official") {
+      return `/lgu/incidents/complaints/${complaintId}`;
+    }
+    if (userRole === "department_staff") {
+      return `/department/incidents/complaints/${complaintId}`;
+    }
+    return null;
+  };
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
@@ -63,9 +93,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     
     // Navigate to complaint if complaint_id exists
     if (notification.complaint_id) {
+      const complaintPath = getComplaintPath(notification.complaint_id);
+      if (!complaintPath) {
+        return;
+      }
       setNotificationDropdownOpen(false);
-      navigate(`/dashboard/incidents/complaints/${notification.complaint_id}`);
+      navigate(complaintPath);
     }
+  };
+
+  const handleViewAllNotifications = () => {
+    setNotificationDropdownOpen(false);
+    navigate(getNotificationsPagePath());
   };
 
   useEffect(() => {
@@ -163,16 +202,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               <div
                 role="menu"
                 aria-label="Notifications menu"
-                className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-xl
-                  border border-gray-100 overflow-hidden z-50"
+                className="absolute right-0 mt-2 w-96 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-black/10 z-50"
                 style={{ animation: "fadeSlideDown 0.15s ease-out" }}
               >
-                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-800">{t('nav.notifications')}</p>
+                <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-5 py-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{t('nav.notifications')}</p>
+                    <p className="text-[11px] text-gray-500">Latest 5 updates</p>
+                  </div>
                   {unreadCount > 0 && (
                     <button
                       onClick={() => markAllAsRead()}
-                      className="text-xs text-green-600 hover:text-green-800 font-medium transition"
+                      className="rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 transition hover:bg-green-100"
                     >
                       {t('nav.markAllRead')}
                     </button>
@@ -182,42 +223,82 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 <div className="max-h-96 overflow-y-auto">
                   {isLoading ? (
                     <div className="px-5 py-8 text-center">
-                      <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                      <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
                       <p className="text-sm text-gray-500">{t('nav.loadingNotifications')}</p>
                     </div>
                   ) : !notifications || notifications.length === 0 ? (
-                    <div className="px-5 py-8 text-center">
-                      <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                      <p className="text-sm text-gray-500">{t('nav.noNotifications')}</p>
-                      <p className="text-xs text-gray-400 mt-1">{t('nav.noNotificationsMessage')}</p>
+                    <div className="px-5 py-10 text-center">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
+                        <Bell className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-medium text-gray-700">{t('nav.noNotifications')}</p>
+                      <p className="mt-1 text-xs text-gray-400">{t('nav.noNotificationsMessage')}</p>
                     </div>
                   ) : (
                     <>
-                      {notifications.map((notification) => (
+                      {previewNotifications.map((notification) => (
                         <button
                           key={notification.id}
                           onClick={() => handleNotificationClick(notification)}
-                          className={`w-full px-5 py-3 text-left hover:bg-gray-50 transition border-b border-gray-100
-                            ${notification.is_read ? 'bg-white' : 'bg-green-50'}`}
+                          className={`w-full border-b border-gray-100 px-5 py-3.5 text-left transition hover:bg-gray-50 ${isRejectNotification(notification)
+                            ? notification.is_read
+                              ? 'bg-red-50/60'
+                              : 'bg-red-50'
+                            : notification.is_read
+                              ? 'bg-white'
+                              : 'bg-green-50/70'}`}
                         >
                           <div className="flex gap-3">
                             {!notification.is_read && (
-                              <div className="shrink-0 w-2 h-2 bg-green-500 rounded-full mt-1.5" />
+                              <div className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${isRejectNotification(notification) ? 'bg-red-500' : 'bg-green-500'}`} />
                             )}
+                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isRejectNotification(notification) ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                              <Bell className="h-4 w-4" />
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-sm font-medium ${notification.is_read ? 'text-gray-700' : 'text-gray-900'}`}>
+                              <div className="mb-1 flex flex-wrap items-center gap-2">
+                                <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${isRejectNotification(notification) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  {isRejectNotification(notification) ? 'Reject' : notification.notification_type.replace(/_/g, ' ')}
+                                </span>
+                                {!notification.is_read && (
+                                  <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                                    New
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-sm font-medium leading-5 ${isRejectNotification(notification)
+                                ? 'text-red-900'
+                                : notification.is_read
+                                  ? 'text-gray-700'
+                                  : 'text-gray-900'}`}>
                                 {notification.title}
                               </p>
-                              <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                              <p className={`mt-1 line-clamp-2 text-xs leading-5 ${isRejectNotification(notification) ? 'text-red-700' : 'text-gray-600'}`}>
                                 {notification.message}
                               </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                {formatTimeAgo(notification.sent_at)}
-                              </p>
+                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                                <p className={`${isRejectNotification(notification) ? 'text-red-600' : 'text-gray-500'}`}>
+                                  Sent at: {formatDateTime(notification.sent_at)}
+                                </p>
+                                <p className={`${isRejectNotification(notification) ? 'text-red-500' : 'text-gray-400'}`}>
+                                  {formatTimeAgo(notification.sent_at)}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </button>
                       ))}
+                      <div className="border-t border-gray-100 bg-gradient-to-r from-white to-gray-50 px-5 py-3">
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={handleViewAllNotifications}
+                            className="rounded-full bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100 hover:text-green-900"
+                          >
+                            {t('nav.viewAllNotifications')}
+                          </button>
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>

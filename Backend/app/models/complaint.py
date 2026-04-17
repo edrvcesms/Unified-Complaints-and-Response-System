@@ -1,7 +1,7 @@
 from app.database.database import Base
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class Complaint(Base):
@@ -21,14 +21,14 @@ class Complaint(Base):
 
     status = Column(String, nullable=True)
 
-    forwarded_at = Column(DateTime, nullable=True)
-    resolved_at = Column(DateTime, nullable=True)
+    forwarded_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
 
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=True, default=datetime.now(timezone.utc))
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    hearing_date = Column(DateTime, nullable=True)
+    hearing_date = Column(DateTime(timezone=True), nullable=True)
     is_rejected_by_lgu = Column(Boolean, default=False, nullable=True)
     is_rejected_by_department = Column(Boolean, default=False, nullable=True)
 

@@ -38,3 +38,4 @@ asgiref
 httpx
 openai
 exponent-server-sdk
+pdfplumber

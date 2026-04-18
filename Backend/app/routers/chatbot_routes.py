@@ -24,7 +24,7 @@ async def ask(body: ChatRequest, chatbot: ChatbotService = Depends(create_chatbo
 
 
 
-@app.post("/upload-pdf", summary="Upload a PDF to index into Pinecone")
+@router.post("/upload-pdf", summary="Upload a PDF to index into Pinecone")
 async def upload_pdf(file: UploadFile = File(...)):
     """
     Accepts a PDF file, extracts text, chunks it by section headings,
@@ -46,7 +46,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not chunks:
         raise HTTPException(status_code=422, detail="No recognizable section headings found in the PDF.")
 
-    embeddings = _embed([c["content"] for c in chunks])
+    embeddings = await _embed([c["content"] for c in chunks])
     count      = _upsert_chunks(chunks, embeddings)
 
     return JSONResponse({

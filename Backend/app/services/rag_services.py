@@ -8,6 +8,7 @@ from pinecone import Pinecone, ServerlessSpec
 from google import genai
 from app.tasks import get_gemini_embedding_service
 import os
+import asyncio
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -86,9 +87,10 @@ def _build_chunk(chunk_id: int, title: str, content_lines: list[str]) -> dict:
         "content": title + "\n" + "\n".join(content_lines).strip(),
     }
 
+
 async def _embed(texts: list[str]) -> list[list[float]]:
     embedding_service = get_gemini_embedding_service()
-    return [await embedding_service.generate(text) for text in texts]
+    return await asyncio.gather(*[embedding_service.generate(text) for text in texts])
 
 def _get_or_create_index():
     """Return the Pinecone index, creating it if it doesn't exist."""
@@ -122,37 +124,5 @@ def _upsert_chunks(chunks: list[dict], embeddings: list[list[float]]) -> int:
     return len(vectors)
 
 
-
-
-@app.post("/upload-pdf", summary="Upload a PDF to index into Pinecone")
-async def upload_pdf(file: UploadFile = File(...)):
-    """
-    Accepts a PDF file, extracts text, chunks it by section headings,
-    embeds each chunk via Gemini, and upserts into Pinecone.
-    """
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
-
-    file_bytes = await file.read()
-    if not file_bytes:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
-
-    # Pipeline: extract → chunk → embed → upsert
-    raw_text  = _extract_text(file_bytes)
-    if not raw_text.strip():
-        raise HTTPException(status_code=422, detail="Could not extract text from PDF (image-only PDF?).")
-
-    chunks     = _chunk_text(raw_text)
-    if not chunks:
-        raise HTTPException(status_code=422, detail="No recognizable section headings found in the PDF.")
-
-    embeddings = _embed([c["content"] for c in chunks])
-    count      = _upsert_chunks(chunks, embeddings)
-
-    return JSONResponse({
-        "message": f"Successfully indexed {count} chunks from '{file.filename}'.",
-        "chunks_indexed": count,
-        "chunk_titles": [c["title"] for c in chunks],
-    })
 
 

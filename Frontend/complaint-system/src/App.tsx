@@ -34,6 +34,7 @@ import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
+import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
 
 function App() {
 
@@ -109,6 +110,7 @@ function App() {
               <Route path="categories" element={<SuperAdminCategories />} />
               <Route path="verify-users" element={<SuperAdminVerifyUsers />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="knowledge-base" element={<KnowledgeBase />} />
             </Route>
           </Route>
 

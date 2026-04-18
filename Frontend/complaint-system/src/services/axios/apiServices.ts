@@ -16,7 +16,7 @@ export const announcementInstance = createApiInstance(`${BASE_URL}/announcements
 export const reportInstance = createApiInstance(`${BASE_URL}/reports`, true);
 export const eventInstance = createApiInstance(`${BASE_URL}/events`, true);
 export const superAdminInstance = createApiInstance(`${BASE_URL}/super-admin`, true);
-
+export const knowledgeBaseInstance = createApiInstance(`${BASE_URL}/chatbot`, true);
 export const authApi = createApiClient(authInstance);
 export const usersApi = createApiClient(usersInstance);
 export const barangayApi = createApiClient(barangayInstance);
@@ -29,3 +29,4 @@ export const announcementApi = createApiClient(announcementInstance);
 export const reportApi = createApiClient(reportInstance);
 export const eventApi = createApiClient(eventInstance);
 export const superAdminApi = createApiClient(superAdminInstance);
+export const knowledgeBaseApi = createApiClient(knowledgeBaseInstance);

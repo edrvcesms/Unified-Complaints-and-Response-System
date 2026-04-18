@@ -5,15 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.department import Department
 from app.models.user import User
 from app.models.category import Category
+from app.models.category_config import CategoryConfigModel
 from app.models.barangay import Barangay
 from app.models.department import Department
 from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentAccountCreate, LGUAccountCreate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentAccountCreate, LGUAccountCreate, CategoryConfigsUpdate
 from sqlalchemy import select, func
 from app.core.security import hash_password
 from datetime import datetime
+from sqlalchemy.orm import selectinload
 from app.constants.roles import UserRole
 from app.core.config import settings
 from app.utils.caching import delete_cache
@@ -315,3 +317,34 @@ async def verify_user_account(user_id: int, db: AsyncSession):
     await delete_cache(f"user_profile:{user_id}")
     
     return {"message": f"User account with ID {user_id} has been verified."}
+
+async def update_category_configs(category_id: int, config_data: CategoryConfigsUpdate, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(CategoryConfigModel).where(CategoryConfigModel.category_id == category_id)
+        )
+        config = result.scalars().first()
+
+        if not config:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category configuration not found")
+
+        if config_data.base_severity_weight is not None:
+            config.base_severity_weight = config_data.base_severity_weight
+        if config_data.time_window_hours is not None:
+            config.time_window_hours = config_data.time_window_hours
+        if config_data.category_radius_km is not None:
+            config.category_radius_km = config_data.category_radius_km
+        if config_data.similarity_threshold is not None:
+            config.similarity_threshold = config_data.similarity_threshold
+
+        await db.commit()
+        await db.refresh(config)
+        return config
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    

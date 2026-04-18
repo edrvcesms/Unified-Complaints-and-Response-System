@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"
+import { Route, Routes, Navigate } from "react-router-dom"
 import { LoginPage } from "./features/authentication/pages/Login"
 import { SuperAdminLoginPage } from "./features/authentication/pages/SuperAdminLogin"
 import { ForgotPasswordPage } from "./features/authentication/pages/ForgotPassword"
@@ -32,7 +32,7 @@ import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayRepo
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
-import { SuperAdminAccounts, SuperAdminCategories, SuperAdminVerifyUsers } from "./features/superadmin/pages"
+import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
 
@@ -41,7 +41,15 @@ function App() {
   const refreshAccessToken = useAuthStore(state => state.refreshAccessToken);
   const isCheckingAuth = useAuthStore(state => state.isCheckingAuth);
   const isAuthenticated = useAuthStore(state => !!state.accessToken);
+  const userRole = useAuthStore(state => state.userRole);
   const clearAuth = useAuthStore(state => state.clearAuth);
+
+  const getDefaultDashboardPath = (role: string | null) => {
+    if (role === "lgu_official") return "/lgu/dashboard";
+    if (role === "department_staff") return "/department/dashboard";
+    if (role === "superadmin") return "/superadmin/accounts";
+    return "/dashboard";
+  };
 
   useEffect(() => {
     refreshAccessToken();
@@ -57,6 +65,15 @@ function App() {
       {isAuthenticated && <Navbar onLogout={clearAuth} />}
       <NetworkProvider>
         <Routes>
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={isAuthenticated ? getDefaultDashboardPath(userRole) : "/officials-login"}
+                replace
+              />
+            }
+          />
           {/* Barangay Official Routes */}
           <Route element={<BarangayRoute />}>
             <Route path="/dashboard/*" element={<DashboardLayout />}>
@@ -108,6 +125,7 @@ function App() {
               <Route index element={<SuperAdminAccounts />} />
               <Route path="accounts" element={<SuperAdminAccounts />} />
               <Route path="categories" element={<SuperAdminCategories />} />
+              <Route path="emergency-hotlines" element={<SuperAdminEmergencyHotlines />} />
               <Route path="verify-users" element={<SuperAdminVerifyUsers />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="knowledge-base" element={<KnowledgeBase />} />

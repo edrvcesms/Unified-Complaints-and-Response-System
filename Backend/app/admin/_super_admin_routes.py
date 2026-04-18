@@ -8,12 +8,38 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs
 from fastapi import status
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate, CategoryConfigsUpdate
+from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
+from app.services.emergency_hotline_services import add_emergency_hotlines, get_emergency_hotlines
 from typing import Optional
 
 router = APIRouter()
+
+
+@router.post("/emergency-hotlines/add-hotline", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def create_emergency_hotline(
+    request: Request,
+    hotline_data: CreateEmergencyHotlineModel,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this action.")
+
+    return await add_emergency_hotlines(hotline_data, db)
+
+
+@router.get("/emergency-hotlines", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_emergency_hotlines_route(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await get_emergency_hotlines(db)
 
 
 @router.post("/create-brgy-account", status_code=status.HTTP_201_CREATED)
@@ -111,6 +137,22 @@ async def get_categories_route(
 ):
     try:
         return await get_all_categories(current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+    
+@router.patch("/categories/{category_id}/update-configs", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def update_category_configs_route(
+    request: Request,
+    category_id: int,
+    config_data: CategoryConfigsUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await update_category_configs(category_id, config_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

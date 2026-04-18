@@ -24,6 +24,7 @@ class Settings:
     EXPO_PUSH_URL = os.getenv("EXPO_PUSH_URL")
     TURNSTILE_SECRET_KEY: str = os.getenv("TURNSTILE_SECRET_KEY") or os.getenv("RECAPTCHA_SITE_KEY")
     OPEN_AI_API_KEY: str = os.getenv("OPEN_AI_API_KEY")
-    
+    PHILSMS_API_URL: str = os.getenv("PHILSMS_API_URL")
+    PHILMSMS_API_TOKEN: str = os.getenv("PHILMSMS_API_TOKEN")
 
 settings = Settings()

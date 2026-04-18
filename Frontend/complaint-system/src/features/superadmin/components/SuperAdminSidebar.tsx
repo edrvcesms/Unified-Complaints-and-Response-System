@@ -1,5 +1,5 @@
 import { Sidebar as GenericSidebar } from "../../general";
-import { Users, Tags, ShieldCheck } from "lucide-react";
+import { Users, Tags, ShieldCheck, PhoneCall } from "lucide-react";
 
 interface SuperAdminSidebarProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ isOpen, on
   const navItems = [
     { path: "/superadmin/accounts", label: "Accounts", icon: <Users className="w-5 h-5" /> },
     { path: "/superadmin/categories", label: "Categories", icon: <Tags className="w-5 h-5" /> },
+    { path: "/superadmin/emergency-hotlines", label: "Emergency Hotlines", icon: <PhoneCall className="w-5 h-5" /> },
     { path: "/superadmin/verify-users", label: "Verify Users", icon: <ShieldCheck className="w-5 h-5" /> },
     { path: "/superadmin/knowledge-base", label: "Knowledge Base", icon: <ShieldCheck className="w-5 h-5" /> },
   ];

@@ -21,7 +21,7 @@ from app.domain.interfaces.i_incident_repository import IIncidentRepository
 from app.domain.interfaces.i_incident_verifier import IIncidentVerifier
 from app.domain.interfaces.i_vector_repository import IVectorRepository
 from app.domain.value_objects.severity_level import SeverityLevel
-
+from app.utils.embedding_translate import translate_to_english
 logger = logging.getLogger(__name__)
 
 # Hybrid scoring weights — semantic is dominant, spatial is a proximity signal
@@ -126,8 +126,11 @@ class ClusterComplaintUseCase:
             f"  Radius      : {data.category_radius_km:.2f} km\n"
             f"  Threshold   : {data.similarity_threshold:.2f} | High: {data.similarity_threshold + 0.10:.2f}"
         )
-
-        embedding = await self._embedding_svc.generate(data.description)
+        
+        translated_description = await translate_to_english(data.description)
+        logger.info(f"  Original    : '{data.description[:120]}'")
+        logger.info(f"  Translated  : '{translated_description[:120]}'")  #  
+        embedding = await self._embedding_svc.generate(translated_description)
         created_at_unix = data.created_at.timestamp()
 
         # Step 1 — Query Postgres for active incidents in same barangay+category+window

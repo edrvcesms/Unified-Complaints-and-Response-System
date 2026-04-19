@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
 from google import genai
-from app.tasks import get_gemini_embedding_service
+from app.tasks import get_openai_embedding_service
 import os
 import asyncio
 
@@ -17,18 +17,6 @@ load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX   = os.getenv("PINECONE_RAG_INDEX_NAME")
 PINECONE_REGION  = "us-east-1"
-
-
-
-SECTION_TITLES = [
-    "Mayor of Santa Maria",
-    "Vice Mayor of Santa Maria",
-    "Office Hours",
-    "How to Submit a Complaint",
-    "Barangays",
-    "Emergency Hotlines",
-    "TRACKING COMPLAINT STATUS",
-]
 
 pinecone_client = Pinecone(api_key=PINECONE_API_KEY)
 
@@ -50,23 +38,43 @@ def _extract_text(file_bytes: bytes) -> str:
 
 
 def _is_section_title(line: str) -> bool:
+    """Detect headings by ALL CAPS convention."""
     stripped = line.strip()
     if not stripped:
         return False
-    for title in SECTION_TITLES:
-        if stripped.lower().startswith(title.lower()):
-            return True
-    return False
+
+    # Extract only alphabetic characters to check casing
+    alpha_only = re.sub(r'[^a-zA-Z]', '', stripped)
+    if not alpha_only:
+        return False
+
+    is_all_caps = alpha_only == alpha_only.upper()
+    is_short = len(stripped) <= 60
+    no_end_punct = not stripped.endswith(('.', '?', '!'))
+    word_count = 1 <= len(stripped.split()) <= 10
+
+    # Debug every line being checked
+    print(f"  checking | caps={is_all_caps} short={is_short} punct={no_end_punct} words={word_count} | '{stripped}'")
+
+    return is_all_caps and is_short and no_end_punct and word_count
 
 
 def _chunk_text(text: str) -> list[dict]:
-    """Split text into chunks on known section titles."""
+    """Split text into chunks on ALL CAPS section titles."""
     text = re.sub(r"-{3,}", "", text)
     lines = text.splitlines()
     chunks, current_title, current_content = [], None, []
 
+    print("\n" + "="*60)
+    print("📄 RAW EXTRACTED LINES:")
+    print("="*60)
+    for i, line in enumerate(lines):
+        print(f"  [{i:03}] {repr(line)}")
+    print("="*60 + "\n")
+
     for line in lines:
         if _is_section_title(line):
+            print(f"✅ HEADING DETECTED: '{line.strip()}'")
             if current_title is not None:
                 chunks.append(_build_chunk(len(chunks) + 1, current_title, current_content))
             current_title = line.strip()
@@ -74,8 +82,17 @@ def _chunk_text(text: str) -> list[dict]:
         elif current_title is not None:
             current_content.append(line)
 
-    if current_title is not None:
+    if current_title is not None and current_content:
         chunks.append(_build_chunk(len(chunks) + 1, current_title, current_content))
+
+    # Debug summary
+    print(f"\n{'='*60}")
+    print(f"📦 TOTAL CHUNKS CREATED: {len(chunks)}")
+    print(f"{'='*60}")
+    for chunk in chunks:
+        print(f"\n🔹 Chunk {chunk['chunk_id']}: '{chunk['title']}'")
+        print(f"   Content preview: {chunk['content'][:120].strip()}...")
+    print(f"{'='*60}\n")
 
     return chunks
 
@@ -89,8 +106,9 @@ def _build_chunk(chunk_id: int, title: str, content_lines: list[str]) -> dict:
 
 
 async def _embed(texts: list[str]) -> list[list[float]]:
-    embedding_service = get_gemini_embedding_service()
+    embedding_service = get_openai_embedding_service()
     return await asyncio.gather(*[embedding_service.generate(text) for text in texts])
+
 
 def _get_or_create_index():
     """Return the Pinecone index, creating it if it doesn't exist."""
@@ -98,7 +116,7 @@ def _get_or_create_index():
     if PINECONE_INDEX not in existing:
         pinecone_client.create_index(
             name=PINECONE_INDEX,
-            dimension=3072,
+            dimension=1024,
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region=PINECONE_REGION),
         )
@@ -122,7 +140,3 @@ def _upsert_chunks(chunks: list[dict], embeddings: list[list[float]]) -> int:
     ]
     index.upsert(vectors=vectors)
     return len(vectors)
-
-
-
-

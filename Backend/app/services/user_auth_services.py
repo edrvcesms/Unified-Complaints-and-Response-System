@@ -73,7 +73,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
 async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
 
     try:
-        
+        """
         result = await db.execute(select(User).where(User.phone_number == user_data.phone_number))
         existing_user = result.scalars().first()
         
@@ -83,7 +83,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Phone number already registered"
             )
-
+        """
         cached_otp = await get_cache(f"otp:{user_data.email}")
         
 
@@ -124,7 +124,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             suffix=user_data.suffix,
             age=user_data.age,
             birthdate=user_data.birthdate,
-            phone_number=user_data.phone_number,
+            #phone_number=user_data.phone_number,
             gender=user_data.gender,
             barangay=user_data.barangay,
             zip_code=user_data.zip_code,

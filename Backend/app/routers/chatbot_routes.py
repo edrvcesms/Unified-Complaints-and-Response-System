@@ -28,7 +28,7 @@ async def ask(body: ChatRequest, chatbot: ChatbotService = Depends(create_chatbo
 async def upload_pdf(file: UploadFile = File(...)):
     """
     Accepts a PDF file, extracts text, chunks it by section headings,
-    embeds each chunk via Gemini, and upserts into Pinecone.
+    embeds each chunk via openAI, and upserts into Pinecone.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")

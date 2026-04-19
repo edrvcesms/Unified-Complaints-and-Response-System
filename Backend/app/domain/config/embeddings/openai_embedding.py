@@ -20,5 +20,6 @@ class OpenAIEmbeddingService(IEmbeddingService):
         result = await self._client.embeddings.create(
             model=self._model,
             input=text,
+            dimensions=1024
         )
         return result.data[0].embedding

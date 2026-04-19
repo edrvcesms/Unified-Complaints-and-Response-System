@@ -51,14 +51,16 @@ load_dotenv()
 from app.core.config import settings
 
 
-_gemini_verifier = None
+
 _embedding_service = None
 _vector_repository = None
 _severity_calculator = None
-_chatbot_service = None
-_gemini_embedding_service = None
 
-"""
+
+#_gemini_embedding_service = None
+
+#_gemini_verifier = None
+
 _openai_incident_verifier = None
 _openai_embedding_service = None
 
@@ -95,6 +97,7 @@ def get_gemini_embedding_service():
        _gemini_embedding_service = GeminiEmbeddingService(api_key=settings.GEMINI_API_KEY)
     return _gemini_embedding_service
 
+"""
 def get_vector_repository():
     global _vector_repository
     if _vector_repository is None:
@@ -572,7 +575,7 @@ def recalculate_severity_task(self, incident_id: int):
         "severity_level": incident.severity_level.value,
     }
 
-"""
+
 
 
 @celery_worker.task(
@@ -595,7 +598,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                 embedding_service=get_openai_embedding_service(),
                 vector_repository=get_vector_repository(),
                 incident_repository=incident_repo,
-                incident_verifier=get_open_ai_incident_verifier()
+                incident_verifier=get_openai_incident_verifier()
             )
 
             input_dto = ClusterComplaintInput(
@@ -904,7 +907,7 @@ def cluster_complaint_task(self, complaint_data: dict):
         "message": result.message,
     }
 
-
+"""
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_notifications_task(
     self,

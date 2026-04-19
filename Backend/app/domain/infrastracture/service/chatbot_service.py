@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 from app.domain.chatbot.rag_service import RAGService, RAGResponse
 from app.domain.IEmbeddingService.vector_store.pinecone_rag_repository import PineconeRAGVectorRepository
 from app.domain.infrastracture.llm.gemini_rag import GeminiRAGLanguageModel
-
+from app.domain.infrastracture.llm.openai_rag import OpenAIRAGLanguageModel
+from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 nest_asyncio.apply()
 load_dotenv()
 from app.core.config import settings
@@ -26,9 +27,8 @@ class ChatbotService:
         embedding = await self._embedder.generate(question)
         return await self._rag.query(question=question, embedding=embedding)
     
-    
 
-
+"""
 
 def create_chatbot_service() -> ChatbotService:
     return ChatbotService(
@@ -43,16 +43,15 @@ def create_chatbot_service() -> ChatbotService:
     )
     
 """   
-def create_openai_chatbot_service() -> ChatbotService:
+def create_chatbot_service() -> ChatbotService:
     return ChatbotService(
         rag_service=RAGService(
             vector_repo=PineconeRAGVectorRepository(
                 api_key=os.environ["PINECONE_API_KEY"],
                 index_name=os.environ["PINECONE_RAG_INDEX_NAME"],
             ),
-            language_model=GeminiRAGLanguageModel(api_key=settings.GEMINI_API_KEY),
+            language_model=OpenAIRAGLanguageModel(api_key=settings.OPEN_AI_API_KEY),
         ),
         embedding_service=OpenAIEmbeddingService(api_key=settings.OPEN_AI_API_KEY),
     )
     
-"""

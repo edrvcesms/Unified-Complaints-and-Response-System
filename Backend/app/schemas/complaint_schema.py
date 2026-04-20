@@ -76,6 +76,8 @@ class MyComplaintData(BaseModel):
     created_at: datetime
     barangay: BarangayInfo | None
     category: CategoryInfo | None
+    is_rejected_by_lgu: Optional[bool] = None
+    is_rejected_by_department: Optional[bool] = None
     department: DepartmentInfo | None = None
     incident_links: Optional[List[IncidentLinkData]] = None
     class Config:

@@ -17,6 +17,7 @@ async def invalidate_cache(
     announcement_uploader_id: Optional[int] = None,
     announcement_id: Optional[int] = None,
     include_global: bool = True,
+    response_id: Optional[int] = None
 ):
     """
     Centralized cache invalidation.
@@ -34,6 +35,10 @@ async def invalidate_cache(
 
     now = datetime.utcnow()
     tasks = set()
+    
+    if response_id:
+        tasks.add(f"response:{response_id}")
+        logger.info(f"Response cache added for response_id: {response_id}")
     
     if announcement_uploader_id:
         tasks.add(f"all_announcements")

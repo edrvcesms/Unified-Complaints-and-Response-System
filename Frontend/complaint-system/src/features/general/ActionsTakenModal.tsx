@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface ActionsTakenModalProps {
   isOpen: boolean;
   title: string;
   confirmText: string;
   confirmColor: "red" | "green" | "yellow" | "blue";
-  onConfirm: (actionsTaken: string) => void;
+  onConfirm: (actionsTaken: string, attachments: File[]) => void;
   onCancel: () => void;
   isLoading?: boolean;
   description?: string;
@@ -29,18 +29,39 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   description,
 }) => {
   const [actionsTaken, setActionsTaken] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActionsTaken("");
+      setSelectedFiles([]);
+    }
+  }, [isOpen]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    setSelectedFiles((prev) => [...prev, ...files]);
+    event.target.value = "";
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index));
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 h-[360px] flex flex-col justify-center ">
+      <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6 max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             try {
-               onConfirm(actionsTaken);
+               onConfirm(actionsTaken, selectedFiles);
             } catch (err) {
               console.error("Submit failed:", err);
             }
@@ -59,6 +80,54 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
             disabled={isLoading}
             placeholder="Describe the actions taken to address this complaint…"
           />
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attachments (optional)
+            </label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed border-gray-300 rounded-md p-4 text-center transition-colors cursor-pointer ${
+                isLoading ? "pointer-events-none opacity-70" : "hover:border-primary-400 hover:bg-primary-50/30"
+              }`}
+            >
+              <p className="text-xs text-gray-600">Click to upload files</p>
+              <p className="text-[11px] text-gray-500 mt-1">Images, videos, PDFs, or documents</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isLoading}
+              />
+            </div>
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-700 truncate">{file.name}</p>
+                      <p className="text-[11px] text-gray-500">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(index)}
+                      className="text-xs text-gray-400 hover:text-red-600"
+                      disabled={isLoading}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex items-center justify-end gap-3">
             <button
               type="button"

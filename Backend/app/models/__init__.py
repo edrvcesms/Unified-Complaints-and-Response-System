@@ -22,3 +22,4 @@ from .response import Response
 from .emergency_contacts import EmergencyContact
 from .evacuation_centers import EvacuationCenter
 from .post_incident_feedback import PostIncidentFeedback
+from .response_attachments import ResponseAttachments

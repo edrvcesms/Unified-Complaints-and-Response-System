@@ -7,7 +7,7 @@ from app.utils.logger import logger
 from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
 from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
@@ -136,7 +136,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             front_id=image_urls[0],
             back_id=image_urls[1],
             selfie_with_id=image_urls[2],
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
 
         db.add(new_user)

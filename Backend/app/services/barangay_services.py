@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 from app.utils.caching import set_cache, get_cache
 from app.utils.logger import logger
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
@@ -157,7 +157,7 @@ async def get_all_barangays(db: AsyncSession, user_id: Optional[int] = None) -> 
 async def mark_barangay_incidents_viewed(user_id: int, barangay_id: int):
     """Mark that a user has viewed a barangay's incidents at this timestamp"""
     try:
-        current_time = datetime.utcnow().isoformat()
+        current_time = datetime.now(timezone.utc).isoformat()
         await set_cache(f"barangay_last_viewed:{user_id}:{barangay_id}", current_time, expiration=2592000)
         logger.info(f"Marked barangay {barangay_id} as viewed by user {user_id} at {current_time}")
         return {"message": "Barangay incidents marked as viewed", "viewed_at": current_time}

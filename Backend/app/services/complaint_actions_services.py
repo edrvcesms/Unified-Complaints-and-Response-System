@@ -1,4 +1,6 @@
-from fastapi import HTTPException, status
+from typing import List, Optional
+
+from fastapi import HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.response_schema import ResponseCreateSchema
 from app.models.complaint import Complaint
@@ -9,14 +11,15 @@ from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from app.utils.cache_invalidator import invalidate_cache
-from app.tasks import save_response_task, send_notifications_task, send_push_notification_task
+from app.tasks import send_notifications_task, send_push_notification_task
+from app.models.response import Response
+from app.services.attachment_services import enqueue_response_attachments
 from fastapi.responses import JSONResponse
 from app.utils.logger import logger
 from app.constants.roles import UserRole
-from datetime import datetime
-from app.utils.push_notifications import send_push_notification
+from datetime import datetime, timezone
 
-async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
+async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -50,11 +53,18 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
 
         await db.commit()
         
-        save_response_task.delay(
+        response = Response(
             incident_id=incident_id,
             responder_id=responder_id,
-            actions_taken=response_data.actions_taken
+            actions_taken=response_data.actions_taken,
+            response_date=datetime.now(timezone.utc),
         )
+        db.add(response)
+        await db.commit()
+        await db.refresh(response)
+
+        if attachments:
+            await enqueue_response_attachments(attachments, response.id, responder_id)
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -106,7 +116,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
+async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -135,16 +145,23 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.utcnow())
+            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.now(timezone.utc))
         )
             
         await db.commit()
     
-        save_response_task.delay(
+        response = Response(
             incident_id=incident_id,
             responder_id=responder_id,
-            actions_taken=response_data.actions_taken
+            actions_taken=response_data.actions_taken,
+            response_date=datetime.now(timezone.utc),
         )
+        db.add(response)
+        await db.commit()
+        await db.refresh(response)
+
+        if attachments:
+            await enqueue_response_attachments(attachments, response.id, responder_id)
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -197,7 +214,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
     
 
 
-async def reject_complaints_by_incident(incident_id: int, rejector_id: int, response_data: ResponseCreateSchema, db: AsyncSession):
+async def reject_complaints_by_incident(incident_id: int, rejector_id: int, response_data: ResponseCreateSchema, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -276,11 +293,18 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         
         await db.commit()
         
-        save_response_task.delay(
+        response = Response(
             incident_id=incident_id,
             responder_id=rejector_id,
-            actions_taken=response_data.actions_taken
+            actions_taken=response_data.actions_taken,
+            response_date=datetime.now(timezone.utc),
         )
+        db.add(response)
+        await db.commit()
+        await db.refresh(response)
+
+        if attachments:
+            await enqueue_response_attachments(attachments, response.id, rejector_id)
         
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None

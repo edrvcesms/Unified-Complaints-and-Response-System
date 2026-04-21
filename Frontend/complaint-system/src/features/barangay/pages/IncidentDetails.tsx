@@ -53,6 +53,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (resolveIncidentMutation.isSuccess) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -65,6 +67,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (reviewIncidentMutation.isSuccess) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -77,6 +81,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (forwardToLguMutation.isSuccess) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -89,6 +95,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (rejectIncidentMutation.isSuccess) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -103,6 +111,7 @@ export const IncidentDetails: React.FC = () => {
       confirmationModal.closeModal();
       setIsHearingModalOpen(false);
       setHearingDate('');
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -115,6 +124,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (resolveIncidentMutation.isError) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = resolveIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
       setErrorModal({
@@ -129,10 +140,12 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (reviewIncidentMutation.isError) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
       const error = reviewIncidentMutation.error as any;
       if (isAbortError(error)) {
         return;
       }
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
         isOpen: true,
@@ -146,6 +159,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (forwardToLguMutation.isError) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = forwardToLguMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to endorse incident to LGU. Please try again.';
       setErrorModal({
@@ -160,6 +175,8 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (rejectIncidentMutation.isError) {
       confirmationModal.closeModal();
+      actionsTakenModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = rejectIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to reject incident. Please try again.';
       setErrorModal({
@@ -174,6 +191,7 @@ export const IncidentDetails: React.FC = () => {
   useEffect(() => {
     if (notifyHearingMutation.isError) {
       confirmationModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = notifyHearingMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to notify users for hearing. Please try again.';
       setErrorModal({
@@ -194,9 +212,9 @@ export const IncidentDetails: React.FC = () => {
       description: "Please describe the actions taken to resolve this incident. This will be recorded and visible to complainants.",
       confirmText: "Resolve",
       confirmColor: "green",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         actionsTakenModal.setIsLoading(true);
-        await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         actionsTakenModal.setIsLoading(false);
       },
     });
@@ -209,11 +227,12 @@ export const IncidentDetails: React.FC = () => {
       description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
       confirmText: "Confirm",
       confirmColor: "yellow",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
+            attachments,
             signal: abortController.signal,
           });
         } catch (err) {
@@ -237,10 +256,10 @@ export const IncidentDetails: React.FC = () => {
       description: "Please provide any relevant notes or instructions for the LGU when endorsing this incident.",
       confirmText: "Escalate",
       confirmColor: "blue",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         actionsTakenModal.setIsLoading(true);
         try {
-          await forwardToLguMutation.mutateAsync({ actions_taken: actionsTaken });
+          await forwardToLguMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
           console.error(err);
           actionsTakenModal.setIsLoading(false);
@@ -257,9 +276,9 @@ export const IncidentDetails: React.FC = () => {
       description: "Please provide the reason for rejecting this incident. This will be recorded and visible to complainants.",
       confirmText: "Reject",
       confirmColor: "red",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         actionsTakenModal.setIsLoading(true);
-        await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+        await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         actionsTakenModal.setIsLoading(false);
       },
     });
@@ -280,6 +299,7 @@ export const IncidentDetails: React.FC = () => {
 
   const handleNotifyHearing = async () => {
     if (!hearingDate) {
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       setErrorModal({
         isOpen: true,
         title: 'Missing Hearing Date',

@@ -2,7 +2,7 @@ from fastapi import UploadFile, HTTPException, status
 from app.models.attachment import Attachment
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.logger import logger
-from app.tasks import upload_attachments_task
+from app.tasks import upload_attachments_task, upload_remarks_attachment
 from datetime import datetime
 import os
 from typing import List
@@ -59,4 +59,53 @@ async def upload_attachments(files: List[UploadFile], uploader_id: int, complain
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process attachments"
+        )
+
+
+async def enqueue_response_attachments(
+    files: List[UploadFile],
+    response_id: int,
+    responder_id: int
+) -> None:
+    for file in files:
+        if file.content_type not in allowed_file_types:
+            logger.warning(f"Unsupported file type: {file.content_type}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unsupported file type: {file.content_type}"
+            )
+
+    temp_dir = tempfile.mkdtemp(prefix="upload_")
+    files_data = []
+
+    try:
+        for file in files:
+            temp_path = os.path.join(temp_dir, file.filename)
+            with open(temp_path, "wb") as temp_file:
+                temp_file.write(await file.read())
+
+            files_data.append({
+                "filename": file.filename,
+                "content_type": file.content_type,
+                "temp_path": temp_path
+            })
+
+        task_result = upload_remarks_attachment.delay(
+            files_data,
+            response_id=response_id,
+            responder_id=responder_id
+        )
+        if not task_result:
+            logger.error("Failed to enqueue response attachment upload task")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to enqueue response attachment upload task"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error preparing response attachments for upload: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process response attachments"
         )

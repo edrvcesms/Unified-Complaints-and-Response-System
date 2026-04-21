@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from app.models.response import Response
@@ -65,7 +65,7 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         if complaint_cache is not None:
             logger.info(f"Cache hit for complaint ID: {complaint_id}")
             return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
+        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user),selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
                 ).where(Complaint.id == complaint_id))
         complaint = result.scalars().first()
 
@@ -100,7 +100,12 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             selectinload(Complaint.incident_links)
                 .selectinload(IncidentComplaintModel.incident)
                 .selectinload(IncidentModel.responses)
-                .selectinload(Response.user)
+                .selectinload(Response.user),
+                
+            selectinload(Complaint.incident_links)
+                .selectinload(IncidentComplaintModel.incident)
+                .selectinload(IncidentModel.responses)   
+                .selectinload(Response.response_attachments)
         )
         
         if barangay_id is not None:
@@ -137,6 +142,7 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
             .where(IncidentComplaintModel.incident_id == incident_id)
             .options(selectinload(Complaint.user), 
                      selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user),
+                        selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                      selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
             .order_by(Complaint.created_at.asc())
         )
@@ -183,7 +189,7 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
     if cached:
         return cached
 
-    since = datetime.utcnow() - timedelta(days=7)
+    since = datetime.now(timezone.utc) - timedelta(days=7)
     complaints = (await db.execute(
         select(Complaint).where(
             Complaint.barangay_id == barangay_id,
@@ -197,7 +203,7 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
     daily_counts: dict = {}
     daily_by_category: dict = {}
     for i in range(7):
-        day = (datetime.utcnow() - timedelta(days=6 - i)).strftime("%Y-%m-%d")
+        day = (datetime.now(timezone.utc) - timedelta(days=6 - i)).strftime("%Y-%m-%d")
         daily_counts[day] = _empty_status_counts()
         daily_by_category[day] = {cat.category_name: 0 for cat in categories}
 
@@ -264,8 +270,8 @@ async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSe
         return cached
 
     _, days_in_month = calendar.monthrange(year, month)
-    start = datetime(year, month, 1)
-    end = datetime(year, month, days_in_month, 23, 59, 59)
+    start = datetime(year, month, 1, tzinfo=timezone.utc)
+    end = datetime(year, month, days_in_month, 23, 59, 59, tzinfo=timezone.utc)
 
     complaints = (await db.execute(
         select(Complaint).where(
@@ -349,8 +355,8 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
     if cached:
         return cached
 
-    start = datetime(year, 1, 1)
-    end = datetime(year, 12, 31, 23, 59, 59)
+    start = datetime(year, 1, 1, tzinfo=timezone.utc)
+    end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
     complaints = (await db.execute(
         select(Complaint).where(
@@ -461,7 +467,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             category_id=complaint_data.category_id,
             status=ComplaintStatus.SUBMITTED.value,
             user_id=user_id,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(new_complaint)
         await db.commit()
@@ -486,7 +492,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             category_radius_km=category_config["category_radius_km"],  # spatial radius
             latitude=complaint_data.latitude,                           # complaint location
             longitude=complaint_data.longitude,                         # complaint location
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         cluster_data = ClusterComplaintSchema.model_validate(input_dto.__dict__)
@@ -515,10 +521,10 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             send_notifications_task.delay(
                 user_id=updated_complaint.barangay_account.user_id,
                 title="New Complaint Submitted",
-                message=f"New complaint submitted: {updated_complaint.title}",
+                message=f"New complaint has been submitted: {updated_complaint.title}",
                 complaint_id=updated_complaint.id,
                 notification_type="info",
-                event="new_complaint"
+                event="info"
             )
             logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
             
@@ -561,7 +567,8 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
                 selectinload(Complaint.barangay),
                 selectinload(Complaint.category),
                 selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses).selectinload(Response.user)
+                .selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
             )
             .where(Complaint.user_id == user_id)
             .order_by(Complaint.created_at.asc())
@@ -646,12 +653,12 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 hearing_day=normalized_hearing_date.strftime("%d"),
                 hearing_month=normalized_hearing_date.strftime("%B"),
                 hearing_year=normalized_hearing_date.strftime("%Y"),
-                issued_day=datetime.utcnow().strftime("%d"),
-                issued_month=datetime.utcnow().strftime("%B"),
-                issued_year=datetime.utcnow().strftime("%Y"),
-                notified_day=datetime.utcnow().strftime("%d"),
-                notified_month=datetime.utcnow().strftime("%B"),
-                notified_year=datetime.utcnow().strftime("%Y"),
+                issued_day=datetime.now(timezone.utc).strftime("%d"),
+                issued_month=datetime.now(timezone.utc).strftime("%B"),
+                issued_year=datetime.now(timezone.utc).strftime("%Y"),
+                notified_day=datetime.now(timezone.utc).strftime("%d"),
+                notified_month=datetime.now(timezone.utc).strftime("%B"),
+                notified_year=datetime.now(timezone.utc).strftime("%Y"),
                 hearing_time=normalized_hearing_date.strftime("%I:%M %p")
             )
             

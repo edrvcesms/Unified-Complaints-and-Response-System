@@ -15,3 +15,4 @@ class Response(Base):
 
     incident = relationship("IncidentModel", back_populates="responses")
     user = relationship("User", back_populates="responses")
+    response_attachments = relationship("ResponseAttachments", back_populates="response")

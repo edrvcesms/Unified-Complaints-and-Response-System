@@ -8,13 +8,13 @@ from app.models.category import Category
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from app.constants.roles import UserRole
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from app.utils.caching import set_cache, get_cache
 
 async def get_monthly_report(barangay_id: int, user_id: int, db: AsyncSession, month: Optional[int] = None, year: Optional[int] = None):
   try:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     target_month = month if month is not None else now.month
     target_year = year if year is not None else now.year
     

@@ -76,6 +76,7 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.attachment),
@@ -122,6 +123,7 @@ async def forwarded_dept_incident_by_barangay(department_account_id: int, barang
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.attachment),
@@ -212,6 +214,7 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),

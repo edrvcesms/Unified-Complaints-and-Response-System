@@ -8,6 +8,7 @@ import type { Complaint } from "../types/complaints/complaint";
 
 type ReviewIncidentPayload = {
   actions_taken: string;
+  attachments?: File[];
   signal?: AbortSignal;
 };
 
@@ -55,7 +56,8 @@ export const useIncidentComplaints = (incidentId: number, enabled: boolean = fal
 export const useResolveIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["resolveIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string }) => resolveIncident(incidentId, payload),
+    mutationFn: (payload: { actions_taken: string; attachments?: File[] }) =>
+      resolveIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
@@ -71,7 +73,11 @@ export const useReviewIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["reviewIncident", incidentId],
     mutationFn: (payload: ReviewIncidentPayload) =>
-      reviewIncident(incidentId, { actions_taken: payload.actions_taken }, payload.signal),
+      reviewIncident(
+        incidentId,
+        { actions_taken: payload.actions_taken, attachments: payload.attachments },
+        payload.signal
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
@@ -86,7 +92,8 @@ export const useReviewIncident = (incidentId: number) => {
 export const useForwardIncidentToLgu = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["forwardIncidentToLgu", incidentId],
-    mutationFn: (payload: { actions_taken: string }) => endorseIncidentToLgu(incidentId, payload),
+    mutationFn: (payload: { actions_taken: string; attachments?: File[] }) =>
+      endorseIncidentToLgu(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
@@ -98,7 +105,8 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
 export const useRejectIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["rejectIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string }) => rejectIncident(incidentId, payload),
+    mutationFn: (payload: { actions_taken: string; attachments?: File[] }) =>
+      rejectIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });

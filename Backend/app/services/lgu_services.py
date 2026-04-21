@@ -1,4 +1,5 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
@@ -10,7 +11,8 @@ from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from app.utils.cache_invalidator import invalidate_cache
 from app.tasks import send_notifications_task
-from app.tasks import save_response_task
+from app.models.response import Response
+from app.services.attachment_services import enqueue_response_attachments
 from fastapi.responses import JSONResponse
 from app.models.department_account import DepartmentAccount
 from app.schemas.response_schema import ResponseCreateSchema
@@ -21,7 +23,7 @@ from sqlalchemy import select, func, update
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from app.constants.complaint_status import ComplaintStatus
-
+from typing import List
 async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
         forwarded_incidents_cache = await get_cache(f"forwarded_barangay_incidents:{barangay_id}")
@@ -39,10 +41,12 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
                 .selectinload(IncidentModel.responses).selectinload(Response.user),
+                
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                     .selectinload(Complaint.attachment),
@@ -84,6 +88,7 @@ async def get_all_forwarded_incidents(db: AsyncSession):
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
@@ -218,7 +223,7 @@ async def complaint_counts_by_barangay_category(db: AsyncSession):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
    
-async def assign_incident_to_department(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, department_account_id: int, db: AsyncSession):
+async def assign_incident_to_department(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, department_account_id: int, attachments: List[UploadFile], db: AsyncSession):
     try:
         incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = incident_result.scalars().first()
@@ -258,11 +263,19 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                     notification_type="update"
                 )
                 
-        save_response_task.delay(
+        response = Response(
             incident_id=incident_id,
             responder_id=responder_id,
-            actions_taken=response_data.actions_taken
+            actions_taken=response_data.actions_taken,
+            response_date=datetime.now(timezone.utc),
         )
+        db.add(response)
+        await db.commit()
+        await db.refresh(response)
+
+        if attachments:
+            await enqueue_response_attachments(attachments, response.id, responder_id)
+        
         result = await db.execute(
             select(IncidentModel)
             .options(

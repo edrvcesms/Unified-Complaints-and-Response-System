@@ -52,6 +52,7 @@ export const LguIncidentDetails: React.FC = () => {
   useEffect(() => {
     if (resolveIncidentMutation.isSuccess) {
       actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -63,6 +64,7 @@ export const LguIncidentDetails: React.FC = () => {
   useEffect(() => {
     if (reviewIncidentMutation.isSuccess) {
       actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -74,6 +76,7 @@ export const LguIncidentDetails: React.FC = () => {
   useEffect(() => {
     if (rejectIncidentMutation.isSuccess) {
       actionsTakenModal.closeModal();
+      setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -85,6 +88,7 @@ export const LguIncidentDetails: React.FC = () => {
   useEffect(() => {
     if (resolveIncidentMutation.isError) {
       actionsTakenModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = resolveIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
       setErrorModal({
@@ -102,6 +106,7 @@ export const LguIncidentDetails: React.FC = () => {
       if (isAbortError(error)) {
         return;
       }
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const errorMessage = error?.response?.data?.detail || 'Failed to mark incident for review. Please try again.';
       setErrorModal({
         isOpen: true,
@@ -114,6 +119,7 @@ export const LguIncidentDetails: React.FC = () => {
   useEffect(() => {
     if (rejectIncidentMutation.isError) {
       actionsTakenModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = rejectIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to reject incident. Please try again.';
       setErrorModal({
@@ -143,10 +149,10 @@ export const LguIncidentDetails: React.FC = () => {
         description: "Please provide any relevant notes or instructions for the department when assigning this incident.",
         confirmText: "Assign",
         confirmColor: "blue",
-        onConfirm: async (actionsTaken: string) => {
+        onConfirm: async (actionsTaken: string, attachments: File[]) => {
           try {
             actionsTakenModal.setIsLoading(true);
-            await handleConfirmAssignment(departmentAccountId, actionsTaken);
+            await handleConfirmAssignment(departmentAccountId, actionsTaken, attachments);
           } catch (err) {
             console.error(err);
           } finally {
@@ -164,10 +170,10 @@ export const LguIncidentDetails: React.FC = () => {
       description: "Please describe the actions taken to resolve this incident. This will be recorded and visible to complainants.",
       confirmText: "Resolve",
       confirmColor: "green",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
           actionsTakenModal.setIsLoading(true);
-          await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+          await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
           console.error(err);
         } finally {
@@ -184,11 +190,12 @@ export const LguIncidentDetails: React.FC = () => {
       description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
       confirmText: "Confirm",
       confirmColor: "yellow",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
+            attachments,
             signal: abortController.signal,
           });
         } catch (err) {
@@ -210,10 +217,10 @@ export const LguIncidentDetails: React.FC = () => {
       description: "Please provide the reason for rejecting this incident. This will be recorded and visible to complainants.",
       confirmText: "Reject",
       confirmColor: "red",
-      onConfirm: async (actionsTaken: string) => {
+      onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
           actionsTakenModal.setIsLoading(true);
-          await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken });
+          await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
           console.error(err);
         } finally {
@@ -271,10 +278,17 @@ export const LguIncidentDetails: React.FC = () => {
     }
   };
 
-  const handleConfirmAssignment = async (departmentAccountId: number, actionsTaken: string) => {
+  const handleConfirmAssignment = async (
+    departmentAccountId: number,
+    actionsTaken: string,
+    attachments: File[]
+  ) => {
     setIsAssigning(true);
     try {
-      await endorseIncidentToDepartment(Number(incidentId), departmentAccountId, { actions_taken: actionsTaken });
+      await endorseIncidentToDepartment(Number(incidentId), departmentAccountId, {
+        actions_taken: actionsTaken,
+        attachments,
+      });
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["incidentDetails", Number(incidentId)] });

@@ -1,4 +1,5 @@
 import { incidentsApi } from "../axios/apiServices";
+import { buildIncidentActionFormData } from "./incidentActionFormData";
 import type { Incident } from "../../types/complaints/incident";
 import type { Complaint } from "../../types/complaints/complaint";
 
@@ -31,10 +32,11 @@ export const getComplaintsByIncidentId = async (incidentId: number): Promise<Com
 
 export const resolveIncident = async (
   incidentId: number,
-  payload: { actions_taken: string }
+  payload: { actions_taken: string; attachments?: File[] }
 ): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/resolve`, payload);
+    const formData = buildIncidentActionFormData(payload.actions_taken, payload.attachments);
+    await incidentsApi.patch(`/${incidentId}/resolve`, formData);
   } catch (error) {
     console.error("Error resolving incident:", error);
     throw error;
@@ -43,11 +45,12 @@ export const resolveIncident = async (
 
 export const reviewIncident = async (
   incidentId: number,
-  payload: { actions_taken: string },
+  payload: { actions_taken: string; attachments?: File[] },
   signal?: AbortSignal
 ): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/review`, payload, { signal });
+    const formData = buildIncidentActionFormData(payload.actions_taken, payload.attachments);
+    await incidentsApi.patch(`/${incidentId}/review`, formData, { signal });
   } catch (error) {
     console.error("Error reviewing incident:", error);
     throw error;
@@ -56,10 +59,11 @@ export const reviewIncident = async (
 
 export const rejectIncident = async (
   incidentId: number,
-  payload: { actions_taken: string }
+  payload: { actions_taken: string; attachments?: File[] }
 ): Promise<void> => {
   try {
-    await incidentsApi.patch(`/${incidentId}/reject`, payload);
+    const formData = buildIncidentActionFormData(payload.actions_taken, payload.attachments);
+    await incidentsApi.patch(`/${incidentId}/reject`, formData);
   } catch (error) {
     console.error("Error rejecting incident:", error);
     throw error;

@@ -1,7 +1,7 @@
 {
   "python-envs.pythonProjects": [
     {
-      "path": "Backend/test.py",
+      "path": "Backend/previous_cluster_complaint.py",
       "envManager": "ms-python.python:system",
       "packageManager": "ms-python.python:pip"
     },

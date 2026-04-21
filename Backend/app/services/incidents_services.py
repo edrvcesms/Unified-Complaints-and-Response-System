@@ -1,8 +1,10 @@
-from fastapi import HTTPException, status
+from typing import List, Optional
+
+from fastapi import HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
+from datetime import datetime, timezone
 from app.models.department_account import DepartmentAccount
 from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.complaint_status import ComplaintStatus
@@ -13,7 +15,9 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.tasks import send_notifications_task, save_response_task
+from app.tasks import send_notifications_task
+from app.models.response import Response
+from app.services.attachment_services import enqueue_response_attachments
 from app.utils.caching import delete_cache, set_cache, get_cache
 from app.models.user import User
 from sqlalchemy.orm import selectinload
@@ -49,6 +53,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -92,6 +97,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),
@@ -128,7 +134,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
         logger.error(f"Error in get_incident_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
-async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, db: AsyncSession):
+async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
         incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = incident_result.scalars().first()
@@ -151,10 +157,14 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
             .where(Complaint.id.in_(complaint_ids))
             .values(
                 status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                forwarded_at=datetime.utcnow(),
+                forwarded_at=datetime.now(timezone.utc),
                 is_rejected_by_lgu=False
             )
         )
+        
+        incident.complaint_count = len(complaint_ids)
+        incident.has_new_complaints = True
+        incident.updated_at = datetime.now(timezone.utc)
         await db.commit()
         
         
@@ -167,15 +177,22 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                     title="Complaint Forwarded to LGU",
                     message="Your complaint has been forwarded to the LGU for further processing.",
                     complaint_id=complaint.id,
-                    notification_type="update"
+                    notification_type="update",
+                    event="info"
                 )
                 
-        save_response_task.delay(
+        response = Response(
             incident_id=incident_id,
             responder_id=responder_id,
-            actions_taken=response_data.actions_taken
+            actions_taken=response_data.actions_taken,
+            response_date=datetime.now(timezone.utc),
         )
-        
+        db.add(response)
+        await db.commit()
+        await db.refresh(response)
+
+        if attachments:
+            await enqueue_response_attachments(attachments, response.id, responder_id)
         
         result = await db.execute(
             select(User).where(User.role == "lgu_official")
@@ -187,7 +204,9 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 title="New Incident Forwarded to LGU",
                 message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
                 complaint_id=None,
-                notification_type="update"
+                notification_type="update",
+                event="info"
+
             )
             
         await invalidate_cache(
@@ -246,7 +265,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         
         incident.has_new_complaints = False
         incident.new_complaint_count = 0
-        incident.last_viewed_at = datetime.utcnow()
+        incident.last_viewed_at = datetime.now(timezone.utc)
         
         await db.commit()
         await db.refresh(incident)

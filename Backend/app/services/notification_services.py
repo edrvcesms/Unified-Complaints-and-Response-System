@@ -4,7 +4,7 @@ from app.models.notification import Notification
 from app.schemas.notification_schema import NotificationCreateData, NotificationData
 from sqlalchemy import select
 from app.utils.logger import logger
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils.caching import get_cache, set_cache, delete_cache
 
 async def create_notification(notification_data: NotificationCreateData, db: AsyncSession):
@@ -16,7 +16,7 @@ async def create_notification(notification_data: NotificationCreateData, db: Asy
             complaint_id=notification_data.complaint_id,
             channel=notification_data.channel,
             notification_type=notification_data.notification_type,
-            sent_at=datetime.utcnow(),
+            sent_at=datetime.now(timezone.utc),
             is_read=notification_data.is_read
         )
         db.add(new_notification)

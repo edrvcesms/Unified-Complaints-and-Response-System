@@ -1,6 +1,7 @@
-import asyncio
+from app.models.response import Response
+from app.models.response_attachments import ResponseAttachments
 from app.utils.template_renderer import render_template
-from datetime import datetime
+from datetime import datetime, timezone
 from app.services.sse_manager import sse_manager
 import os
 from sqlalchemy import func
@@ -15,12 +16,7 @@ from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from sqlalchemy.orm import selectinload
 from app.models.incident_complaint import IncidentComplaintModel
 from app.database.database import AsyncSessionLocal
-from app.utils.cloudinary import (
-    upload_multiple_files_to_cloudinary,
-    delete_from_cloudinary,
-    delete_multiple_from_cloudinary,
-    extract_public_id_from_url,
-)
+from app.utils.cloudinary import (upload_multiple_files_to_cloudinary,delete_multiple_from_cloudinary,extract_public_id_from_url,)
 from app.utils.caching import delete_cache
 from app.utils.cache_invalidator import invalidate_cache
 from app.core.email_config import conf
@@ -33,34 +29,18 @@ from starlette.datastructures import Headers
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
-from app.domain.config.embeddings.sentence_transformer_service import SentenceTransformerEmbeddingService
-from app.domain.config.embeddings.gemini_embedding_service import GeminiEmbeddingService
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
 from app.domain.repository.incident_repository import IncidentRepository
-from app.domain.infrastracture.llm.gemini_incident_verifier import GeminiIncidentVerifier
 from dotenv import load_dotenv
 from app.utils.push_notifications import send_push_notification
-from app.domain.infrastracture.service.chatbot_service import ChatbotService
-from app.domain.chatbot.rag_service import RAGService, RAGResponse
-from app.domain.IEmbeddingService.vector_store.pinecone_rag_repository import PineconeRAGVectorRepository
-from app.domain.infrastracture.llm.gemini_rag import GeminiRAGLanguageModel
 from app.domain.infrastracture.llm.openai_incident_verifier import OpenAIIncidentVerifier
 from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 nest_asyncio.apply()
 load_dotenv()
 from app.core.config import settings
 
-
-
-_embedding_service = None
 _vector_repository = None
 _severity_calculator = None
-
-
-#_gemini_embedding_service = None
-
-#_gemini_verifier = None
-
 _openai_incident_verifier = None
 _openai_embedding_service = None
 
@@ -76,28 +56,6 @@ def get_openai_embedding_service():
         _openai_embedding_service = OpenAIEmbeddingService(api_key=settings.OPEN_AI_API_KEY)
     return _openai_embedding_service
 
-"""
-
-def get_gemini_verifier():
-    global _gemini_verifier
-    if _gemini_verifier is None:
-        _gemini_verifier = GeminiIncidentVerifier(api_key=settings.GEMINI_API_KEY)
-    return _gemini_verifier
-
-def get_embedding_service():
-    global _embedding_service
-    if _embedding_service is None:
-        _embedding_service = SentenceTransformerEmbeddingService()
-    return _embedding_service
-
-
-def get_gemini_embedding_service():
-    global _gemini_embedding_service
-    if _gemini_embedding_service is None:
-       _gemini_embedding_service = GeminiEmbeddingService(api_key=settings.GEMINI_API_KEY)
-    return _gemini_embedding_service
-
-"""
 def get_vector_repository():
     global _vector_repository
     if _vector_repository is None:
@@ -228,7 +186,7 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
                         file_type=f["content_type"],
                         file_size=os.path.getsize(f["temp_path"]),
                         file_path=url,
-                        uploaded_at=datetime.utcnow(),
+                        uploaded_at=datetime.now(timezone.utc),
                         complaint_id=complaint_id,
                         uploaded_by=uploader_id,
                     )
@@ -286,7 +244,7 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
                             announcement_id=announcement_id,
                             media_type=f["content_type"].split("/")[0],
                             media_url=url,
-                            uploaded_at=datetime.utcnow(),
+                            uploaded_at=datetime.now(timezone.utc),
                         )
                     )
 
@@ -415,7 +373,7 @@ def upload_event_media_task(self, files_data, event_id: int):
                             event_id=event_id,
                             media_type=f["content_type"].split("/")[0],
                             media_url=url,
-                            uploaded_at=datetime.utcnow(),
+                            uploaded_at=datetime.now(timezone.utc),
                         )
                     )
 
@@ -510,6 +468,82 @@ def delete_event_media_task(self, public_ids, event_id: int):
         logger.error(f"Event media delete failed: {e}")
         raise self.retry(exc=e)
     
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def upload_remarks_attachment(self, files_data, response_id: int, responder_id: int):
+
+    async def _run():
+        file_objs = []
+
+        try:
+            # Prepare UploadFile objects
+            for f in files_data:
+                file_obj = open(f["temp_path"], "rb")
+                upload_file = UploadFile(
+                    filename=f["filename"],
+                    file=file_obj,
+                    headers=Headers({"content-type": f["content_type"]}),
+                )
+                file_objs.append(upload_file)
+
+            # Upload to Cloudinary
+            urls = await upload_multiple_files_to_cloudinary(
+                file_objs, folder="ucrs/remarks"
+            )
+
+            # Save to DB
+            async with AsyncSessionLocal() as db:
+                remarks_files = []
+
+                for f, url in zip(files_data, urls):
+                    remarks_files.append(
+                        ResponseAttachments(
+                            response_id=response_id,
+                            file_url=url,
+                            media_type=f["content_type"].split("/")[0],
+                            created_at=datetime.now(timezone.utc),
+                        )
+                    )
+
+                db.add_all(remarks_files)
+                await db.commit()
+                await invalidate_cache(response_id=response_id)
+
+            return urls
+
+        finally:
+            # Close files
+            for f in file_objs:
+                try:
+                    f.file.close()
+                except:
+                    pass
+
+            # Delete temp files
+            for f in files_data:
+                try:
+                    if os.path.exists(f["temp_path"]):
+                        os.remove(f["temp_path"])
+                except:
+                    pass
+
+            # Delete temp folder if empty
+            try:
+                temp_dir = os.path.dirname(files_data[0]["temp_path"])
+                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
+                    os.rmdir(temp_dir)
+            except:
+                pass
+            
+            await invalidate_cache(response_id=response_id)
+            logger.info(f"Enqueued upload task for {len(files_data)} response attachments and invalidated relevant caches")
+
+    try:
+        return run_async(_run())
+    except Exception as e:
+        logger.error(f"Response attachment upload failed: {e}")
+        raise self.retry(exc=e)  
+    
+
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def delete_cloudinary_media_task(self, public_ids):
 
@@ -631,13 +665,13 @@ def cluster_complaint_task(self, complaint_data: dict):
                 if complaint:
                     if result.existing_incident_status != "submitted":
                         complaint.status = result.existing_incident_status
-                        complaint.updated_at = datetime.utcnow()
+                        complaint.updated_at = datetime.now(timezone.utc)
 
                         if result.existing_incident_status in ["forwarded_to_lgu", "forwarded_to_department"] and not complaint.forwarded_at:
-                            complaint.forwarded_at = datetime.utcnow()
+                            complaint.forwarded_at = datetime.now(timezone.utc)
 
                         if result.existing_incident_status == "resolved" and not complaint.resolved_at:
-                            complaint.resolved_at = datetime.utcnow()
+                            complaint.resolved_at = datetime.now(timezone.utc)
 
                     # SAVE NOTIFICATION
                     notification = Notification(
@@ -648,7 +682,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                         notification_type="info",
                         channel="in_app",
                         is_read=False,
-                        sent_at=datetime.utcnow()
+                        sent_at=datetime.now(timezone.utc)
                     )
                     db.add(notification)
 
@@ -670,7 +704,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                     if incident_hearing_date:
                         complaint.hearing_date = incident_hearing_date
 
-                        if incident_hearing_date > datetime.utcnow():
+                        if incident_hearing_date > datetime.now(timezone.utc):
                             user_name = (
                                 f"{complaint.user.first_name} {complaint.user.last_name}".strip()
                                 if complaint.user else "User"
@@ -683,12 +717,12 @@ def cluster_complaint_task(self, complaint_data: dict):
                                 hearing_day=incident_hearing_date.strftime("%d"),
                                 hearing_month=incident_hearing_date.strftime("%B"),
                                 hearing_year=incident_hearing_date.strftime("%Y"),
-                                issued_day=datetime.utcnow().strftime("%d"),
-                                issued_month=datetime.utcnow().strftime("%B"),
-                                issued_year=datetime.utcnow().strftime("%Y"),
-                                notified_day=datetime.utcnow().strftime("%d"),
-                                notified_month=datetime.utcnow().strftime("%B"),
-                                notified_year=datetime.utcnow().strftime("%Y"),
+                                issued_day=datetime.now(timezone.utc).strftime("%d"),
+                                issued_month=datetime.now(timezone.utc).strftime("%B"),
+                                issued_year=datetime.now(timezone.utc).strftime("%Y"),
+                                notified_day=datetime.now(timezone.utc).strftime("%d"),
+                                notified_month=datetime.now(timezone.utc).strftime("%B"),
+                                notified_year=datetime.now(timezone.utc).strftime("%Y"),
                                 hearing_time=incident_hearing_date.strftime("%I:%M %p")
                             )
 
@@ -741,173 +775,6 @@ def cluster_complaint_task(self, complaint_data: dict):
         "message": result.message,
     }
 
-
-"""
-    
-@celery_worker.task(
-    bind=True,
-    name="app.tasks.cluster_complaint_task",
-    max_retries=3,
-    default_retry_delay=10,
-    autoretry_for=(Exception,),
-)
-def cluster_complaint_task(self, complaint_data: dict):
-
-    cluster_data = ClusterComplaintSchema.model_validate(complaint_data)
-    logger.info(f"[cluster_complaint_task] Started clustering for complaint_id={cluster_data.complaint_id}")
-
-    async def _run():
-        async with AsyncSessionLocal() as db:
-            incident_repo = IncidentRepository(db)
-
-            use_case = ClusterComplaintUseCase(
-                embedding_service=get_embedding_service(),
-                vector_repository=get_vector_repository(),
-                incident_repository=incident_repo,
-                incident_verifier=get_gemini_verifier()
-            )
-
-            input_dto = ClusterComplaintInput(
-                complaint_id=cluster_data.complaint_id,
-                user_id=cluster_data.user_id,
-                title=cluster_data.title,
-                latitude=cluster_data.latitude,
-                longitude=cluster_data.longitude,
-                description=cluster_data.description,
-                barangay_id=cluster_data.barangay_id,
-                category_id=cluster_data.category_id,
-                category_radius_km=cluster_data.category_radius_km,
-                category_time_window_hours=cluster_data.category_time_window_hours,
-                category_base_severity_weight=cluster_data.category_base_severity_weight,
-                similarity_threshold=cluster_data.similarity_threshold,
-                created_at=cluster_data.created_at
-            )
-
-            result = await use_case.execute(input_dto)
-
-            if not result.is_new_incident and result.existing_incident_status:
-                complaint_result = await db.execute(
-                    select(Complaint)
-                    .options(selectinload(Complaint.user), selectinload(Complaint.barangay))
-                    .where(Complaint.id == cluster_data.complaint_id)
-                )
-
-                complaint = complaint_result.scalars().first()
-
-                if complaint:
-                    if result.existing_incident_status != "submitted":
-                        complaint.status = result.existing_incident_status
-                        complaint.updated_at = datetime.utcnow()
-
-                        if result.existing_incident_status in ["forwarded_to_lgu", "forwarded_to_department"] and not complaint.forwarded_at:
-                            complaint.forwarded_at = datetime.utcnow()
-
-                        if result.existing_incident_status == "resolved" and not complaint.resolved_at:
-                            complaint.resolved_at = datetime.utcnow()
-
-                    # SAVE NOTIFICATION
-                    notification = Notification(
-                        user_id=cluster_data.user_id,
-                        complaint_id=cluster_data.complaint_id,
-                        title="Update on your complaint",
-                        message=result.message or f"Your complaint is linked to an existing report. Status: {result.existing_incident_status}",
-                        notification_type="info",
-                        channel="in_app",
-                        is_read=False,
-                        sent_at=datetime.utcnow()
-                    )
-                    db.add(notification)
-
-                    # HEARING DATE LOOKUP
-                    hearing_date_result = await db.execute(
-                        select(func.max(Complaint.hearing_date))
-                        .join(
-                            IncidentComplaintModel,
-                            IncidentComplaintModel.complaint_id == Complaint.id
-                        )
-                        .where(
-                            IncidentComplaintModel.incident_id == result.incident_id,
-                            Complaint.hearing_date.isnot(None)
-                        )
-                    )
-
-                    incident_hearing_date = hearing_date_result.scalar_one_or_none()
-
-                    if incident_hearing_date:
-                        complaint.hearing_date = incident_hearing_date
-
-                        if incident_hearing_date > datetime.utcnow():
-                            user_name = (
-                                f"{complaint.user.first_name} {complaint.user.last_name}".strip()
-                                if complaint.user else "User"
-                            )
-
-                            notify_user_for_hearing_task.delay(
-                                recipient=complaint.user.email,
-                                barangay_name=complaint.barangay.barangay_name if complaint.barangay else "N/A",
-                                compliant_name=user_name,
-                                hearing_day=incident_hearing_date.strftime("%d"),
-                                hearing_month=incident_hearing_date.strftime("%B"),
-                                hearing_year=incident_hearing_date.strftime("%Y"),
-                                issued_day=datetime.utcnow().strftime("%d"),
-                                issued_month=datetime.utcnow().strftime("%B"),
-                                issued_year=datetime.utcnow().strftime("%Y"),
-                                notified_day=datetime.utcnow().strftime("%d"),
-                                notified_month=datetime.utcnow().strftime("%B"),
-                                notified_year=datetime.utcnow().strftime("%Y"),
-                                hearing_time=incident_hearing_date.strftime("%I:%M %p")
-                            )
-
-                        else:
-                            send_notifications_task.delay(
-                                user_id=cluster_data.user_id,
-                                title="Hearing update",
-                                message=f"Hearing already happened on {incident_hearing_date}",
-                                complaint_id=cluster_data.complaint_id,
-                                notification_type="info"
-                            )
-
-            await db.commit()
-
-            await invalidate_cache(
-                complaint_ids=[cluster_data.complaint_id],
-                user_ids=[cluster_data.user_id],
-                barangay_id=cluster_data.barangay_id,
-                incident_ids=[result.incident_id],
-                include_global=True,
-            )
-            return result
-
-    result = run_async(_run())
-
-    # CACHE CLEANUP
-    async def _cleanup_cache():
-        keys = [
-            f"complaint:{cluster_data.complaint_id}",
-            f"incident:{result.incident_id}",
-            f"user_notifications:{cluster_data.user_id}",
-        ]
-        for k in keys:
-            await delete_cache(k)
-
-    run_async(_cleanup_cache())
-
-    # TRIGGER SEVERITY RECALCULATION
-    recalculate_severity_task.apply_async(
-        args=[result.incident_id],
-        queue="severity",
-    )
-
-    return {
-        "incident_id": result.incident_id,
-        "is_new_incident": result.is_new_incident,
-        "similarity_score": result.similarity_score,
-        "severity_level": result.severity_level,
-        "existing_incident_status": result.existing_incident_status,
-        "message": result.message,
-    }
-
-"""
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_notifications_task(
     self,
@@ -929,7 +796,7 @@ def send_notifications_task(
                 notification_type=notification_type,
                 channel="sse",
                 is_read=False,
-                sent_at=datetime.utcnow(),
+                sent_at=datetime.now(timezone.utc),
             )
             db.add(notification)
             await db.commit()
@@ -941,7 +808,7 @@ def send_notifications_task(
                 data={
                     "title": title,
                     "message": message,
-                    "sent_at": datetime.utcnow().isoformat(),
+                    "sent_at": datetime.now(timezone.utc).isoformat(),
                     "complaint_id": complaint_id,
                     "notification_type": notification_type,
                 },
@@ -961,10 +828,18 @@ def save_response_task(self, incident_id: int, responder_id: int, actions_taken:
                 incident_id=incident_id,
                 responder_id=responder_id,
                 actions_taken=actions_taken,
-                response_date=datetime.utcnow(),
+                response_date=datetime.now(timezone.utc),
             )
             db.add(response)
             await db.commit()
+            
+        return {
+            "response_id": response.id,
+            "incident_id": incident_id,
+            "responder_id": responder_id,
+            "actions_taken": actions_taken,
+            "response_date": response.response_date.isoformat(),
+        }
 
     try:
         run_async(_run())

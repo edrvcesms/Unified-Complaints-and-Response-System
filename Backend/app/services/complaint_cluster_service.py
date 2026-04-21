@@ -1,6 +1,6 @@
 from fastapi import status
 from app.schemas.complaint_schema import ComplaintCreateData
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.repository.incident_repository import IncidentRepository
@@ -20,7 +20,7 @@ async def cluster_complaints(complaint_data: ComplaintCreateData, user_id: int, 
         "category_time_window_hours": category_config["time_window_hours"],
         "category_base_severity_weight": category_config["base_severity_weight"],
         "similarity_threshold": category_config["similarity_threshold"],
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
     
     cluster_complaint_task.delay(complaint_data=task_payload)

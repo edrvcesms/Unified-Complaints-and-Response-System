@@ -66,7 +66,6 @@ class DepartmentInfo(BaseModel):
     class Config:
         from_attributes = True
 
-
 class MyComplaintData(BaseModel):
     id: int
     title: str

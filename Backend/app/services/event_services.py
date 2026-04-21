@@ -11,7 +11,7 @@ from app.tasks import upload_event_media_task, delete_event_media_task
 import tempfile
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.cache_invalidator import invalidate_cache
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 allowed_event_media_types = ["image/jpeg", "image/png", "video/mp4"]
@@ -31,7 +31,7 @@ async def get_events(db: AsyncSession):
         result = await db.execute(
             select(Event)
             .options(selectinload(Event.media))
-            .where(Event.date >= datetime.utcnow())
+            .where(Event.date >= datetime.now(timezone.utc))
             .order_by(Event.date.asc())
         )
         events = result.scalars().all()
@@ -174,7 +174,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
         event.description = event_data.description
         event.date = event_data.date
         event.location = event_data.location
-        event.updated_at = datetime.utcnow()
+        event.updated_at = datetime.now(timezone.utc)
 
         await db.commit()
 

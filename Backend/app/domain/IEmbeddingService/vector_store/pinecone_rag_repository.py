@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # fallback only.
 _DEFAULT_TOP_K = 5
 _MAX_TOP_K = 8          # Hard ceiling — enforced before every Pinecone call
-_SCORE_THRESHOLD = 0.40  # Chunks below this score are dropped even if top_k allows them
+_SCORE_THRESHOLD = 0.25  # Chunks below this score are dropped even if top_k allows them
 
 
 class PineconeRAGVectorRepository(IRAGVectorRepository):

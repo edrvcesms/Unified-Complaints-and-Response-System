@@ -26,3 +26,16 @@ class IRAGLanguageModel(ABC):
         Returns:
             A natural-language answer grounded in the provided context.
         """
+
+    @abstractmethod
+    async def generate_no_context_answer(self, question: str) -> str:
+        """
+        Generates a polite fallback answer when no relevant chunks were retrieved.
+
+        Args:
+            question: The natural-language question from the user.
+
+        Returns:
+            A natural-language response informing the resident no information
+            was found, and directing them to their barangay or munisipyo.
+        """

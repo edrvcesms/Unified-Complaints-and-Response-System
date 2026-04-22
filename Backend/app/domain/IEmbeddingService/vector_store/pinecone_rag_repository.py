@@ -7,7 +7,7 @@ from pinecone import Pinecone
 
 from app.domain.interfaces.i_rag_vector_repository import IRAGVectorRepository
 from app.domain.value_objects.rag_retrieval_result import RAGRetrievalResult
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 # ── Retrieval budget ────────────────────────────────────────────────────────
 
@@ -100,7 +100,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
         results: List[RAGRetrievalResult] = []
         for match in response.matches:
             if match.score < _SCORE_THRESHOLD:
-                logger.debug(
+                logger.info(
                     f"Dropping chunk '{match.id}' — score {match.score:.3f} "
                     f"below threshold {_SCORE_THRESHOLD}"
                 )

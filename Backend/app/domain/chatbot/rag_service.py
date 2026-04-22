@@ -5,9 +5,7 @@ from typing import List, Optional
 from app.domain.interfaces.i_rag_model import IRAGLanguageModel
 from app.domain.interfaces.i_rag_vector_repository import IRAGVectorRepository
 from app.domain.value_objects.rag_retrieval_result import RAGRetrievalResult
-
-logger = logging.getLogger(__name__)
-
+from app.utils.logger import logger
 
 @dataclass
 class RAGResponse:
@@ -44,6 +42,7 @@ class RAGService:
         )
 
         if not chunks:
+          
             logger.warning("No chunks above threshold — calling LLM for no-context response.")
             answer = await self._language_model.generate_no_context_answer(
                 question=question,

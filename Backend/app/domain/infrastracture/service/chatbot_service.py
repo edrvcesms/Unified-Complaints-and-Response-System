@@ -11,8 +11,7 @@ from app.core.config import settings
 from app.core.redis import redis_client
 
 load_dotenv()
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class ChatbotService:

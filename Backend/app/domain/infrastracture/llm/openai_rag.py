@@ -26,14 +26,13 @@ Design decisions
 
 from __future__ import annotations
 
-import logging
 from typing import List
 
 from openai import AsyncOpenAI
 
 from app.domain.interfaces.i_rag_model import IRAGLanguageModel
 
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class OpenAIRAGLanguageModel(IRAGLanguageModel):
@@ -57,14 +56,23 @@ LANGUAGE POLICY
 ════════════════════════════════════════
 CONTEXT BEHAVIOR
 ════════════════════════════════════════
-- Kung may CONTEXT na ibinigay: sagutin LAMANG base sa mga dokumentong iyon.
-  Huwag banggitin ang "Context 1", "Context 2", o anumang panloob na label.
-  Sumagot nang natural, parang alam mo na ang impormasyon.
-- Kung WALANG CONTEXT na ibinigay: gamitin ang pangkalahatang kaalaman
-  tungkol sa lokal na pamahalaan ng Pilipinas, proseso ng barangay, at
-  Santa Maria, Laguna. Maging tapat kung hindi ka sigurado sa partikular
-  na lokal na detalye — imungkahi sa residente na makipag-ugnayan sa
-  kanilang barangay o sa munisipyo nang direkta.
+- Kung may CONTEXT na ibinigay AT malinaw na sinasagot nito ang tanong:
+  → DIRETSO sagutin ang tanong gamit ang context.
+  → HUWAG magtanong ng confirmation kahit maikli o simple ang tanong.
+  → HUWAG gumamit ng NO-CONTEXT classification.
+  → HUWAG mag-classify ng intent kung may sapat na impormasyon upang sumagot.
+  → Ipagpalagay na tama ang intensyon ng residente kung ito ay malinaw.
+  → Magbigay ng kumpletong sagot (hindi isang pangungusap lamang).
+
+- Kung may CONTEXT na ibinigay:
+  → Sagutin LAMANG base sa mga dokumentong iyon.
+  → Huwag banggitin ang "Context 1", "Context 2", o anumang panloob na label.
+  → HUWAG balewalain ang context kung ito ay may sagot.
+  → Sumagot nang natural, parang alam mo na ang impormasyon.
+
+- Kung WALANG CONTEXT na ibinigay:
+  → Gamitin ang pangkalahatang kaalaman tungkol sa lokal na pamahalaan ng Pilipinas, proseso ng barangay, at Santa Maria, Laguna.
+  → Maging tapat kung hindi sigurado at imungkahi ang pakikipag-ugnayan sa barangay o munisipyo.
 
 ════════════════════════════════════════
 NO-CONTEXT CLASSIFICATION (internal use)
@@ -218,6 +226,8 @@ HARD LIMITS
             f"[CONTEXT {i + 1}]\n{chunk.strip()}"
             for i, chunk in enumerate(chunks)
         )
+        
+        
 
     async def _call_openai(
         self,
@@ -258,8 +268,8 @@ HARD LIMITS
                 exc_info=True,
             )
             return (
-                "Paumanhin, may nangyaring error sa aming sistema. "
-                "Subukan ulit o makipag-ugnayan sa inyong barangay para sa tulong."
+                 "Paumanhin, mukhang mabagal ang internet connection. "
+                "Pakisubukang muli o siguraduhing maayos ang signal."
             )
 
  
@@ -275,6 +285,8 @@ HARD LIMITS
         Answers strictly from the retrieved documents.
         """
         formatted_context = self._format_context(context)
+        
+        logger.info("formatted_context:\n%s", formatted_context)  # Debug log for formatted context
 
         user_prompt = (
             f"RETRIEVED CONTEXT\n"

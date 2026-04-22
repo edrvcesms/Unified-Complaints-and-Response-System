@@ -6,7 +6,7 @@
 1. **POST /api/complaints/submit-complaint** — saves complaint, fetches category config, dispatches `cluster_complaint_task` to Celery, returns 201 immediately.
 
 2. **cluster_complaint_task (Celery, `clustering` queue)**:
-   - Generates embedding via `SentenceTransformerEmbeddingService`
+  - Generates embedding via `OpenAIEmbeddingService`
    - Stores vector in Pinecone with metadata (barangay, category, status, timestamp)
    - Queries Pinecone for similar ACTIVE complaints in same barangay + category within time window
    - Merges into existing incident (if score ≥ threshold) OR creates new incident
@@ -94,7 +94,7 @@ Similarity & Matching
 Same problem, different barangay — if a flood crosses barangay boundaries, each barangay gets a separate incident with no connection between them. There's no cross-barangay linking.
 Same complaint submitted twice by the same user — the system will still merge it as if it's a new reporter. There's no duplicate submission detection per user.
 Very short or vague descriptions — if someone just writes "grabe" or "problem dito", the embedding will be low quality and matching will likely fail, creating a new incident instead of merging.
-Complaints in Filipino/Tagalog or mixed language (Taglish) — all-MiniLM-L6-v2 is primarily trained on English. Filipino descriptions may produce poor embeddings and miss matches that a human would obviously recognize as the same problem.
+Complaints in Filipino/Tagalog or mixed language (Taglish) — multilingual embeddings reduce language mismatch, but very short/noisy descriptions can still miss matches.
 "Other" category matching — user-defined complaints under "Other" have a slightly stricter threshold (0.70) but two very different custom complaints could still accidentally get merged if their descriptions happen to be semantically close.
 
 

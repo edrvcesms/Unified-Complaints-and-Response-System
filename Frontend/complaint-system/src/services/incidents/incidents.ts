@@ -12,6 +12,15 @@ export const getIncidents = async (): Promise<Incident[]> => {
   };
 };
 
+export const getAllIncidents = async (): Promise<Incident[]> => {
+  try {
+    return await incidentsApi.get("/all/");
+  } catch (error) {
+    console.error("Error fetching all incidents:", error);
+    throw error;
+  };
+};
+
 export const getIncidentById = async (incidentId: number): Promise<Incident> => {
   try {
     return await incidentsApi.get(`/${incidentId}`);

@@ -1,11 +1,22 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip as ChartJsTooltip,
+  Legend as ChartJsLegend,
+  type ChartOptions,
+} from "chart.js";
+import { Bar as ChartJsBar } from "react-chartjs-2";
 import type { Incident } from "../../../types/complaints/incident";
 import { useWeeklyForwardedIncidentsStats, useComplaintCountsByBarangayCategory } from "../../../hooks/useStats";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ChartJsTooltip, ChartJsLegend);
 
 interface StatCardProps {
   label: string;
@@ -127,6 +138,84 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     return { data, series };
   }, [categoryStats, selectedCategory]);
 
+  const weeklyChartData = {
+    labels: WEEKLY_DATA.map((row) => row.day),
+    datasets: [
+      { label: t('chart.forwarded'), data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
+      { label: t('chart.resolved'), data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
+      { label: t('chart.underReview'), data: WEEKLY_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+    ],
+  };
+
+  const weeklyChartOptions: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          font: { size: 14 },
+          padding: 12,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#111827",
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: "#9ca3af", font: { size: 15 } },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "#9ca3af", font: { size: 15 }, precision: 0 },
+        grid: { color: "#f0f0f0" },
+      },
+    },
+  };
+
+  const categoryChartData = {
+    labels: categoryChart.data.map((row) => String(row.barangay ?? "")),
+    datasets: categoryChart.series.map((series) => ({
+      label: series.label,
+      data: categoryChart.data.map((row) => Number(row[series.key] ?? 0)),
+      backgroundColor: series.color,
+      borderRadius: 4,
+      stack: "total",
+    })),
+  };
+
+  const categoryChartOptions: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          font: { size: 13 },
+          padding: 8,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#111827",
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        ticks: { color: "#9ca3af", font: { size: 14 }, maxRotation: 25, minRotation: 25 },
+        grid: { display: false },
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: { color: "#9ca3af", font: { size: 15 }, precision: 0 },
+        grid: { color: "#f0f0f0" },
+      },
+    },
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -152,18 +241,9 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
           <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
         </div>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={WEEKLY_DATA} barSize={20} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-            <XAxis dataKey="day" tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }} cursor={{ fill: "#f9fafb" }} />
-            <Legend wrapperStyle={{ fontSize: "14px", paddingTop: "12px" }} />
-            <Bar dataKey="forwarded" name={t('chart.forwarded')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="resolved" name={t('chart.resolved')} fill="#22c55e" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="under_review" name={t('chart.underReview')} fill="#6366f1" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="w-full h-[300px]">
+          <ChartJsBar data={weeklyChartData} options={weeklyChartOptions} />
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
@@ -191,32 +271,9 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
         {isCategoryLoading ? (
           <div className="h-60 bg-gray-100 rounded animate-pulse" />
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={categoryChart.data} barSize={20} barGap={4} margin={{ left: 8, right: 8, bottom: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis
-                dataKey="barangay"
-                tick={{ fontSize: 14, fill: "#9ca3af" }}
-                axisLine={false}
-                tickLine={false}
-                angle={-25}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis tick={{ fontSize: 15, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }} cursor={{ fill: "#f9fafb" }} />
-              <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "8px" }} />
-              {categoryChart.series.map((series) => (
-                <Bar
-                  key={series.key}
-                  dataKey={series.key}
-                  name={series.label}
-                  stackId="total"
-                  fill={series.color}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[340px]">
+            <ChartJsBar data={categoryChartData} options={categoryChartOptions} />
+          </div>
         )}
       </div>
 

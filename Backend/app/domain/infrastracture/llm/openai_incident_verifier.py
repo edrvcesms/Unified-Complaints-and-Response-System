@@ -10,7 +10,7 @@ class OpenAIIncidentVerifier(IIncidentVerifier):
     OpenAI GPT-based implementation of IIncidentVerifier.
 
     DIP: Implements IIncidentVerifier — use-case has no knowledge of OpenAI.
-    OCP: Swap to Gemini or Claude by implementing IIncidentVerifier, rewire DI.
+    OCP: Swap providers by implementing IIncidentVerifier, rewire DI.
     SRP: Only responsible for LLM-based incident verification.
     """
 

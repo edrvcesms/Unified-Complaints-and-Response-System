@@ -71,6 +71,7 @@ async def invalidate_cache(
 
     if barangay_id:
         tasks.update([
+            f"all_incidents:{barangay_id}",
             f"barangay_incidents:{barangay_id}",
             f"barangay_{barangay_id}_complaints",
             f"complaint_stats:weekly:{barangay_id}",

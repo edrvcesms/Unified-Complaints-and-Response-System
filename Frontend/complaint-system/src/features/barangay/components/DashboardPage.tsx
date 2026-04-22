@@ -1,18 +1,20 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+  ArcElement,
+} from "chart.js";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Tooltip as ChartJsTooltip,
+  Legend as ChartJsLegend,
+  type ChartOptions,
+} from "chart.js";
+import { Line, Bar as ChartJsBar, Pie as ChartJsPie } from "react-chartjs-2";
 
 import type { Complaint, ComplaintStats } from "../../../types/complaints/complaint";
 import type { Period } from "../../../types/general/stats";
@@ -34,6 +36,8 @@ import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon, ForwardedIcon } from 
 import { StatCard } from "../../general";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { utcToLocal } from "../../../utils/dateUtils";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartJsTooltip, ChartJsLegend);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -134,23 +138,65 @@ interface StatusChartProps {
 }
 
 function StatusChart({ data }: StatusChartProps) {
+  const barData = {
+    labels: data.map((row) => row.label),
+    datasets: [
+      { label: "Submitted", data: data.map((row) => row.submitted), backgroundColor: "#eab308", borderRadius: 4 },
+      { label: "Under Review", data: data.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+      { label: "Forwarded to LGU", data: data.map((row) => row.forwarded), backgroundColor: "#f97316", borderRadius: 4 },
+      { label: "Resolved", data: data.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
+    ],
+  };
+
+  const options: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          font: {
+            size: 13,
+          },
+          padding: 12,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#111827",
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: "#9ca3af",
+          font: {
+            size: 14,
+          },
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: "#9ca3af",
+          font: {
+            size: 14,
+          },
+          precision: 0,
+        },
+        grid: {
+          color: "#f0f0f0",
+        },
+      },
+    },
+  };
+
   return (
-    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
-      <BarChart data={data} barSize={18} barGap={4}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
-          cursor={{ fill: "#f9fafb" }}
-        />
-        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
-        <Bar dataKey="submitted" name="Submitted" fill="#eab308" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="under_review" name="Under Review" fill="#6366f1" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="forwarded" name="Forwarded to LGU" fill="#f97316" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="resolved" name="Resolved" fill="#22c55e" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full min-w-0 min-h-[300px]">
+      <ChartJsBar data={barData} options={options} />
+    </div>
   );
 }
 
@@ -159,12 +205,12 @@ interface CategoryChartProps {
 }
 
 function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
-  const data = Object.entries(totalByCategory)
+  const pieEntries = Object.entries(totalByCategory)
     .filter(([, v]) => v > 0)
     .sort(([, a], [, b]) => b - a)
     .map(([name, value]) => ({ name: formatCategoryName(name), value }));
 
-  if (data.length === 0) {
+  if (pieEntries.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-base text-gray-400">
         No category data for this period.
@@ -172,32 +218,41 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
     );
   }
 
+  const pieData = {
+    labels: pieEntries.map((entry) => entry.name),
+    datasets: [
+      {
+        data: pieEntries.map((entry) => entry.value),
+        backgroundColor: pieEntries.map((_, index) => getCategoryColor(index)),
+        borderColor: "#ffffff",
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const options: ChartOptions<"pie"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          font: {
+            size: 13,
+          },
+          padding: 12,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#111827",
+      },
+    },
+  };
+
   return (
-    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius="40%"
-          outerRadius="70%"
-          paddingAngle={3}
-          dataKey="value"
-          label={({ name, percent }) =>
-            `${name} ${(percent * 100).toFixed(0)}%`
-          }
-          labelLine={false}
-        >
-          {data.map((_, index) => (
-            <Cell key={index} fill={getCategoryColor(index)} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
-        />
-        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full min-w-0 min-h-[240px]">
+      <ChartJsPie data={pieData} options={options} />
+    </div>
   );
 }
 
@@ -206,7 +261,7 @@ interface CategoryBarChartProps {
   categoryNames: string[];
 }
 
-function CategoryBarChart({ data, categoryNames }: CategoryBarChartProps) {
+function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
   if (categoryNames.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-base text-gray-400">
@@ -215,28 +270,73 @@ function CategoryBarChart({ data, categoryNames }: CategoryBarChartProps) {
     );
   }
 
+  const lineData = {
+    labels: data.map((row) => row.label),
+    datasets: categoryNames.map((name, i) => ({
+      label: formatCategoryName(name),
+      data: data.map((row) => Number(row[name] ?? 0)),
+      borderColor: getCategoryColor(i),
+      backgroundColor: getCategoryColor(i),
+      borderWidth: 3,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.35,
+    })),
+  };
+
+  const options: ChartOptions<"line"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: "index",
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: {
+          font: {
+            size: 13,
+          },
+          padding: 12,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#111827",
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: "#9ca3af",
+          font: {
+            size: 14,
+          },
+        },
+        grid: {
+          display: false,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: "#9ca3af",
+          font: {
+            size: 14,
+          },
+          precision: 0,
+        },
+        grid: {
+          color: "#f0f0f0",
+        },
+      },
+    },
+  };
+
   return (
-    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
-      <BarChart data={data} barSize={14} barGap={2}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fontSize: 14, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
-        <Tooltip
-          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "14px" }}
-          cursor={{ fill: "#f9fafb" }}
-        />
-        <Legend wrapperStyle={{ fontSize: "13px", paddingTop: "12px" }} />
-        {categoryNames.map((name, i) => (
-          <Bar
-            key={name}
-            dataKey={name}
-            name={formatCategoryName(name)}
-            fill={getCategoryColor(i)}
-            radius={[4, 4, 0, 0]}
-          />
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="w-full h-full min-w-0 min-h-[300px]">
+      <Line data={lineData} options={options} />
+    </div>
   );
 }
 
@@ -389,7 +489,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
               Complaints by Status
             </h3>
-            <div className="w-full min-w-0 h-60 sm:h-64">
+            <div className="w-full min-w-0 h-72 sm:h-80">
               <StatusChart data={chartData} />
             </div>
           </div>
@@ -421,8 +521,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 Category Trend
               </h3>
-              <div className="w-full min-w-0 h-60 sm:h-64">
-                <CategoryBarChart
+              <div className="w-full min-w-0 h-72 sm:h-80">
+                <CategoryLineChart
                   data={chartData}
                   categoryNames={categoryNames}
                 />

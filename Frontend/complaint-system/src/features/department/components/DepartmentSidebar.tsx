@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Sidebar as GenericSidebar } from "../../general";
+import { Archive } from "lucide-react";
 import { DashboardIcon, ComplaintsIcon } from "../../barangay/components/Icons";
 
 interface DepartmentSidebarProps {
@@ -13,6 +14,7 @@ export const DepartmentSidebar: React.FC<DepartmentSidebarProps> = ({ isOpen, on
   const NAV_ITEMS = [
     { path: "/department/dashboard", label: t('sidebar.department.dashboard'), icon: <DashboardIcon />, end: true },
     { path: "/department/incidents", label: t('sidebar.department.incidents'), icon: <ComplaintsIcon /> },
+    { path: "/department/archive", label: "Archive", icon: <Archive className="w-5 h-5" /> },
   ];
 
   return (

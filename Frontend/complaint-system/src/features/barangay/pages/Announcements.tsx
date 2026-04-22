@@ -26,6 +26,8 @@ import {
 import { validateTitle, validateDescription } from "../../../utils/validators";
 import type { Announcement } from "../../../types/general/announcement";
 
+const MAX_UPLOAD_FILES = 3;
+
 const getVideoMimeType = (mediaType: string, mediaUrl: string) => {
   if (mediaType.includes("/")) {
     return mediaType;
@@ -106,7 +108,7 @@ interface FormErrors {
 
 export const AnnouncementsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "manage">("manage");
   const [formData, setFormData] = useState<FormData>({
     title: "",
     content: "",
@@ -145,6 +147,17 @@ export const AnnouncementsPage: React.FC = () => {
         ...prev, 
         files: t('errors.invalidFileType')
       }));
+      return;
+    }
+
+    if (selectedFiles.length + files.length > MAX_UPLOAD_FILES) {
+      setErrors((prev) => ({
+        ...prev,
+        files: `You can only upload up to ${MAX_UPLOAD_FILES} files.`
+      }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
     
@@ -303,17 +316,6 @@ export const AnnouncementsPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab("create")}
-            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "create"
-                ? "border-primary-600 text-primary-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            {editingAnnouncement ? t('announcements.editTab') : t('announcements.createTab')}
-          </button>
-          <button
             onClick={() => {
               setActiveTab("manage");
               refetch();
@@ -332,220 +334,20 @@ export const AnnouncementsPage: React.FC = () => {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("create")}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "create"
+                ? "border-primary-600 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            {editingAnnouncement ? t('announcements.editTab') : t('announcements.createTab')}
+          </button>
         </div>
-
-        {/* Create/Edit Tab */}
-        {activeTab === "create" && (
-          <div className="p-6">
-            {editingAnnouncement && (
-              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg flex items-center justify-between">
-                <p className="text-sm text-primary-700">
-                  Editing: <span className="font-semibold">{editingAnnouncement.title}</span>
-                </p>
-                <button
-                  onClick={handleCancelEdit}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  {t('announcements.form.cancel')}
-                </button>
-              </div>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Title */}
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t('announcements.form.title')} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder={t('announcements.form.titlePlaceholder')}
-                  maxLength={200}
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
-                    focus:outline-none focus:ring-2 transition
-                    ${errors.title
-                      ? "border-red-400 bg-red-50 focus:ring-red-300"
-                      : "border-gray-300 bg-white focus:ring-primary-400 focus:border-primary-400"
-                    }`}
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-                )}
-              </div>
-
-              {/* Content */}
-              <div>
-                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t('announcements.form.content')} <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={formData.content}
-                  onChange={handleChange}
-                  placeholder={t('announcements.form.contentPlaceholder')}
-                  rows={6}
-                  maxLength={5000}
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
-                    focus:outline-none focus:ring-2 transition resize-none
-                    ${errors.content
-                      ? "border-red-400 bg-red-50 focus:ring-red-300"
-                      : "border-gray-300 bg-white focus:ring-blue-400 focus:border-blue-400"
-                    }`}
-                />
-                {errors.content && (
-                  <p className="mt-1 text-sm text-red-600">{errors.content}</p>
-                )}
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t('announcements.form.uploadMedia')}
-                </label>
-                
-                {/* Existing Media - Show when editing */}
-                {editingAnnouncement && editingAnnouncement.media.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      {t('announcements.form.existingMedia')} ({existingMediaToKeep.length})
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {editingAnnouncement.media
-                        .filter((media) => existingMediaToKeep.includes(media.id))
-                        .map((media) => (
-                          <div key={media.id} className="relative group">
-                            <div className="aspect-square rounded-lg border border-gray-200 overflow-hidden bg-gray-100">
-                              <MediaThumbnail url={media.media_url} type={media.media_type} />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeExistingMedia(media.id)}
-                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-md"
-                              title="Remove media"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 mb-1">
-                    {editingAnnouncement ? t('announcements.form.uploadDescription') : t('announcements.form.uploadDescription')}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Supported: JPG, PNG, MP4, MPEG, MOV
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime"
-                    multiple
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                </div>
-                {errors.files && (
-                  <p className="mt-1 text-sm text-red-600">{errors.files}</p>
-                )}
-
-                {/* Selected Files */}
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium text-gray-700">
-                      {t('announcements.form.selectedFiles')} ({selectedFiles.length})
-                    </p>
-                    <div className="space-y-2">
-                      {selectedFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            {getFileIcon(file)}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {file.name}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="shrink-0 p-1 text-gray-400 hover:text-red-600 transition-colors"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                {editingAnnouncement && (
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    {t('modal.cancel')}
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  disabled={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
-                  className="px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {(createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending) && (
-                    <svg
-                      className="animate-spin h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                  )}
-                  {editingAnnouncement 
-                    ? (updateAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.update'))
-                    : (createAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.submit'))
-                  }
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Manage Tab */}
+
+        {/* Manage Tab - Show announcements list */}
         {activeTab === "manage" && (
           <div className="p-6">
             {isLoading ? (
@@ -671,6 +473,220 @@ export const AnnouncementsPage: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Create/Edit Tab */}
+        {activeTab === "create" && (
+          <div className="p-6">
+            {editingAnnouncement && (
+              <div className="mb-4 p-3 bg-primary-50 border border-primary-200 rounded-lg flex items-center justify-between">
+                <p className="text-sm text-primary-700">
+                  Editing: <span className="font-semibold">{editingAnnouncement.title}</span>
+                </p>
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  {t('announcements.form.cancel')}
+                </button>
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Title */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t('announcements.form.title')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder={t('announcements.form.titlePlaceholder')}
+                  maxLength={200}
+                  className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
+                    focus:outline-none focus:ring-2 transition
+                    ${errors.title
+                      ? "border-red-400 bg-red-50 focus:ring-red-300"
+                      : "border-gray-300 bg-white focus:ring-primary-400 focus:border-primary-400"
+                    }`}
+                />
+                {errors.title && (
+                  <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                )}
+              </div>
+
+              {/* Content */}
+              <div>
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t('announcements.form.content')} <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleChange}
+                  placeholder={t('announcements.form.contentPlaceholder')}
+                  rows={6}
+                  maxLength={5000}
+                  className={`w-full px-4 py-2.5 rounded-lg border text-sm text-gray-800 placeholder-gray-400
+                    focus:outline-none focus:ring-2 transition resize-none
+                    ${errors.content
+                      ? "border-red-400 bg-red-50 focus:ring-red-300"
+                      : "border-gray-300 bg-white focus:ring-blue-400 focus:border-blue-400"
+                    }`}
+                />
+                {errors.content && (
+                  <p className="mt-1 text-sm text-red-600">{errors.content}</p>
+                )}
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  {t('announcements.form.uploadMedia')}
+                </label>
+                
+                {/* Existing Media - Show when editing */}
+                {editingAnnouncement && editingAnnouncement.media.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {t('announcements.form.existingMedia')} ({existingMediaToKeep.length})
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {editingAnnouncement.media
+                        .filter((media) => existingMediaToKeep.includes(media.id))
+                        .map((media) => (
+                          <div key={media.id} className="relative group">
+                            <div className="aspect-square rounded-lg border border-gray-200 overflow-hidden bg-gray-100">
+                              <MediaThumbnail url={media.media_url} type={media.media_type} />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeExistingMedia(media.id)}
+                              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-md"
+                              title="Remove media"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 hover:bg-primary-50/30 transition-colors cursor-pointer"
+                >
+                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 mb-1">
+                    {editingAnnouncement ? t('announcements.form.uploadDescription') : t('announcements.form.uploadDescription')}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Supported: JPG, PNG, MP4, MPEG, MOV
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Max {MAX_UPLOAD_FILES} files
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+                {errors.files && (
+                  <p className="mt-1 text-sm text-red-600">{errors.files}</p>
+                )}
+
+                {/* Selected Files */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      {t('announcements.form.selectedFiles')} ({selectedFiles.length})
+                    </p>
+                    <div className="space-y-2">
+                      {selectedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3"
+                        >
+                          <div className="flex items-center gap-3">
+                            {getFileIcon(file)}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="shrink-0 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                {editingAnnouncement && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-6 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    {t('modal.cancel')}
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
+                  className="px-6 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {(createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending) && (
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  )}
+                  {editingAnnouncement 
+                    ? (updateAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.update'))
+                    : (createAnnouncementMutation.isPending ? t('modal.processing') : t('announcements.form.submit'))
+                  }
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>

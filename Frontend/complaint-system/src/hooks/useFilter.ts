@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Incident } from "../types/complaints/incident";
-import type { StatusFilter, SeverityScoreFilter } from "../types/complaints/complaint";
+import type { StatusFilter, SeverityScoreFilter, ComplaintStatusFilter } from "../types/complaints/complaint";
 import { ITEMS_PER_PAGE } from "../types/complaints/complaint";
 import { formatCategoryName } from "../utils/categoryFormatter";
 import { utcToLocal } from "../utils/dateUtils";
@@ -28,9 +28,10 @@ const getPriorityScore = (incident: Incident): number => {
   return (levelWeight * 3) + incident.severity_score;
 };
 
-export function useComplaintsFilter(complaints: Incident[]) {
+export function useComplaintsFilter(complaints: Incident[], filterByComplaintStatus: boolean = false) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
+  const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>("date_oldest_first");
@@ -78,8 +79,16 @@ export function useComplaintsFilter(complaints: Incident[]) {
 
   const filtered = useMemo(() => {
     return sorted.filter((c) => {
-      const matchesStatus =
-        filterStatus === "all" || c.severity_level === filterStatus;
+      let matchesStatus = true;
+
+      if (filterByComplaintStatus) {
+        // Filter by complaint status (from first complaint in cluster)
+        const complaintStatus = c.complaint_clusters?.[0]?.complaint?.status;
+        matchesStatus = filterComplaintStatus === "all" || complaintStatus === filterComplaintStatus;
+      } else {
+        // Filter by severity level
+        matchesStatus = filterStatus === "all" || c.severity_level === filterStatus;
+      }
 
       const matchesSeverityScore = () => {
         if (filterSeverityScore === "all") return true;
@@ -128,7 +137,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
 
       return matchesStatus && matchesSeverityScore() && matchesDate() && matchesSearch;
     });
-  }, [sorted, filterStatus, filterSeverityScore, search, dateFrom, dateTo]);
+  }, [sorted, filterStatus, filterComplaintStatus, filterSeverityScore, search, dateFrom, dateTo, filterByComplaintStatus]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 
@@ -139,6 +148,11 @@ export function useComplaintsFilter(complaints: Incident[]) {
 
   const handleFilterChange = (value: StatusFilter) => {
     setFilterStatus(value);
+    setCurrentPage(1);
+  };
+
+  const handleComplaintStatusFilterChange = (value: ComplaintStatusFilter) => {
+    setFilterComplaintStatus(value);
     setCurrentPage(1);
   };
 
@@ -176,6 +190,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
   return {
     search,
     filterStatus,
+    filterComplaintStatus,
     filterSeverityScore,
     sortBy,
     dateFrom,
@@ -188,6 +203,7 @@ export function useComplaintsFilter(complaints: Incident[]) {
     totalPages,
     handleSearch,
     handleFilterChange,
+    handleComplaintStatusFilterChange,
     handleSeverityScoreFilterChange,
     handleSortChange,
     handleDateFromChange,

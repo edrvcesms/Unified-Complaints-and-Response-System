@@ -17,6 +17,7 @@ import SuperAdminDashboardLayout from "./layouts/SuperAdminDashboardLayout"
 import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
+import { ArchiveIncidents as BarangayArchiveIncidents } from "./features/barangay/pages/ArchiveIncidents"
 import { ComplaintDetails } from "./features/barangay/pages/ComplaintDetails"
 import { AnnouncementsPage } from "./features/barangay/pages/Announcements"
 import { EventsPage } from "./features/barangay/pages/Events"
@@ -27,11 +28,13 @@ import { LguIncidentComplaints } from "./features/lgu/pages/IncidentComplaints"
 import { LguComplaintDetails } from "./features/lgu/pages/ComplaintDetails"
 import { BarangayList } from "./features/lgu/pages/BarangayList"
 import { BarangayIncidents } from "./features/lgu/pages/BarangayIncidents"
+import { LguArchiveIncidents } from "./features/lgu/pages/ArchiveIncidents"
 import { LguAnnouncements } from "./features/lgu/pages/Announcements"
 import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayReports"
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
+import { DepartmentArchiveIncidents } from "./features/department/pages/ArchiveIncidents"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
@@ -79,6 +82,7 @@ function App() {
             <Route path="/dashboard/*" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="incidents" element={<IncidentPage />} />
+              <Route path="archive" element={<BarangayArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
@@ -95,6 +99,7 @@ function App() {
               <Route path="barangay-incidents" element={<BarangayList />} />
               <Route path="barangay-incidents/:barangayId" element={<BarangayIncidents />} />
               <Route path="incidents" element={<LguIncidents />} />
+              <Route path="archive" element={<LguArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<LguIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<LguIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<LguComplaintDetails />} />
@@ -112,6 +117,7 @@ function App() {
             <Route path="/department/*" element={<DepartmentDashboardLayout />}>
               <Route path="dashboard" element={<DepartmentDashboard />} />
               <Route path="incidents" element={<DepartmentIncidents />} />
+              <Route path="archive" element={<DepartmentArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<DepartmentIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<DepartmentIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<DepartmentComplaintDetails />} />

@@ -11,7 +11,7 @@ class BaseLLMClient(ABC):
 
     DIP:
         Higher-level modules (RAG, use-cases) depend on this abstraction,
-        not on concrete implementations like Gemini, GPT, etc.
+        not on concrete provider implementations.
 
     OCP:
         New LLM providers can be added without modifying dependent code.

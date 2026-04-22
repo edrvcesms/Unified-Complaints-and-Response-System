@@ -20,6 +20,7 @@ import { isAbortError } from "../../../utils/axiosException";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
+import { validateAttachments } from '../../../utils/attachmentHelper';
 
 export const LguIncidentDetails: React.FC = () => {
   const actionsTakenModal = useActionsTakenModal();
@@ -151,6 +152,11 @@ export const LguIncidentDetails: React.FC = () => {
         confirmColor: "blue",
         onConfirm: async (actionsTaken: string, attachments: File[]) => {
           try {
+            const validationError = validateAttachments(attachments);
+            if (validationError) {
+              setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+              return;
+            }
             actionsTakenModal.setIsLoading(true);
             await handleConfirmAssignment(departmentAccountId, actionsTaken, attachments);
           } catch (err) {
@@ -172,6 +178,11 @@ export const LguIncidentDetails: React.FC = () => {
       confirmColor: "green",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
+          const validationError = validateAttachments(attachments);
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
           actionsTakenModal.setIsLoading(true);
           await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
@@ -192,6 +203,11 @@ export const LguIncidentDetails: React.FC = () => {
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
+          const validationError = validateAttachments(attachments);
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
@@ -218,6 +234,12 @@ export const LguIncidentDetails: React.FC = () => {
       confirmText: "Reject",
       confirmColor: "red",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
+        const validationError = validateAttachments(attachments);
+        if (validationError) {
+          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          return;
+        }
+
         try {
           actionsTakenModal.setIsLoading(true);
           await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });

@@ -3,6 +3,10 @@ from app.models.response_attachments import ResponseAttachments
 from app.utils.template_renderer import render_template
 from datetime import datetime, timezone
 from app.services.sse_manager import sse_manager
+import asyncio
+import atexit
+import base64
+import io
 import os
 from sqlalchemy import func
 from app.models.notification import Notification
@@ -24,7 +28,6 @@ from sqlalchemy import select
 from app.utils.logger import logger
 from fastapi import UploadFile
 from app.celery_worker import celery_worker
-import nest_asyncio
 from starlette.datastructures import Headers
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintUseCase, ClusterComplaintInput
 from app.domain.application.use_cases.recalculate_severity import RecalculateSeverityUseCase, WeightedSeverityCalculator
@@ -35,7 +38,7 @@ from dotenv import load_dotenv
 from app.utils.push_notifications import send_push_notification
 from app.domain.infrastracture.llm.openai_incident_verifier import OpenAIIncidentVerifier
 from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
-nest_asyncio.apply()
+from app.utils.attachments import validate_encoded_upload
 load_dotenv()
 from app.core.config import settings
 
@@ -72,15 +75,50 @@ def get_severity_calculator():
     return _severity_calculator
 
 
+_celery_event_loop = None
+
+def _get_or_create_celery_event_loop():
+    """Reuse one event loop per Celery worker process for async resources."""
+    global _celery_event_loop
+
+    if _celery_event_loop is not None and not _celery_event_loop.is_closed():
+        asyncio.set_event_loop(_celery_event_loop)
+        return _celery_event_loop
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError("Current event loop is closed")
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    _celery_event_loop = loop
+    return loop
+
+
+def _close_celery_event_loop():
+    global _celery_event_loop
+    if _celery_event_loop is not None and not _celery_event_loop.is_closed():
+        _celery_event_loop.close()
+    _celery_event_loop = None
+
+
+atexit.register(_close_celery_event_loop)
+
 
 def run_async(coro):
-    import asyncio
-    try:
-        return asyncio.run(coro)
-    except RuntimeError:
-        # If already in an event loop, fallback (rare in Celery)
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(coro)
+    loop = _get_or_create_celery_event_loop()
+
+    if loop.is_running():
+        # Defensive fallback for unexpected nested-loop environments.
+        temp_loop = asyncio.new_event_loop()
+        try:
+            return temp_loop.run_until_complete(coro)
+        finally:
+            temp_loop.close()
+
+    return loop.run_until_complete(coro)
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_email_task(self, subject: str, recipient: str, body: str):
@@ -169,7 +207,9 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
 
         try:
             for f in files_data:
-                file_obj = open(f["temp_path"], "rb")
+                validate_encoded_upload(f)
+                content_bytes = base64.b64decode(f["content_b64"])
+                file_obj = io.BytesIO(content_bytes)
                 upload_file = UploadFile(
                     filename=f["filename"],
                     file=file_obj,
@@ -184,7 +224,7 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
                     Attachment(
                         file_name=f["filename"],
                         file_type=f["content_type"],
-                        file_size=os.path.getsize(f["temp_path"]),
+                        file_size=f.get("file_size", 0),
                         file_path=url,
                         uploaded_at=datetime.now(timezone.utc),
                         complaint_id=complaint_id,
@@ -211,7 +251,6 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
         logger.error(f"Upload failed: {e}")
         raise self.retry(exc=e)
     
-    
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def upload_announcement_media_task(self, files_data, announcement_id: int, uploader_id: int):
 
@@ -221,7 +260,9 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
         try:
             # Prepare UploadFile objects
             for f in files_data:
-                file_obj = open(f["temp_path"], "rb")
+                validate_encoded_upload(f)
+                content_bytes = base64.b64decode(f["content_b64"])
+                file_obj = io.BytesIO(content_bytes)
                 upload_file = UploadFile(
                     filename=f["filename"],
                     file=file_obj,
@@ -261,22 +302,6 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
                     f.file.close()
                 except:
                     pass
-
-            # Delete temp files
-            for f in files_data:
-                try:
-                    if os.path.exists(f["temp_path"]):
-                        os.remove(f["temp_path"])
-                except:
-                    pass
-
-            # Delete temp folder if empty
-            try:
-                temp_dir = os.path.dirname(files_data[0]["temp_path"])
-                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                    os.rmdir(temp_dir)
-            except:
-                pass
             
             await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
             logger.info(f"Enqueued upload task for {len(files_data)} media files and invalidated relevant caches")
@@ -350,7 +375,9 @@ def upload_event_media_task(self, files_data, event_id: int):
         try:
             # Prepare UploadFile objects
             for f in files_data:
-                file_obj = open(f["temp_path"], "rb")
+                validate_encoded_upload(f)
+                content_bytes = base64.b64decode(f["content_b64"])
+                file_obj = io.BytesIO(content_bytes)
                 upload_file = UploadFile(
                     filename=f["filename"],
                     file=file_obj,
@@ -390,22 +417,6 @@ def upload_event_media_task(self, files_data, event_id: int):
                     f.file.close()
                 except:
                     pass
-
-            # Delete temp files
-            for f in files_data:
-                try:
-                    if os.path.exists(f["temp_path"]):
-                        os.remove(f["temp_path"])
-                except:
-                    pass
-
-            # Delete temp folder if empty
-            try:
-                temp_dir = os.path.dirname(files_data[0]["temp_path"])
-                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                    os.rmdir(temp_dir)
-            except:
-                pass
 
             await invalidate_cache(event_ids=[event_id])
 
@@ -477,7 +488,9 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
         try:
             # Prepare UploadFile objects
             for f in files_data:
-                file_obj = open(f["temp_path"], "rb")
+                validate_encoded_upload(f)
+                content_bytes = base64.b64decode(f["content_b64"])
+                file_obj = io.BytesIO(content_bytes)
                 upload_file = UploadFile(
                     filename=f["filename"],
                     file=file_obj,
@@ -517,22 +530,6 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
                     f.file.close()
                 except:
                     pass
-
-            # Delete temp files
-            for f in files_data:
-                try:
-                    if os.path.exists(f["temp_path"]):
-                        os.remove(f["temp_path"])
-                except:
-                    pass
-
-            # Delete temp folder if empty
-            try:
-                temp_dir = os.path.dirname(files_data[0]["temp_path"])
-                if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                    os.rmdir(temp_dir)
-            except:
-                pass
             
             await invalidate_cache(response_id=response_id)
             logger.info(f"Enqueued upload task for {len(files_data)} response attachments and invalidated relevant caches")
@@ -582,6 +579,7 @@ def delete_cloudinary_media_task(self, public_ids):
     except Exception as e:
         logger.error(f"Delete failed: {e}")
         raise self.retry(exc=e)
+
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=5)
 def recalculate_severity_task(self, incident_id: int):
@@ -682,7 +680,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                         notification_type="info",
                         channel="in_app",
                         is_read=False,
-                        sent_at=datetime.now(timezone.utc)
+                        sent_at=datetime.now(timezone.utc),
                     )
                     db.add(notification)
 
@@ -796,7 +794,7 @@ def send_notifications_task(
                 notification_type=notification_type,
                 channel="sse",
                 is_read=False,
-                sent_at=datetime.now(timezone.utc).isoformat(),
+                sent_at=datetime.now(timezone.utc),
             )
             db.add(notification)
             await db.commit()

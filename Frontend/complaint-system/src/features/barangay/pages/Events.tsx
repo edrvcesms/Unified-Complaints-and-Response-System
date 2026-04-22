@@ -8,6 +8,8 @@ import { validateDescription, validateTitle } from "../../../utils/validators";
 import type { Event } from "../../../types/general/event";
 import { Calendar, Edit, FileImage, FileVideo, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
 
+const MAX_UPLOAD_FILES = 3;
+
 interface EventForm {
   event_name: string;
   description: string;
@@ -65,7 +67,7 @@ const getMediaList = (media: Event["media"] | undefined | null) => (Array.isArra
 
 export const EventsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "manage">("manage");
   const [formData, setFormData] = useState<EventForm>(defaultFormState);
   const [errors, setErrors] = useState<EventFormErrors>({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -94,6 +96,14 @@ export const EventsPage: React.FC = () => {
 
     if (invalidFiles.length > 0) {
       setErrors((prev) => ({ ...prev, files: t("errors.invalidFileType") }));
+      return;
+    }
+
+    if (selectedFiles.length + files.length > MAX_UPLOAD_FILES) {
+      setErrors((prev) => ({ ...prev, files: `You can only upload up to ${MAX_UPLOAD_FILES} files.` }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -239,15 +249,6 @@ export const EventsPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="flex border-b border-gray-200">
           <button
-            onClick={() => setActiveTab("create")}
-            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
-              activeTab === "create" ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            {editingEvent ? t("events.editTab") : t("events.createTab")}
-          </button>
-          <button
             onClick={() => {
               setActiveTab("manage");
               refetch();
@@ -262,7 +263,120 @@ export const EventsPage: React.FC = () => {
               <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 text-primary-600 rounded-full">{events.length}</span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("create")}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-b-2 ${
+              activeTab === "create" ? "border-primary-600 text-primary-600" : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            {editingEvent ? t("events.editTab") : t("events.createTab")}
+          </button>
         </div>
+
+        {activeTab === "manage" && (
+          <div className="p-6">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+              </div>
+            ) : events && events.length > 0 ? (
+              <div className="space-y-4">
+                {events.map((event) => {
+                  const eventMedia = getMediaList(event.media);
+
+                  return (
+                  <div key={event.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-sm transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-900">{event.event_name}</h3>
+                    {event.description && <p className="text-sm text-gray-600 mt-2 line-clamp-3">{event.description}</p>}
+
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4" />
+                        {formatDate(event.date)}
+                      </div>
+                      {!!event.location && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4" />
+                          {event.location}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <FileImage className="w-4 h-4" />
+                        {eventMedia.length} {t("events.list.mediaCount")}
+                      </div>
+                    </div>
+
+                    {eventMedia.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {eventMedia.slice(0, 4).map((media) => (
+                          <div key={media.id} className="relative w-48 h-48 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <EventMediaPreview mediaUrl={media.media_url} mediaType={media.media_type} />
+                          </div>
+                        ))}
+                        {eventMedia.length > 4 && (
+                          <div className="w-48 h-48 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">+{eventMedia.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-3 mt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => handleEdit(event)}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        {t("events.list.edit")}
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(event.id)}
+                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {t("events.list.delete")}
+                      </button>
+                    </div>
+
+                    {deleteConfirm === event.id && (
+                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700 mb-3">{t("events.list.deleteConfirm")}</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleDelete(event.id)}
+                            disabled={deleteEventMutation.isPending}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                          >
+                            {deleteEventMutation.isPending ? t("modal.processing") : t("events.list.confirmDelete")}
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(null)}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            {t("events.list.cancelDelete")}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )})}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 mb-2">{t("events.list.noEvents")}</p>
+                <p className="text-sm text-gray-400 mb-4">{t("events.list.noEventsMessage")}</p>
+                <button
+                  onClick={() => setActiveTab("create")}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("events.createTab")}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === "create" && (
           <div className="p-6">
@@ -396,6 +510,7 @@ export const EventsPage: React.FC = () => {
                   <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-600">{t("events.form.uploadDescription")}</p>
                   <p className="text-xs text-gray-500 mt-1">JPG, PNG, MP4</p>
+                  <p className="text-xs text-gray-500">Max {MAX_UPLOAD_FILES} files</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -457,110 +572,6 @@ export const EventsPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        )}
-
-        {activeTab === "manage" && (
-          <div className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-              </div>
-            ) : events && events.length > 0 ? (
-              <div className="space-y-4">
-                {events.map((event) => {
-                  const eventMedia = getMediaList(event.media);
-
-                  return (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-sm transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-900">{event.event_name}</h3>
-                    {event.description && <p className="text-sm text-gray-600 mt-2 line-clamp-3">{event.description}</p>}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(event.date)}
-                      </div>
-                      {!!event.location && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4" />
-                          {event.location}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <FileImage className="w-4 h-4" />
-                        {eventMedia.length} {t("events.list.mediaCount")}
-                      </div>
-                    </div>
-
-                    {eventMedia.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {eventMedia.slice(0, 4).map((media) => (
-                          <div key={media.id} className="relative w-48 h-48 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                            <EventMediaPreview mediaUrl={media.media_url} mediaType={media.media_type} />
-                          </div>
-                        ))}
-                        {eventMedia.length > 4 && (
-                          <div className="w-48 h-48 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600">+{eventMedia.length - 4}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-3 mt-3 border-t border-gray-200">
-                      <button
-                        onClick={() => handleEdit(event)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                        {t("events.list.edit")}
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(event.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        {t("events.list.delete")}
-                      </button>
-                    </div>
-
-                    {deleteConfirm === event.id && (
-                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-700 mb-3">{t("events.list.deleteConfirm")}</p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDelete(event.id)}
-                            disabled={deleteEventMutation.isPending}
-                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                          >
-                            {deleteEventMutation.isPending ? t("modal.processing") : t("events.list.confirmDelete")}
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(null)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            {t("events.list.cancelDelete")}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )})}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">{t("events.list.noEvents")}</p>
-                <p className="text-sm text-gray-400 mb-4">{t("events.list.noEventsMessage")}</p>
-                <button
-                  onClick={() => setActiveTab("create")}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  {t("events.createTab")}
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>

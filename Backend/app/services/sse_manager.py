@@ -3,10 +3,11 @@ import json
 from typing import Any, Dict, Set
 from fastapi.responses import StreamingResponse
 import redis.asyncio as aioredis
+from app.core.config import settings
 
 
 class SSEManager:
-    def __init__(self, redis_url: str = "redis://localhost:6379"):
+    def __init__(self, redis_url: str = settings.REDIS_URL or "redis://localhost:6379"):
         self.redis_url = redis_url
         self._redis: aioredis.Redis | None = None
         self._connections: Dict[str, Set[asyncio.Queue]] = {}
@@ -115,4 +116,4 @@ class SSEManager:
             self._redis = None
 
 
-sse_manager = SSEManager(redis_url="redis://localhost:6379")
+sse_manager = SSEManager()

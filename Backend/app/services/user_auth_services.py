@@ -21,6 +21,7 @@ from app.schemas.department_schema import DepartmentWithUserData
 from app.services.department_services import get_department_account
 from app.services.barangay_services import get_barangay_account
 from app.services.sse_manager import sse_manager
+from app.utils.attachments import validate_upload_files
 
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
@@ -109,6 +110,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             )
         
         images = [front_id, back_id, selfie_with_id]
+        await validate_upload_files(images)
         image_urls = await upload_multiple_files_to_cloudinary(images, folder="ucrs/id_verification")
         logger.info(f"ID images uploaded to Cloudinary for {user_data.email}: {image_urls}")
 

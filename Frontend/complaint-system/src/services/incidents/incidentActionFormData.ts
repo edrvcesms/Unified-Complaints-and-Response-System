@@ -1,3 +1,5 @@
+const MAX_UPLOAD_FILES = 3;
+
 export const buildIncidentActionFormData = (
   actionsTaken: string,
   attachments?: File[]
@@ -7,7 +9,7 @@ export const buildIncidentActionFormData = (
   formData.append("actions_taken", actionsTaken);
 
   if (attachments?.length) {
-    attachments.forEach((file) => formData.append("attachments", file));
+    attachments.slice(0, MAX_UPLOAD_FILES).forEach((file) => formData.append("attachments", file));
   }
 
   return formData;

@@ -17,7 +17,7 @@ database, and the embedding model. If you write it like this:
 # BAD — use-case is hardcoded to specific implementations
 class ClusterComplaintUseCase:
     def __init__(self):
-        self.embeddings = SentenceTransformerEmbeddingService()  # hardcoded
+        self.embeddings = OpenAIEmbeddingService(api_key="...")  # hardcoded
         self.vectors    = PineconeVectorRepository(api_key="...")  # hardcoded
         self.db         = IncidentRepository(db_session)  # hardcoded
 ```
@@ -29,7 +29,7 @@ connection.
 **What the container does instead:**
 
 The container (`infrastructure/container.py`) is the only place in the entire
-codebase where concrete classes (Pinecone, SQLAlchemy, SentenceTransformer) are
+codebase where concrete classes (Pinecone, SQLAlchemy, embedding provider) are
 created and connected together. Use-cases don't know what they're connected to —
 they only know they received something that satisfies an interface.
 
@@ -49,7 +49,7 @@ Then `container.py` does the assembly:
 
 ```python
 # container.py — the only place that knows what's real
-embedding_service   = SentenceTransformerEmbeddingService()
+embedding_service   = OpenAIEmbeddingService(api_key=os.environ["OPEN_AI_API_KEY"])
 vector_repository   = PineconeVectorRepository(api_key=os.environ["PINECONE_API_KEY"])
 incident_repository = IncidentRepository(db_session)
 
@@ -105,7 +105,7 @@ complaint_system/
 │   │   ├── incident_repository.py
 │   │   └──
 │   ├── embeddings/
-│   │   └── sentence_transformer_service.py
+│   │   └── openai_embedding.py
 │   ├── vector_store/
 │   │   └── pinecone_vector_repository.py
 │   ├── celery/
@@ -230,6 +230,7 @@ different jobs.
 
 This layer contains the actual business logic. It imports only from the domain layer.
 It never imports Pinecone, SQLAlchemy, or sentence-transformers directly.
+It never imports Pinecone, SQLAlchemy, or a concrete embedding SDK directly.
 
 ---
 
@@ -272,19 +273,17 @@ Clamped to [1.0, 10.0].
 
 
 
-#### `infrastructure/embeddings/sentence_transformer_service.py` — SentenceTransformerEmbeddingService
+#### `infrastructure/embeddings/openai_embedding.py` — OpenAIEmbeddingService
 
-Implements `IEmbeddingService` using `all-MiniLM-L6-v2` from HuggingFace. The model
-is loaded once via `@lru_cache` and reused. Because encoding is CPU-bound and would
-block the async event loop, it runs in a thread pool via `asyncio.run_in_executor()`.
-Returns 384 floats per complaint description.
+Implements `IEmbeddingService` using OpenAI embeddings. The service returns
+1024-dimension vectors and is called asynchronously.
 
 ---
 
 #### `infrastructure/vector_store/pinecone_vector_repository.py` — PineconeVectorRepository
 
 Implements `IVectorRepository` using Pinecone. The index is named `complaints-index`,
-uses cosine similarity, and stores 384-dim vectors. Each vector's ID is the complaint
+uses cosine similarity, and stores 1024-dim vectors. Each vector's ID is the complaint
 ID. Stored alongside each vector: `barangay_id`, `category_id`, `incident_id`,
 `status`, `created_at` (Unix timestamp).
 
@@ -402,7 +401,7 @@ User submits complaint
         |
         v  (runs async in Celery clustering worker)
 [cluster_complaint_task]
-  1. Generate 384-dim embedding from complaint description
+    1. Generate 1024-dim embedding from complaint description
   2. Store vector in Pinecone with metadata
   3. Query Pinecone for similar ACTIVE complaints in same barangay + category + time window
   4a. Match found (score >= threshold)?
@@ -447,8 +446,8 @@ celery -A infrastructure.celery.celery_app worker -Q severity --concurrency=2 -l
 
 | Principle | Plain English | Where |
 |---|---|---|
-| **SRP** | Every class has exactly one job | `SentenceTransformerEmbeddingService` only generates embeddings. `IncidentRepository` only handles DB persistence. `ClusterComplaintUseCase` only decides clustering logic. |
+| **SRP** | Every class has exactly one job | `OpenAIEmbeddingService` only generates embeddings. `IncidentRepository` only handles DB persistence. `ClusterComplaintUseCase` only decides clustering logic. |
 | **OCP** | Add new behavior without editing existing code | Want OpenAI embeddings? Write a new `IEmbeddingService`. Want a different severity formula? Write a new `ISeverityCalculator`. No existing files change. |
 | **LSP** | Any implementation of an interface is safely swappable | You can replace `PineconeVectorRepository` with a `PgVectorRepository` and nothing in the use-cases breaks. |
 | **ISP** | Interfaces are small and focused, not bloated | `IVelocityDetector` and `ISeverityCalculator` are separate. `IVectorRepository` and `IIncidentRepository` are separate. No class implements methods it doesn't need. |
-| **DIP** | High-level logic depends on abstractions, not concrete tools | `ClusterComplaintUseCase` depends on `IEmbeddingService`, `IVectorRepository`, `IIncidentRepository` — never on Pinecone, SQLAlchemy, or sentence-transformers directly. |
+| **DIP** | High-level logic depends on abstractions, not concrete tools | `ClusterComplaintUseCase` depends on `IEmbeddingService`, `IVectorRepository`, `IIncidentRepository` — never on Pinecone, SQLAlchemy, or a concrete embedding SDK directly. |

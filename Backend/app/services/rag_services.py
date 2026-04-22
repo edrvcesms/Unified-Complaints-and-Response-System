@@ -5,7 +5,6 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
-from google import genai
 from app.tasks import get_openai_embedding_service
 import os
 import asyncio

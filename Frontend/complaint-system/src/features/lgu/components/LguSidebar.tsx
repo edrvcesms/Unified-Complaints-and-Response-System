@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Sidebar as GenericSidebar } from "../../general";
 import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon } from "../../barangay/components/Icons";
-import { MapPin, FileText } from "lucide-react";
+import { MapPin, FileText, Archive } from "lucide-react";
 
 interface LguSidebarProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export const LguSidebar: React.FC<LguSidebarProps> = ({ isOpen, onClose }) => {
     { path: "/lgu/dashboard", label: t('sidebar.lgu.dashboard'), icon: <DashboardIcon />, end: true },
     { path: "/lgu/barangay-incidents", label: t('sidebar.lgu.barangayIncidents'), icon: <MapPin className="w-5 h-5" /> },
     { path: "/lgu/incidents", label: t('sidebar.lgu.forwardedIncidents'), icon: <ComplaintsIcon /> },
+    { path: "/lgu/archive", label: "Archive", icon: <Archive className="w-5 h-5" /> },
     { path: "/lgu/monthly-reports", label: t('sidebar.lgu.monthlyReports'), icon: <FileText className="w-5 h-5" /> },
     { path: "/lgu/announcements", label: t('sidebar.lgu.announcements'), icon: <AnnouncementsIcon /> },
   ];

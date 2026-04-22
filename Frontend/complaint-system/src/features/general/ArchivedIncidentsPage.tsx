@@ -1,18 +1,30 @@
-import { useTranslation } from 'react-i18next';
-import { useAssignedIncidents } from "../../../hooks/useDepartment";
-import { useComplaintsFilter } from "../../../hooks/useFilter";
-import { DepartmentIncidentsTable } from "../components/DepartmentIncidentsTable";
-import { SearchInput } from "../../general";
-import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
-import { ErrorMessage, PageHeader } from "../../general";
+import { useTranslation } from "react-i18next";
+import { useAllIncidents } from "../../hooks/useIncidents";
+import { useComplaintsFilter } from "../../hooks/useFilter";
+import { SearchInput } from "./SearchInput";
+import { ErrorMessage } from "./ErrorMessage";
+import { PageHeader } from "./PageHeader";
+import { ComplaintStatusFilterDropdown, SortDropdown, DateFilter } from "../barangay/components/Filters";
+import { ArchivedIncidentsTable } from "./ArchivedIncidentsTable";
 
-export const DepartmentIncidents: React.FC = () => {
-  const { incidents, isLoading, error: isError } = useAssignedIncidents();
+interface ArchivedIncidentsPageProps {
+  title: string;
+  description: string;
+  detailPathBase: string;
+  emptyMessage?: string;
+}
+
+export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
+  title,
+  description,
+  detailPathBase,
+  emptyMessage,
+}) => {
+  const { incidents, isLoading, error: isError } = useAllIncidents();
   const { t } = useTranslation();
-
   const {
     search,
-    filterStatus,
+    filterComplaintStatus,
     sortBy,
     dateFrom,
     dateTo,
@@ -22,36 +34,31 @@ export const DepartmentIncidents: React.FC = () => {
     paginated,
     totalPages,
     handleSearch,
-    handleFilterChange,
+    handleComplaintStatusFilterChange,
     handleSortChange,
     handleDateFromChange,
     handleDateToChange,
     handleClearDateFilter,
     setCurrentPage,
-  } = useComplaintsFilter(incidents || []);
+  } = useComplaintsFilter(incidents || [], true);
 
   if (isError) {
-    return <ErrorMessage message="Failed to load assigned incidents. Please refresh." />;
+    return <ErrorMessage message="Failed to load archived incidents. Please refresh." />;
   }
 
   return (
     <div className="space-y-3">
-      <PageHeader 
-        title="Assigned Incidents"
-        description="Review and manage incidents assigned to your department"
-      />
+      <PageHeader title={title} description={description} />
 
-      {/* Search */}
       <div>
-        <SearchInput value={search} onChange={handleSearch} />
+        <SearchInput value={search} onChange={handleSearch} placeholder={t('search.placeholder')} />
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Severity Level</label>
-            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+            <label className="text-sm font-medium text-gray-700">Complaint Status</label>
+            <ComplaintStatusFilterDropdown current={filterComplaintStatus} onChange={handleComplaintStatusFilterChange} />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">Sort By</label>
@@ -73,15 +80,15 @@ export const DepartmentIncidents: React.FC = () => {
         </div>
       </div>
 
-      <DepartmentIncidentsTable
+      <ArchivedIncidentsTable
         incidents={paginated}
         isLoading={isLoading}
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        detailPathBase={detailPathBase}
+        emptyMessage={emptyMessage}
       />
     </div>
   );
 };
-
-export default DepartmentIncidents;

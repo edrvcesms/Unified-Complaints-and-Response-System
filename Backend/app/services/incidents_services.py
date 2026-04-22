@@ -23,6 +23,48 @@ from app.models.user import User
 from sqlalchemy.orm import selectinload
 from app.utils.cache_invalidator import invalidate_cache
 
+async def get_all_incidents(db: AsyncSession):
+    try:
+        all_incidents_cache = await get_cache("all_incidents")
+        if all_incidents_cache is not None:
+            logger.info("Cache hit for all incidents")
+            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in all_incidents_cache]
+        
+        result = await db.execute(
+            select(IncidentModel)
+            .options(
+                selectinload(IncidentModel.category),
+                selectinload(IncidentModel.barangay),
+                selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.attachment),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.incident_links),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.complaint)
+                        .selectinload(Complaint.user),
+                selectinload(IncidentModel.complaint_clusters)
+                    .selectinload(IncidentComplaintModel.incident),
+            )
+            .order_by(IncidentModel.first_reported_at.asc())
+        )
+
+        incidents = result.scalars().all()
+        incidents_data =  [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        await set_cache("all_incidents", [i.model_dump_json() for i in incidents_data], expiration=3600)
+        return incidents_data
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error in get_all_incidents: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
         incidents_cache = await get_cache(f"barangay_incidents:{barangay_id}")
@@ -242,6 +284,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
                 selectinload(IncidentModel.responses).selectinload(Response.user),
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
                 selectinload(IncidentModel.complaint_clusters)
                     .selectinload(IncidentComplaintModel.complaint)
                         .selectinload(Complaint.attachment),

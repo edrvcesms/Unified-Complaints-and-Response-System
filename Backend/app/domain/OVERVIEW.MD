@@ -50,10 +50,10 @@ LAYER 2 — INCIDENT CLUSTERING ENGINE
 │       Three-tier decision gate based on per-category similarity threshold:
 │
 │         score >= threshold + 0.10  →  Auto-Merge        (no LLM, clear match)
-│         score >= threshold         →  Gemini LLM Decides (ambiguous zone)
+│         score >= threshold         →  LLM Decides        (ambiguous zone)
 │         score <  threshold         →  New Incident       (clear non-match)
 │
-│       Gemini LLM handles multilingual input natively — critical for
+│       The LLM handles multilingual input natively — critical for
 │       Santa Maria residents who communicate in Filipino, Tagalog,
 │       Bisaya, Ilocano, code-switching, slang, and misspellings.
 │       LLM is only called in the ambiguous zone — cost and latency efficient.

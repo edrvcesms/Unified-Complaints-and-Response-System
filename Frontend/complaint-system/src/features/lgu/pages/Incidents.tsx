@@ -34,11 +34,15 @@ export const LguIncidents: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageHeader 
         title="Forwarded Incidents"
         description="Review and manage incidents forwarded from barangays"
       />
+
+      <div>
+        <SearchInput value={search} onChange={handleSearch} placeholder={t('search.placeholder')} />
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">

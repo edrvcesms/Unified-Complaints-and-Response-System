@@ -14,6 +14,7 @@ import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
+import { validateAttachments } from "../../../utils/attachmentHelper";
 
 export const DepartmentIncidentDetails: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -139,6 +140,12 @@ export const DepartmentIncidentDetails: React.FC = () => {
       confirmColor: "green",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try{
+          const validationError = validateAttachments(attachments);
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
+
           actionsTakenModal.setIsLoading(true);
           await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
@@ -158,6 +165,12 @@ export const DepartmentIncidentDetails: React.FC = () => {
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
+          const validationError = validateAttachments(attachments);
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
+
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
@@ -185,6 +198,12 @@ export const DepartmentIncidentDetails: React.FC = () => {
       confirmText: "Reject",
       confirmColor: "red",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
+        const validationError = validateAttachments(attachments);
+        if (validationError) {
+          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          return;
+        }
+
         try {
           actionsTakenModal.setIsLoading(true);
           await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });

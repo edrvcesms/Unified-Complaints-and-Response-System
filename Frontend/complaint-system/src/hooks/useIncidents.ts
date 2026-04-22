@@ -1,4 +1,4 @@
-import { getIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
+import { getIncidents, getAllIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
 import { endorseIncidentToLgu } from "../services/endorsement/incidentEndorsement";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -16,6 +16,19 @@ export const useIncidents = () => {
   const { data, isLoading, error } = useQuery<Incident[]>({
     queryKey: ["incidents"],
     queryFn: getIncidents,
+  });
+
+  return {
+    incidents: data,
+    isLoading,
+    error,
+  };
+};
+
+export const useAllIncidents = () => {
+  const { data, isLoading, error } = useQuery<Incident[]>({
+    queryKey: ["archiveIncidents"],
+    queryFn: getAllIncidents,
   });
 
   return {
@@ -64,6 +77,7 @@ export const useResolveIncident = (incidentId: number) => {
       queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });
   return mutation;
@@ -84,6 +98,7 @@ export const useReviewIncident = (incidentId: number) => {
       queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });
   return mutation;
@@ -97,6 +112,7 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });
   return mutation;
@@ -113,6 +129,7 @@ export const useRejectIncident = (incidentId: number) => {
       queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });
   return mutation;
@@ -150,6 +167,7 @@ export const useMarkIncidentAsViewed = () => {
     mutationFn: (incidentId: number) => markIncidentAsViewed(incidentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });
   return mutation;

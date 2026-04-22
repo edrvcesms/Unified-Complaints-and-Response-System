@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, Up
 from datetime import datetime
 from app.dependencies.rate_limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.incidents_services import get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed
+from app.services.incidents_services import get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed, get_all_incidents
 from app.dependencies.auth_dependency import get_current_user
 from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing
 from app.services.incidents_services import forward_incident_to_lgu
@@ -39,6 +39,7 @@ def parse_response_data(response_data: Optional[str], actions_taken: Optional[st
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail="Missing response data.",
     )
+    
 
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_incidents(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
@@ -48,6 +49,15 @@ async def get_incidents(db: AsyncSession = Depends(get_async_db), current_user: 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
     return await get_incidents_by_barangay(current_user.barangay_account.barangay_id, db)
+
+@router.get("/all", status_code=status.HTTP_200_OK)
+@router.get("/all/", status_code=status.HTTP_200_OK)
+async def get_all_incidents_endpoint(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+
+    return await get_all_incidents(db)
 
 @router.get("/department", status_code=status.HTTP_200_OK)
 async def get_department_incidents(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

@@ -3,18 +3,16 @@ from fastapi import HTTPException, status, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+import base64
 from app.models.event import Event
 from app.utils.logger import logger
 from typing import List, Optional
 from app.schemas.event_schema import EventCreate, EventData
 from app.tasks import upload_event_media_task, delete_event_media_task
-import tempfile
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.cache_invalidator import invalidate_cache
 from datetime import datetime, timezone
-import os
-
-allowed_event_media_types = ["image/jpeg", "image/png", "video/mp4"]
+from app.utils.attachments import validate_upload_files
 
 async def get_events(db: AsyncSession):
     try:
@@ -73,6 +71,9 @@ async def get_event_by_id(event_id: int, db: AsyncSession):
 
 async def create_new_event(event_data: EventCreate, event_files: Optional[List[UploadFile]], db: AsyncSession) -> Event:
     try:
+        if event_files:
+            await validate_upload_files(event_files)
+
         new_event = Event(
             event_name=event_data.event_name,
             description=event_data.description,
@@ -84,19 +85,17 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
         await db.refresh(new_event)
 
         if event_files:
-            temp_dir = tempfile.mkdtemp(prefix="event_media_")
             event_media = []
             
             try:
                 for file in event_files:
-                    temp_path = os.path.join(temp_dir, file.filename)
-                    with open(temp_path, "wb") as temp_file:
-                        temp_file.write(await file.read())
+                    content_bytes = await file.read()
                     
                     event_media.append({
                         "filename": file.filename,
                         "content_type": file.content_type,
-                        "temp_path": temp_path
+                        "content_b64": base64.b64encode(content_bytes).decode("ascii"),
+                        "file_size": len(content_bytes),
                     })
 
                 task = upload_event_media_task.delay(event_media, event_id=new_event.id)
@@ -135,12 +134,7 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
 async def update_event(event_id: int, event_data: EventCreate, event_files: Optional[List[UploadFile]],keep_media_ids: Optional[List[int]], db: AsyncSession,):
     try:
         if event_files:
-            for file in event_files:
-                if file.content_type not in allowed_event_media_types:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Unsupported file type: {file.content_type}",
-                    )
+            await validate_upload_files(event_files)
 
         keep_ids = keep_media_ids or []
 
@@ -179,19 +173,17 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
         await db.commit()
 
         if event_files:
-            temp_dir = tempfile.mkdtemp(prefix="event_media_update_")
             event_media = []
 
             try:
                 for file in event_files:
-                    temp_path = os.path.join(temp_dir, file.filename)
-                    with open(temp_path, "wb") as temp_file:
-                        temp_file.write(await file.read())
+                    content_bytes = await file.read()
 
                     event_media.append({
                         "filename": file.filename,
                         "content_type": file.content_type,
-                        "temp_path": temp_path,
+                        "content_b64": base64.b64encode(content_bytes).decode("ascii"),
+                        "file_size": len(content_bytes),
                     })
 
                 task = upload_event_media_task.delay(event_media, event_id=event.id)

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
+const MAX_UPLOAD_FILES = 3;
+
 interface ActionsTakenModalProps {
   isOpen: boolean;
   title: string;
@@ -30,12 +32,14 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
 }) => {
   const [actionsTaken, setActionsTaken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setActionsTaken("");
       setSelectedFiles([]);
+      setFileError("");
     }
   }, [isOpen]);
 
@@ -43,12 +47,21 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
-    setSelectedFiles((prev) => [...prev, ...files]);
+    setSelectedFiles((prev) => {
+      const nextFiles = [...prev, ...files];
+      if (nextFiles.length > MAX_UPLOAD_FILES) {
+        setFileError(`You can only upload up to ${MAX_UPLOAD_FILES} files.`);
+      } else {
+        setFileError("");
+      }
+      return nextFiles.slice(0, MAX_UPLOAD_FILES);
+    });
     event.target.value = "";
   };
 
   const handleRemoveFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index));
+    setFileError("");
   };
 
   if (!isOpen) return null;
@@ -127,8 +140,9 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
                 ))}
               </div>
             )}
+            {fileError && <p className="mt-2 text-xs text-red-600">{fileError}</p>}
           </div>
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center mt-4 justify-end gap-3">
             <button
               type="button"
               onClick={onCancel}

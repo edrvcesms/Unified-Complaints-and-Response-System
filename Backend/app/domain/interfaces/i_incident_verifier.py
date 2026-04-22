@@ -7,7 +7,7 @@ class IIncidentVerifier(ABC):
     
     SRP: Only responsible for determining if two complaints refer to the same incident.
     DIP: Use-cases depend on this abstraction, not a concrete LLM implementation.
-    OCP: New verifiers (GPT, Gemini, Claude) can be added without touching use-case code.
+    OCP: New verifiers can be added without touching use-case code.
     """
 
     @abstractmethod

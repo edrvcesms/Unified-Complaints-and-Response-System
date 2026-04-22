@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import type{ StatusFilter, SeverityScoreFilter } from "../../../types/complaints/complaint";
-import { STATUS_FILTERS, SEVERITY_SCORE_FILTERS } from "../../../types/complaints/complaint";
+import type{ StatusFilter, SeverityScoreFilter, ComplaintStatusFilter } from "../../../types/complaints/complaint";
+import { STATUS_FILTERS, SEVERITY_SCORE_FILTERS, COMPLAINT_STATUS_FILTERS } from "../../../types/complaints/complaint";
 import type { SortOption } from "../../../hooks/useFilter";
 
 interface StatusFilterPillsProps {
@@ -85,6 +85,37 @@ export const SeverityScoreFilterDropdown: React.FC<SeverityScoreFilterDropdownPr
     }}
   >
     {SEVERITY_SCORE_FILTERS.map(({ label, value }) => (
+      <option key={value} value={value} className="py-2">
+        {label}
+      </option>
+    ))}
+  </select>
+);
+
+interface ComplaintStatusFilterDropdownProps {
+  current: ComplaintStatusFilter;
+  onChange: (status: ComplaintStatusFilter) => void;
+}
+
+export const ComplaintStatusFilterDropdown: React.FC<ComplaintStatusFilterDropdownProps> = ({
+  current,
+  onChange,
+}) => (
+  <select
+    value={current}
+    onChange={(e) => onChange(e.target.value as ComplaintStatusFilter)}
+    className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+      focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
+      bg-white hover:border-gray-400 transition-colors cursor-pointer
+      appearance-none bg-no-repeat bg-right pr-10
+      font-medium text-gray-700"
+    style={{
+      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+      backgroundPosition: 'right 0.5rem center',
+      backgroundSize: '1.5em 1.5em',
+    }}
+  >
+    {COMPLAINT_STATUS_FILTERS.map(({ label, value }) => (
       <option key={value} value={value} className="py-2">
         {label}
       </option>

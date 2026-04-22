@@ -3,10 +3,10 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
+import base64
 from app.models.barangay_account import BarangayAccount
 from app.models.announcements import Announcement
 from app.models.announcement_media import AnnouncementMedia
-import tempfile
 from app.schemas.announcement_schema import AnnouncementCreate, AnnouncementOut
 from app.utils.cache_invalidator import invalidate_cache
 from app.tasks import upload_announcement_media_task, delete_cloudinary_media_task, delete_announcement_media_task
@@ -15,9 +15,7 @@ from app.models.user import User
 from app.utils.caching import get_cache, set_cache, delete_cache
 from app.constants.roles import UserRole
 from app.utils.cloudinary import extract_public_id_from_url
-import os
-
-allowed_media_types = ["image/jpeg", "image/png", "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv"]
+from app.utils.attachments import validate_upload_files
 
 async def get_all_announcements(db: AsyncSession):
     try:
@@ -116,12 +114,7 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
     
     try:
         if media_files:
-            for media in media_files:
-                if media.content_type not in allowed_media_types:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Unsupported media type: {media.content_type}"
-                    )
+            await validate_upload_files(media_files)
         
         user_result = await db.execute(select(User).where(User.id == uploader_id))
         user = user_result.scalar_one_or_none()
@@ -156,20 +149,17 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
         new_announcement = result.scalar_one()
         
         if media_files:
-            temp_dir = tempfile.mkdtemp(prefix="announcement_media_")
             files_data = []
 
             try:
                 for media in media_files:
-                    temp_path = os.path.join(temp_dir, media.filename)
-
-                    with open(temp_path, "wb") as temp_file:
-                        temp_file.write(await media.read())
+                    content_bytes = await media.read()
 
                     files_data.append({
                         "filename": media.filename,
                         "content_type": media.content_type,
-                        "temp_path": temp_path
+                        "content_b64": base64.b64encode(content_bytes).decode("ascii"),
+                        "file_size": len(content_bytes),
                     })
 
                 medias = upload_announcement_media_task.delay(
@@ -215,12 +205,7 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
 async def edit_announcement(announcement_id: int, announcement_data: AnnouncementCreate, media_files: Optional[List[UploadFile]], keep_media_ids: List[int], uploader_id: int, db: AsyncSession):
     try:
         if media_files:
-            for media in media_files:
-                if media.content_type not in allowed_media_types:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Unsupported media type: {media.content_type}"
-                    )
+            await validate_upload_files(media_files)
         
         result = await db.execute(
             select(Announcement).where(Announcement.id == announcement_id).options(
@@ -256,20 +241,17 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
         await db.flush()
         
         if media_files:
-            temp_dir = tempfile.mkdtemp(prefix="announcement_media_update_")
             files_data = []
 
             try:
                 for media in media_files:
-                    temp_path = os.path.join(temp_dir, media.filename)
-
-                    with open(temp_path, "wb") as temp_file:
-                        temp_file.write(await media.read())
+                    content_bytes = await media.read()
 
                     files_data.append({
                         "filename": media.filename,
                         "content_type": media.content_type,
-                        "temp_path": temp_path
+                        "content_b64": base64.b64encode(content_bytes).decode("ascii"),
+                        "file_size": len(content_bytes),
                     })
 
                 medias = upload_announcement_media_task.delay(

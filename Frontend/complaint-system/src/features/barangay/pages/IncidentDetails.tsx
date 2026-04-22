@@ -16,6 +16,7 @@ import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { isAbortError } from "../../../utils/axiosException";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
+import { validateAttachments } from '../../../utils/attachmentHelper';
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -126,6 +127,7 @@ export const IncidentDetails: React.FC = () => {
       confirmationModal.closeModal();
       actionsTakenModal.closeModal();
       setSuccessModal({ isOpen: false, title: '', message: '' });
+
       const error = resolveIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to resolve incident. Please try again.';
       setErrorModal({
@@ -213,6 +215,12 @@ export const IncidentDetails: React.FC = () => {
       confirmText: "Resolve",
       confirmColor: "green",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
+        const validationError = validateAttachments(attachments);
+        if (validationError) {
+          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          return;
+        }
+        
         actionsTakenModal.setIsLoading(true);
         await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         actionsTakenModal.setIsLoading(false);
@@ -229,6 +237,11 @@ export const IncidentDetails: React.FC = () => {
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
+          const validationError = validateAttachments(attachments); 
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
           actionsTakenModal.setIsLoading(true);
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
@@ -259,6 +272,11 @@ export const IncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         actionsTakenModal.setIsLoading(true);
         try {
+          const validationError = validateAttachments(attachments);
+          if (validationError) {
+            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            return;
+          }
           await forwardToLguMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         } catch (err) {
           console.error(err);
@@ -277,6 +295,11 @@ export const IncidentDetails: React.FC = () => {
       confirmText: "Reject",
       confirmColor: "red",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
+        const validationError = validateAttachments(attachments);
+        if (validationError) {
+          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          return;
+        }
         actionsTakenModal.setIsLoading(true);
         await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         actionsTakenModal.setIsLoading(false);
@@ -499,7 +522,7 @@ export const IncidentDetails: React.FC = () => {
             </p>
           </div>
         </div>
-        
+
 
         <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
@@ -520,7 +543,7 @@ export const IncidentDetails: React.FC = () => {
                       <p className="text-xs font-semibold text-gray-500 mt-2">
                         - {response.user?.role === "lgu_official" ? "Local Government Unit" : "Barangay " + incident.barangay?.barangay_name}{" "}
                       </p>
-                      
+
                     )}
                     <p className="text-xs text-gray-500 mb-1 mt-1 text-right">
                       {formatDateTime(response.response_date)}

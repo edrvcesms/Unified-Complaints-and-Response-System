@@ -130,6 +130,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         logger.error(f"Error in get_all_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+    
 async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
     try:
         complaints_cache = await get_cache(f"incident_complaints:{incident_id}")

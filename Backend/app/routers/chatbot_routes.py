@@ -6,8 +6,9 @@ from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from app.schemas.chatbot_schema import ChatRequest, ChatResponse
-
-
+from app.dependencies.auth_dependency import get_current_user
+from app.models.user import User
+from app.core.redis import redis_client 
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -17,11 +18,21 @@ router = APIRouter()
 from app.domain.infrastracture.service.chatbot_service import ChatbotService
 from app.domain.infrastracture.service.chatbot_service import create_chatbot_service
 
-@router.post("/ask", response_model=ChatResponse)
-async def ask(body: ChatRequest, chatbot: ChatbotService = Depends(create_chatbot_service)):
-    result = await chatbot.ask(body.question)
-    return ChatResponse(answer=result.answer, is_grounded=result.is_grounded)
 
+
+@router.post("/ask", response_model=ChatResponse)
+async def ask(
+    body: ChatRequest,
+    chatbot: ChatbotService = Depends(create_chatbot_service),
+    user=Depends(get_current_user),
+):
+    result = await chatbot.ask(
+        question=body.question,
+        session_id=body.session_id,
+        user_id=str(user.id),
+    )
+    return ChatResponse(answer=result.answer, is_grounded=result.is_grounded)
+ 
 
 
 @router.post("/upload-pdf", summary="Upload a PDF to index into Pinecone")

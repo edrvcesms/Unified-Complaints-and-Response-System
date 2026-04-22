@@ -10,9 +10,7 @@ from app.domain.value_objects.rag_retrieval_result import RAGRetrievalResult
 logger = logging.getLogger(__name__)
 
 # ── Retrieval budget ────────────────────────────────────────────────────────
-# Gemini 2.5 Flash context window is large, but the prompt already carries
-# the system prompt + user question. We cap chunks here so the LLM receives
-# focused, high-signal context rather than a wall of loosely-related text.
+
 #
 #   top_k = 5  →  ~5 × 400 tokens ≈ 2 000 tokens of context  (recommended)
 #   top_k = 8  →  upper bound for complex multi-part questions
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 # fallback only.
 _DEFAULT_TOP_K = 5
 _MAX_TOP_K = 8          # Hard ceiling — enforced before every Pinecone call
-_SCORE_THRESHOLD = 0.25  # Chunks below this score are dropped even if top_k allows them
+_SCORE_THRESHOLD = 0.10  # Chunks below this score are dropped even if top_k allows them
 
 
 class PineconeRAGVectorRepository(IRAGVectorRepository):

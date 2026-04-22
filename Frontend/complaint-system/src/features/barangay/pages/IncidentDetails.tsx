@@ -32,6 +32,7 @@ export const IncidentDetails: React.FC = () => {
   const notifyHearingMutation = useNotifyHearing();
   const [hearingDate, setHearingDate] = useState('');
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
+  const [attachmentError, setAttachmentError] = useState('');
 
   const confirmationModal = useConfirmationModal();
   const actionsTakenModal = useActionsTakenModal();
@@ -46,6 +47,12 @@ export const IncidentDetails: React.FC = () => {
     title: '',
     message: '',
   });
+
+  useEffect(() => {
+  if (!actionsTakenModal.isOpen) {
+    setAttachmentError('');
+  }
+}, [actionsTakenModal.isOpen]);
 
   // Map modal state
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -217,10 +224,10 @@ export const IncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         const validationError = validateAttachments(attachments);
         if (validationError) {
-          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          setAttachmentError(validationError);
           return;
         }
-        
+
         actionsTakenModal.setIsLoading(true);
         await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
         actionsTakenModal.setIsLoading(false);
@@ -237,9 +244,9 @@ export const IncidentDetails: React.FC = () => {
       confirmColor: "yellow",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         try {
-          const validationError = validateAttachments(attachments); 
+          const validationError = validateAttachments(attachments);
           if (validationError) {
-            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            setAttachmentError(validationError);
             return;
           }
           actionsTakenModal.setIsLoading(true);
@@ -274,7 +281,7 @@ export const IncidentDetails: React.FC = () => {
         try {
           const validationError = validateAttachments(attachments);
           if (validationError) {
-            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+            setAttachmentError(validationError);
             return;
           }
           await forwardToLguMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
@@ -297,7 +304,7 @@ export const IncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         const validationError = validateAttachments(attachments);
         if (validationError) {
-          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
+          setAttachmentError(validationError);
           return;
         }
         actionsTakenModal.setIsLoading(true);
@@ -620,6 +627,7 @@ export const IncidentDetails: React.FC = () => {
         onConfirm={actionsTakenModal.onConfirm}
         onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
+        externalError={attachmentError}
       />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">

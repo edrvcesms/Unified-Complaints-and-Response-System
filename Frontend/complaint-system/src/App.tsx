@@ -38,6 +38,7 @@ import { DepartmentArchiveIncidents } from "./features/department/pages/ArchiveI
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 function App() {
 

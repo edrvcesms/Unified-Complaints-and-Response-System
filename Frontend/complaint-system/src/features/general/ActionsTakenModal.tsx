@@ -11,6 +11,7 @@ interface ActionsTakenModalProps {
   onCancel: () => void;
   isLoading?: boolean;
   description?: string;
+  externalError?: string;
 }
 
 const colorClasses = {
@@ -29,6 +30,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   onCancel,
   isLoading = false,
   description,
+  externalError,
 }) => {
   const [actionsTaken, setActionsTaken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -141,6 +143,8 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
               </div>
             )}
             {fileError && <p className="mt-2 text-xs text-red-600">{fileError}</p>}
+            
+            {externalError && <p className="mt-2 text-xs text-red-600">{externalError}</p>}
           </div>
           <div className="flex items-center mt-4 justify-end gap-3">
             <button
@@ -179,6 +183,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
               ) : null}
               {isLoading ? "Processing..." : confirmText}
             </button>
+            
           </div>
         </form>
       </div>

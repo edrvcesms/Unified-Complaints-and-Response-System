@@ -26,6 +26,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
+  const [attachmentError, setAttachmentError] = useState('');
 
   const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -41,6 +42,13 @@ export const DepartmentIncidentDetails: React.FC = () => {
 
     // Map modal state
     const [isMapOpen, setIsMapOpen] = useState(false);
+
+  
+  useEffect(() => {
+  if (!actionsTakenModal.isOpen) {
+    setAttachmentError('');
+  }
+}, [actionsTakenModal.isOpen]);
 
   // Handle successful resolve
   useEffect(() => {
@@ -142,8 +150,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         try{
           const validationError = validateAttachments(attachments);
           if (validationError) {
-            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
-            return;
+            setAttachmentError(validationError);
           }
 
           actionsTakenModal.setIsLoading(true);
@@ -167,8 +174,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         try {
           const validationError = validateAttachments(attachments);
           if (validationError) {
-            setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
-            return;
+            setAttachmentError(validationError);
           }
 
           actionsTakenModal.setIsLoading(true);
@@ -199,10 +205,9 @@ export const DepartmentIncidentDetails: React.FC = () => {
       confirmColor: "red",
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         const validationError = validateAttachments(attachments);
-        if (validationError) {
-          setErrorModal({ isOpen: true, title: 'Attachment Too Large', message: validationError });
-          return;
-        }
+          if (validationError) {
+            setAttachmentError(validationError);
+          }
 
         try {
           actionsTakenModal.setIsLoading(true);

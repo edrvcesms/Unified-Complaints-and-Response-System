@@ -27,8 +27,9 @@ Design decisions
 from __future__ import annotations
 
 from typing import List
+import asyncio
+from openai import AsyncOpenAI, APIError, RateLimitError, APITimeoutError, APIConnectionError
 
-from openai import AsyncOpenAI
 
 from app.domain.interfaces.i_rag_model import IRAGLanguageModel
 
@@ -202,7 +203,6 @@ HARD LIMITS
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
 
-
     def _build_messages(
         self,
         user_prompt: str,
@@ -227,8 +227,6 @@ HARD LIMITS
             for i, chunk in enumerate(chunks)
         )
         
-        
-
     async def _call_openai(
         self,
         messages: List[dict],
@@ -236,18 +234,19 @@ HARD LIMITS
         temperature: float,
         label: str,
     ) -> str:
-        """
-        Single OpenAI call with shared error handling and logging.
-        """
         try:
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
+            response = await asyncio.wait_for(
+                self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                ),
+                timeout=20  # ⏱️ hard timeout (seconds)
             )
+
             answer = response.choices[0].message.content.strip()
-            usage  = response.usage
+            usage = response.usage
 
             logger.info(
                 "[OpenAI] %s | model=%s | prompt_tokens=%d | "
@@ -259,20 +258,64 @@ HARD LIMITS
                 usage.total_tokens,
                 len(answer),
             )
+
             return answer
 
-        except Exception as e:
-            logger.error(
-                "[OpenAI] %s FAILED | model=%s | error_type=%s | error=%s",
-                label, self._model, type(e).__name__, e,
-                exc_info=True,
-            )
+        # ⏱️ TIMEOUT (very important for slow connections)
+        except asyncio.TimeoutError:
+            logger.warning("[OpenAI] %s TIMEOUT", label)
             return (
-                 "Paumanhin, mukhang mabagal ang internet connection. "
-                "Pakisubukang muli o siguraduhing maayos ang signal."
+                "Paumanhin, mabagal ang koneksyon sa ngayon. "
+                "Pakisubukang muli pagkatapos ng ilang sandali."
             )
 
- 
+        # 🌐 NETWORK ISSUE (no internet, DNS, etc.)
+        except APIConnectionError:
+            logger.error("[OpenAI] %s CONNECTION ERROR", label, exc_info=True)
+            return (
+                "Paumanhin, hindi makakonek sa server. "
+                "Pakisuri ang inyong internet connection at subukang muli."
+            )
+
+        # ⏱️ OPENAI TIMEOUT (internal)
+        except APITimeoutError:
+            logger.warning("[OpenAI] %s API TIMEOUT", label)
+            return (
+                "Paumanhin, mabagal ang tugon ng system. "
+                "Pakisubukang muli."
+            )
+
+        # 💸 RATE LIMIT
+        except RateLimitError:
+            logger.warning("[OpenAI] %s RATE LIMITED", label)
+            return (
+                "Maraming request sa ngayon. "
+                "Pakisubukang muli makalipas ang ilang sandali."
+            )
+
+        # ⚠️ GENERIC API ERROR
+        except APIError as e:
+            logger.error(
+                "[OpenAI] %s API ERROR | status=%s | message=%s",
+                label, getattr(e, "status_code", "unknown"), str(e),
+                exc_info=True
+            )
+            return (
+                "May pansamantalang problema sa system. "
+                "Pakisubukang muli mamaya."
+            )
+
+        # ❌ FALLBACK (unexpected errors)
+        except Exception as e:
+            logger.critical(
+                "[OpenAI] %s UNKNOWN ERROR | type=%s | error=%s",
+                label, type(e).__name__, e,
+                exc_info=True
+            )
+            return (
+                "Paumanhin, may hindi inaasahang error. "
+                "Pakisubukang muli."
+            )
 
     async def generate_answer(
         self,

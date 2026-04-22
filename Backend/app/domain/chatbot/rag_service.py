@@ -1,4 +1,3 @@
-# app/infrastructure/services/rag_service.py
 import logging
 from dataclasses import dataclass
 from typing import List, Optional
@@ -34,6 +33,7 @@ class RAGService:
         question: str,
         embedding: List[float],
         *,
+        history: Optional[List[dict]] = None,
         top_k: int = _DEFAULT_TOP_K,
         filters: Optional[dict] = None,
     ) -> RAGResponse:
@@ -44,16 +44,18 @@ class RAGService:
         )
 
         if not chunks:
-           logger.warning("No chunks above threshold — calling LLM for no-context response.")
-           answer = await self._language_model.generate_no_context_answer(question)
-           return RAGResponse(answer=answer, sources=[], is_grounded=False)
-       
+            logger.warning("No chunks above threshold — calling LLM for no-context response.")
+            answer = await self._language_model.generate_no_context_answer(
+                question=question,
+                history=history or [],
+            )
+            return RAGResponse(answer=answer, sources=[], is_grounded=False)
+
         context_chunks = chunks[: self._MAX_CONTEXT_CHUNKS]
         context_texts = [chunk.text for chunk in context_chunks]
         answer = await self._language_model.generate_answer(
             question=question,
             context=context_texts,
+            history=history or [],
         )
         return RAGResponse(answer=answer, sources=context_chunks, is_grounded=True)
-
- 

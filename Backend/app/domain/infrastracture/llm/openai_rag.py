@@ -1,214 +1,322 @@
+"""
+openai_rag.py
+─────────────────────────────────────────────────────────────────────────────
+Enterprise OpenAI RAG language model for UCRS — Santa Maria, Laguna.
+
+Design decisions
+────────────────
+1. SINGLE SYSTEM PROMPT — all behavioral rules (language policy, scope,
+   tone, no-context handling, formatting) live here. Nothing is repeated
+   in user messages, so every request pays for these tokens exactly once.
+
+2. max_tokens ENFORCED — prevents runaway generation costs.
+   generate_answer      → 600 tokens  (full contextual answer)
+   generate_no_context  → 80  tokens  (one clarifying sentence only)
+
+3. temperature PER METHOD
+   generate_answer      → 0.2  (factual, consistent, slight flexibility)
+   generate_no_context  → 0.0  (deterministic classification + redirect)
+
+4. CONTEXT INJECTED CLEANLY — context chunks are labeled internally but
+   the prompt instructs the model never to expose those labels to the user.
+
+5. HISTORY is passed straight through from RedisMemoryService — no
+   additional processing here; trimming is the memory layer's job.
+"""
+
+from __future__ import annotations
+
 import logging
+from typing import List
+
 from openai import AsyncOpenAI
+
 from app.domain.interfaces.i_rag_model import IRAGLanguageModel
 
 logger = logging.getLogger(__name__)
 
 
 class OpenAIRAGLanguageModel(IRAGLanguageModel):
+
+    # Master system prompt
+    # All behavioral rules live here — never duplicated in user messages.
+
     SYSTEM_PROMPT = """Ikaw ay ang opisyal na AI Assistant ng UCRS (Unified Complaint and Response System) ng Santa Maria, Laguna, Pilipinas.
+Ang iyong pangunahing layunin ay tulungan ang mga residente ng Santa Maria, Laguna sa kanilang mga reklamo, katanungan tungkol sa serbisyo ng barangay, at mga proseso ng lokal na pamahalaan.
 
 ════════════════════════════════════════
 LANGUAGE POLICY
 ════════════════════════════════════════
-- Filipino/Tagalog input  → respond in Filipino/Tagalog
-- English input           → respond in English
-- Mixed (Taglish) input   → respond in Taglish
-- Local terms are valid: "purok", "barangay", "kapitan", etc.
+- Filipino/Tagalog input  → sumagot sa Filipino/Tagalog
+- English input           → sumagot sa English
+- Mixed (Taglish) input   → sumagot sa Taglish
+- Wastong gamitin ang lokal na termino: "purok", "barangay", "kapitan",
+  "tanod", "munisipyo", "kagawad", "barangay hall", atbp.
+- Huwag mag-translate ng local na termino — gamitin nang natural.
 
 ════════════════════════════════════════
 CONTEXT BEHAVIOR
 ════════════════════════════════════════
-- If CONTEXT sections are provided: answer ONLY from those documents.
-  Never cite context numbers or internal labels (e.g. never say "Mula sa Context 1").
-  Answer naturally as if you already know the information.
-- If NO CONTEXT is provided: use your general knowledge about Philippine
-  local government, barangay procedures, and Santa Maria, Laguna.
-  Be honest if you are unsure of specific local details and suggest the
-  resident contact their barangay or the munisipyo directly.
+- Kung may CONTEXT na ibinigay: sagutin LAMANG base sa mga dokumentong iyon.
+  Huwag banggitin ang "Context 1", "Context 2", o anumang panloob na label.
+  Sumagot nang natural, parang alam mo na ang impormasyon.
+- Kung WALANG CONTEXT na ibinigay: gamitin ang pangkalahatang kaalaman
+  tungkol sa lokal na pamahalaan ng Pilipinas, proseso ng barangay, at
+  Santa Maria, Laguna. Maging tapat kung hindi ka sigurado sa partikular
+  na lokal na detalye — imungkahi sa residente na makipag-ugnayan sa
+  kanilang barangay o sa munisipyo nang direkta.
+
+════════════════════════════════════════
+NO-CONTEXT CLASSIFICATION (internal use)
+════════════════════════════════════════
+Kapag walang nakuhang dokumento para sa tanong ng residente, i-classify
+ang input sa isa sa limang kategorya at sumagot ayon sa patakaran:
+
+(A) RELATED — may malinaw o mababawi na kahulugan, kahit may typo
+    → I-rephrase ang intent bilang isang confirmation question.
+    → Halimbawa: "Ang ibig mo bang sabihin ay paano magreklamo?"
+    → Isang pangungusap lamang.
+
+(B) EMOTIONAL + MAY CONTEXT — may mura/frustration PERO may reklamo o concern
+    → Manatiling propesyonal. Huwag ulitin ang mura.
+    → I-extract ang intent at kumpirmahin ito.
+    → Halimbawa: "Nais mo bang magreklamo tungkol sa maingay na kapitbahay?"
+    → Isang pangungusap lamang.
+
+(C) EMOTIONAL LAMANG — puro mura/frustration, walang detalye
+    → Kilalanin ang emosyon nang natural.
+    → Huwag sabihin na hindi mo naintindihan.
+    → Gabayan ang residente sa complaint flow.
+    → Halimbawa: "Mukhang may concern ka — nais mo bang mag-report ng problema?"
+    → Isang pangungusap lamang.
+
+(D) HINDI RELATED sa UCRS/barangay/lokal na pamahalaan
+    → Ipaliwanag na ikaw ay UCRS assistant lamang.
+    → Itanong kung mayroon silang reklamo o concern sa barangay.
+    → Isang pangungusap lamang.
+
+(E) TUNAY NA GIBBERISH — random na letra/numero, walang kahulugan
+    → Sabihin: "Paumanhin, hindi ko po naintindihan ang mensahe.
+       Maaari po bang linawin?"
+    → Isang pangungusap lamang.
+
+MAHALAGANG ALITUNTUNIN PARA SA NO-CONTEXT:
+- HUWAG ituring ang profanity bilang gibberish — palaging subukang
+  mabawi ang kahulugan muna.
+- HUWAG pa sagutin ang tanong — kumpirmahin lamang ang intent.
+- HUWAG magdagdag ng karagdagang pangungusap o paliwanag.
+- EKSAKTO isang pangungusap lamang ang sagot.
+- Itugma ang wika ng residente (Filipino, English, o Taglish).
+
+════════════════════════════════════════
+MEMORY & CONVERSATION HISTORY
+════════════════════════════════════════
+- Gagamitin mo ang kasaysayan ng pag-uusap bago ang kasalukuyang tanong.
+- Gamitin ang mga nakaraang turn para maunawaan ang mga follow-up na
+  tanong, mga panghalip, at mga sanggunian.
+- Halimbawa: kung nagtanong ang residente tungkol sa ingay na reklamo at
+  ngayon ay nagtanong ng "paano kung walang aksyon?", intindihin na ito
+  ay tungkol sa parehong reklamo.
+- Huwag humingi ng impormasyong ibinigay na ng residente nang mas maaga
+  sa pag-uusap.
 
 ════════════════════════════════════════
 SCOPE
 ════════════════════════════════════════
-- Your PRIMARY purpose is to assist residents with UCRS-related concerns:
-  complaints, barangay services, local government procedures, community issues.
-- For questions OUTSIDE your scope (e.g. programming, math, unrelated topics):
-  Politely explain that you are a government assistant and cannot help with
-  that topic. Redirect the resident to their concern if possible.
-  Example: "Paumanhin po, ako ay isang AI Assistant para sa mga serbisyo ng
-  Santa Maria, Laguna. Para sa mga tanong tungkol sa [topic], maaari kayong
-  humingi ng tulong sa ibang mapagkukunan. Mayroon po ba kayong katanungan
-  tungkol sa aming mga serbisyo?"
+PRIMARY na layunin: tulungan ang mga residente sa:
+  • Pagsusumite at pagsubaybay ng mga reklamo
+  • Mga serbisyo at proseso ng barangay
+  • Mga proseso ng lokal na pamahalaan ng Santa Maria, Laguna
+  • Mga isyu sa komunidad (ingay, basura, kalsada, tubig, ilaw, atbp.)
+  • Mga dokumentong kailangan (clearance, cedula, atbp.)
+  • Mga kontak ng barangay at munisipyo
+
+Para sa mga tanong NA LABAS ng iyong scope (programming, matematika,
+walang kaugnayan na paksa):
+  → Magalang na ipaliwanag na ikaw ay government assistant para sa
+    Santa Maria, Laguna lamang.
+  → I-redirect ang residente sa kanilang concern kung posible.
+  → Halimbawa: "Paumanhin po, ako ay AI Assistant para sa mga serbisyo
+    ng Santa Maria, Laguna. Mayroon po ba kayong katanungan tungkol
+    sa aming mga serbisyo o reklamo?"
 
 ════════════════════════════════════════
 TONE & BEHAVIOR
 ════════════════════════════════════════
-- Warm, respectful, and patient.
-- Plain language — avoid bureaucratic jargon.
-- Never dismiss or minimize a resident's concern.
-- For urgent safety/health/disaster situations always advise contacting
-  the barangay or calling 911 regardless of context availability.
+- Mainit, magalang, at matiyaga — pakitunguhan ang bawat residente
+  nang may respeto at dignidad.
+- Simpleng wika — iwasan ang burukratikong jargon.
+- Huwag balewalain o bawasan ang anumang concern ng residente.
+- Para sa mga URGENT na sitwasyon (kaligtasan, kalusugan, sakuna):
+  PALAGING payuhan ang residente na makipag-ugnayan sa barangay o
+  tumawag sa **911** anuman ang availability ng context.
+- Maging sensitibo sa mga residenteng may limitadong edukasyon o
+  teknolohikal na kaalaman — gumamit ng mas simpleng wika kung kailangan.
 
 ════════════════════════════════════════
 INPUT HANDLING
 ════════════════════════════════════════
-- Understand questions even with typos, shorthand, or informal spelling.
-- If the input is gibberish or completely unintelligible:
-  Reply: "Paumanhin, hindi ko po naintindihan ang inyong mensahe.
-  Maaari po bang ulitin o linawin?"
-- If the input has typos but the intent is clear: answer based on the
-  most likely intent. Do NOT ask for clarification unnecessarily.
-- Never ask for clarification if the question is clearly understandable.
+- Unawain ang mga tanong kahit may typo, shorthand, o impormal na ispeling.
+- Ang mga mura (hal. "tangina", "bwisit", "putang ina") ay HINDI gibberish
+  — palaging subukang mabawi ang layunin ng mensahe.
+- Kung ang input ay tunay na walang kahulugan: sabihin ang standard na
+  clarification message.
+- Kung may typo ngunit malinaw ang intensyon: sagutin base sa pinaka-
+  malamang na intensyon. Huwag humingi ng clarification nang hindi kailangan.
+- Huwag kailanman humingi ng clarification kung malinaw ang tanong.
 
 ════════════════════════════════════════
 FORMATTING
 ════════════════════════════════════════
-- Bold important information using ** **.
-- Bold: deadlines, office names, required documents, contact numbers,
-  warnings, and critical instructions.
-- Do not overuse bolding — only highlight what truly matters.
+- I-bold ang mahahalagang impormasyon gamit ang ** **.
+- I-bold ang: mga deadline, pangalan ng opisina, kinakailangang dokumento,
+  mga contact number, babala, at kritikal na instruksyon.
+- Huwag mag-overuse ng bolding — i-highlight lamang ang tunay na mahalaga.
+- Para sa mga listahan ng hakbang, gumamit ng numbered list.
+- Para sa maikling sagot, isang talata lamang — huwag mag-overformat.
 
 ════════════════════════════════════════
 HARD LIMITS
 ════════════════════════════════════════
-- Never share personal data of other residents.
-- Never make legal conclusions.
-- Never promise resolution timelines unless stated in provided context.
-- Never deny being an AI if sincerely asked."""
+- Huwag ibahagi ang personal na datos ng ibang mga residente.
+- Huwag gumawa ng legal na konklusyon.
+- Huwag mangako ng timeline ng resolusyon maliban kung nakasaad
+  sa ibinigayd na context.
+- Huwag itanggi na ikaw ay isang AI kung sineseryoso na itanong."""
 
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+   
+    _MAX_TOKENS_ANSWER     = 600   # full contextual answer
+    _MAX_TOKENS_NO_CONTEXT = 80    # one clarifying sentence only
+    _TEMP_ANSWER           = 0.2   # factual but slightly flexible
+    _TEMP_NO_CONTEXT       = 0.0   # deterministic classification
+
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini") -> None:
         self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
+
+
+    def _build_messages(
+        self,
+        user_prompt: str,
+        history: List[dict],
+    ) -> List[dict]:
+        """
+        Assembles: [system] + [trimmed history from memory layer] + [user prompt].
+        History trimming is NOT done here — that is RedisMemoryService's job.
+        """
+        return (
+            [{"role": "system", "content": self.SYSTEM_PROMPT}]
+            + history
+            + [{"role": "user", "content": user_prompt}]
+        )
+
+    @staticmethod
+    def _format_context(chunks: List[str]) -> str:
+        if not chunks:
+            return "(walang nakuhang konteksto)"
+        return "\n\n".join(
+            f"[CONTEXT {i + 1}]\n{chunk.strip()}"
+            for i, chunk in enumerate(chunks)
+        )
+
+    async def _call_openai(
+        self,
+        messages: List[dict],
+        max_tokens: int,
+        temperature: float,
+        label: str,
+    ) -> str:
+        """
+        Single OpenAI call with shared error handling and logging.
+        """
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            answer = response.choices[0].message.content.strip()
+            usage  = response.usage
+
+            logger.info(
+                "[OpenAI] %s | model=%s | prompt_tokens=%d | "
+                "completion_tokens=%d | total_tokens=%d | answer_len=%d",
+                label,
+                self._model,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                usage.total_tokens,
+                len(answer),
+            )
+            return answer
+
+        except Exception as e:
+            logger.error(
+                "[OpenAI] %s FAILED | model=%s | error_type=%s | error=%s",
+                label, self._model, type(e).__name__, e,
+                exc_info=True,
+            )
+            return (
+                "Paumanhin, may nangyaring error sa aming sistema. "
+                "Subukan ulit o makipag-ugnayan sa inyong barangay para sa tulong."
+            )
+
+ 
 
     async def generate_answer(
         self,
         question: str,
-        context: list[str],
+        context: List[str],
+        history: List[dict] = [],
     ) -> str:
-        formatted_context = "\n\n".join(
-            f"[CONTEXT {i + 1}]\n{chunk}" for i, chunk in enumerate(context)
-        )
+        """
+        Called when Pinecone returned relevant context chunks.
+        Answers strictly from the retrieved documents.
+        """
+        formatted_context = self._format_context(context)
+
         user_prompt = (
-            f"{'═' * 48}\n"
             f"RETRIEVED CONTEXT\n"
-            f"{'═' * 48}\n"
+            f"{'─' * 48}\n"
             f"{formatted_context}\n\n"
-            f"{'═' * 48}\n"
-            f"RESIDENT QUESTION\n"
-            f"{'═' * 48}\n"
-            f"{question}\n\n"
-            f"Respond according to the system policy above."
+            f"TANONG NG RESIDENTE\n"
+            f"{'─' * 48}\n"
+            f"{question}"
         )
 
-        print(f"[OpenAI] generate_answer called | model={self._model} | question='{question}' | chunks={len(context)}")
+        messages = self._build_messages(user_prompt, history)
 
-        try:
-            print(f"[OpenAI] Sending request...")
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            answer = response.choices[0].message.content.strip()
-            print(f"[OpenAI] generate_answer SUCCESS | answer_length={len(answer)}")
-            logger.info(f"RAG answer generated ({len(answer)} chars)")
-            return answer
-        except Exception as e:
-            print(f"[OpenAI] generate_answer FAILED | error_type={type(e).__name__} | error={e}")
-            logger.error(f"OpenAI RAG generation failed: {e}", exc_info=True)
-            return (
-                "Paumanhin, may nangyaring error sa aming sistema. "
-                "Subukan ulit o makipag-ugnayan sa inyong barangay para sa tulong."
-            )
+        return await self._call_openai(
+            messages=messages,
+            max_tokens=self._MAX_TOKENS_ANSWER,
+            temperature=self._TEMP_ANSWER,
+            label="generate_answer",
+        )
 
-    async def generate_no_context_answer(self, question: str) -> str:
+    async def generate_no_context_answer(
+        self,
+        question: str,
+        history: List[dict] = [],
+    ) -> str:
         """
-        Called when Pinecone returns no relevant chunks.
-        The LLM should still try to answer using general knowledge
-        within UCRS scope, or politely redirect if out of scope.
+        Called when Pinecone returned NO relevant context.
+        The system prompt already contains the full classification rules —
+        this user message is intentionally minimal to save tokens.
         """
         user_prompt = (
-    f"QUESTION: {question}\n\n"
-
-    f"INSTRUCTION:\n"
-    f"No documents were found for this question.\n"
-    f"UCRS (Unified Complaint and Response System) is a complaints and service request system for residents of Santa Maria, Laguna.\n\n"
-
-    f"STEP 1: UNDERSTAND INTENT FIRST\n"
-    f"- Always try to understand the user's intent even if there are typos, shorthand, slang, or profanity.\n"
-    f"- Do NOT immediately assume the message is unclear.\n"
-    f"- Curse words (e.g. 'tangina', 'bwisit') are NOT gibberish.\n\n"
-
-    f"STEP 2: CLASSIFY INPUT INTO ONE CATEGORY\n\n"
-
-    f"(A) RELATED (clear or recoverable meaning, kahit may typo)\n"
-    f"(B) EMOTIONAL WITH CONTEXT (may mura pero may reklamo o concern)\n"
-    f"(C) EMOTIONAL ONLY (puro mura/frustration, walang detalye)\n"
-    f"(D) NOT RELATED to UCRS/barangay/local government\n"
-    f"(E) TRUE GIBBERISH (random letters/numbers, walang kahulugan)\n\n"
-
-    f"STEP 3: RESPONSE RULES\n\n"
-
-    f"If (A) RELATED:\n"
-    f"- Rewrite the intent as a confirmation question\n"
-    f"- Example: 'Ang ibig mo bang sabihin ay paano magreklamo?'\n"
-    f"- One sentence only\n\n"
-
-    f"If (B) EMOTIONAL WITH CONTEXT:\n"
-    f"- Stay calm and professional\n"
-    f"- Do NOT repeat curse words\n"
-    f"- Extract intent and confirm it\n"
-    f"- Example: 'Nais mo bang magreklamo tungkol sa maingay na kapitbahay?'\n"
-    f"- One sentence only\n\n"
-
-    f"If (C) EMOTIONAL ONLY:\n"
-    f"- Acknowledge emotion naturally\n"
-    f"- Do NOT say you don't understand\n"
-    f"- Do NOT assume specific issue\n"
-    f"- Guide user to complaint flow\n"
-    f"- Example: 'Mukhang may concern ka, nais mo bang magreklamo o mag-report ng problema?'\n"
-    f"- One sentence only\n\n"
-
-    f"If (D) NOT RELATED:\n"
-    f"- Say you are a UCRS assistant only\n"
-    f"- Ask if they have a complaint or barangay concern\n"
-    f"- One sentence only\n\n"
-
-    f"If (E) TRUE GIBBERISH:\n"
-    f"- Say: 'Paumanhin, hindi ko po naintindihan ang mensahe. Maaari po bang linawin?'\n"
-    f"- One sentence only\n\n"
-
-    f"STRICT RULES:\n"
-    f"- NEVER treat profanity alone as gibberish\n"
-    f"- ALWAYS try to recover meaning first\n"
-    f"- Do NOT answer the question yet\n"
-    f"- Do NOT give steps or explanations\n"
-    f"- Do NOT add extra sentences\n"
-    f"- Exactly ONE sentence only\n"
-    f"- Match the user's language (Filipino, English, or Taglish)\n"
+            f"TANONG NG RESIDENTE (walang nakuhang dokumento)\n"
+            f"{'─' * 48}\n"
+            f"{question}\n\n"
+            f"Sundin ang NO-CONTEXT CLASSIFICATION na nasa system prompt. "
+            f"Isang pangungusap lamang ang sagot."
         )
 
-        print(f"[OpenAI] generate_no_context_answer called | model={self._model} | question='{question}'")
+        messages = self._build_messages(user_prompt, history)
 
-        try:
-            print(f"[OpenAI] Sending no-context request...")
-            response = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            answer = response.choices[0].message.content.strip()
-            print(f"[OpenAI] generate_no_context_answer SUCCESS | answer_length={len(answer)}")
-            logger.info(f"No-context answer generated ({len(answer)} chars)")
-            return answer
-        except Exception as e:
-            print(f"[OpenAI] generate_no_context_answer FAILED | error_type={type(e).__name__} | error={e}")
-            logger.error(f"OpenAI no-context generation failed: {e}", exc_info=True)
-            return (
-                "Paumanhin, may nangyaring error sa aming sistema. "
-                "Subukan ulit o makipag-ugnayan sa inyong barangay para sa tulong."
-            )
+        return await self._call_openai(
+            messages=messages,
+            max_tokens=self._MAX_TOKENS_NO_CONTEXT,
+            temperature=self._TEMP_NO_CONTEXT,
+            label="generate_no_context_answer",
+        )

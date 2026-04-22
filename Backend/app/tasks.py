@@ -796,7 +796,7 @@ def send_notifications_task(
                 notification_type=notification_type,
                 channel="sse",
                 is_read=False,
-                sent_at=datetime.now(timezone.utc),
+                sent_at=datetime.now(timezone.utc).isoformat(),
             )
             db.add(notification)
             await db.commit()

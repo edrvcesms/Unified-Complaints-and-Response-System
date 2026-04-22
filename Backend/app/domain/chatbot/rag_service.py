@@ -44,13 +44,10 @@ class RAGService:
         )
 
         if not chunks:
-            logger.warning("No chunks above threshold — falling back to Gemini general response.")
-            answer = await self._language_model.generate_answer(
-                question=question,
-                context=[],
-            )
-            return RAGResponse(answer=answer, sources=[], is_grounded=False)
-
+           logger.warning("No chunks above threshold — calling LLM for no-context response.")
+           answer = await self._language_model.generate_no_context_answer(question)
+           return RAGResponse(answer=answer, sources=[], is_grounded=False)
+       
         context_chunks = chunks[: self._MAX_CONTEXT_CHUNKS]
         context_texts = [chunk.text for chunk in context_chunks]
         answer = await self._language_model.generate_answer(

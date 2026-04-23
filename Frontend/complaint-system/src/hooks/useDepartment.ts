@@ -5,17 +5,7 @@ import { getAllDepartments } from "../services/department/department";
 import type { Incident } from "../types/complaints/incident";
 import type { Department } from "../types/department/department";
 
-interface DailyCounts {
-  [date: string]: {
-    forwarded: number;
-    under_review: number;
-    resolved: number;
-  };
-}
-
-interface WeeklyDepartmentStats {
-  daily_counts: DailyCounts;
-}
+type WeeklyDepartmentStats = Awaited<ReturnType<typeof getWeeklyDepartmentStats>>;
 
 export const useAllDepartments = () => {
   const { data, isLoading, error } = useQuery<Department[]>({

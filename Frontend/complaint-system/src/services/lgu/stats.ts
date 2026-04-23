@@ -2,9 +2,10 @@ import { lguApi } from "../axios/apiServices";
 
 interface DailyCounts {
   [date: string]: {
-    forwarded: number;
-    resolved: number;
-    under_review: number;
+    forwarded?: number;
+    forwarded_to_department?: number;
+    resolved?: number;
+    under_review?: number;
   };
 }
 

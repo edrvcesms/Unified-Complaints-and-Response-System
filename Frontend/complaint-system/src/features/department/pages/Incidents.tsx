@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { useAssignedIncidents } from "../../../hooks/useDepartment";
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { DepartmentIncidentsTable } from "../components/DepartmentIncidentsTable";
@@ -8,7 +7,6 @@ import { ErrorMessage, PageHeader } from "../../general";
 
 export const DepartmentIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAssignedIncidents();
-  const { t } = useTranslation();
   const manageIncidents = (incidents || []).filter((incident) => {
     const incidentStatus = incident.complaint_clusters[0]?.complaint?.status || incident.status;
     return incidentStatus !== "forwarded_to_lgu";

@@ -6,7 +6,7 @@ import { useBarangayById, useMarkBarangayViewed } from "../../../hooks/useBarang
 import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { useTranslation } from "react-i18next";
-import { StatusFilterDropdown, SeverityScoreFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
+import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { ErrorMessage, BackButton } from "../../general";
 
 export const BarangayIncidents: React.FC = () => {
@@ -28,9 +28,7 @@ export const BarangayIncidents: React.FC = () => {
   }, [barangayIdNum]);
 
   const {
-    search,
     filterStatus,
-    filterSeverityScore,
     sortBy,
     dateFrom,
     dateTo,
@@ -39,16 +37,13 @@ export const BarangayIncidents: React.FC = () => {
     currentPage,
     paginated,
     totalPages,
-    handleSearch,
     handleFilterChange,
-    handleSeverityScoreFilterChange,
     handleSortChange,
     handleDateFromChange,
     handleDateToChange,
     handleClearDateFilter,
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);
-
   if (incidentsError) {
     return <ErrorMessage message="Failed to load incidents. Please refresh." />;
   }

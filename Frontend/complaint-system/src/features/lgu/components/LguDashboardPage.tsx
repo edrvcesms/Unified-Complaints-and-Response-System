@@ -53,10 +53,10 @@ interface WeeklyDataPoint {
 }
 
 interface WeeklyCounts {
-  forwarded: number;
-  forwarded_to_department: number;
-  resolved: number;
-  under_review: number;
+  forwarded?: number;
+  forwarded_to_department?: number;
+  resolved?: number;
+  under_review?: number;
 }
 
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
@@ -90,10 +90,10 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
 
       return {
         day: dayNames[date.getDay()],
-        forwarded: counts.forwarded,
-        forwarded_to_department: counts.forwarded_to_department,
-        resolved: counts.resolved,
-        under_review: counts.under_review,
+        forwarded: counts.forwarded ?? 0,
+        forwarded_to_department: counts.forwarded_to_department ?? 0,
+        resolved: counts.resolved ?? 0,
+        under_review: counts.under_review ?? 0,
       };
     });
   }, [weeklyDailyCounts]);

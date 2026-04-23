@@ -87,9 +87,9 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
 
       return {
         day: dayNames[date.getDay()],
-        forwarded: counts.forwarded,
-        under_review: counts.under_review,
-        resolved: counts.resolved,
+        forwarded: counts.forwarded ?? 0,
+        under_review: counts.under_review ?? 0,
+        resolved: counts.resolved ?? 0,
       };
     });
   }, [weeklyStats]);

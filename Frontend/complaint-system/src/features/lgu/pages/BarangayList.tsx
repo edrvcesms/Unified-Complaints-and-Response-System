@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { useAllBarangays } from "../../../hooks/useBarangays";
 import { BarangayCard } from "../components/BarangayCard";
@@ -33,18 +33,13 @@ export const BarangayList: React.FC = () => {
   }, [filteredBarangays, currentPage, itemsPerPage]);
 
   // Reset to page 1 when search term changes
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
   const barangaysWithNewIncidents = useMemo(() => {
     if (!barangays) return 0;
     return barangays.filter(b => (b.new_forwarded_incident_count ?? 0) > 0).length;
-  }, [barangays]);
-
-  const totalForwardedIncidents = useMemo(() => {
-    if (!barangays) return 0;
-    return barangays.reduce((sum, b) => sum + (b.forwarded_incident_count ?? 0), 0);
   }, [barangays]);
 
   const totalNewIncidents = useMemo(() => {

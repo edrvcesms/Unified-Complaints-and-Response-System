@@ -1,10 +1,9 @@
-
 import { useNavigate } from "react-router-dom";
 import type { Incident } from "../../types/complaints/incident";
 import { Pagination } from "../barangay/components/Pagination";
 import { SkeletonRow } from "../barangay/components/Skeletons";
 import { formatCategoryName } from "../../utils/categoryFormatter";
-import { getSeverityColor, getStatusColor, formatStatus } from "../../utils/incidentHelpers";
+import { getStatusColor, formatStatus } from "../../utils/incidentHelpers";
 import { useAuthStore } from "../../store/authStore";
 
 interface ArchivedIncidentTableRowProps {
@@ -15,7 +14,6 @@ interface ArchivedIncidentTableRowProps {
 const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ incident, detailPathBase }) => {
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
-
   const handleView = () => {
     navigate(`${detailPathBase}/${incident.id}`);
   };
@@ -23,7 +21,7 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
   const incidentStatus = incident.complaint_clusters[0]?.complaint?.status || "";
 
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
+    <tr className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={handleView}>
       <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">#{incident.id}</td>
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">{incident.title}</td>
       <td className="px-4 py-3 text-sm text-gray-600 text-center">{incident.barangay?.barangay_name || "N/A"}</td>

@@ -1,6 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { useTranslation } from 'react-i18next';
 import { useMonthlyIncidentReport } from "../../../hooks/useReports";
 import { ErrorMessage } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -11,7 +10,6 @@ export const CategoryIncidents: React.FC = () => {
   const { barangayId, categoryName } = useParams<{ barangayId: string; categoryName: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   
   const month = Number(searchParams.get("month"));
   const year = Number(searchParams.get("year"));

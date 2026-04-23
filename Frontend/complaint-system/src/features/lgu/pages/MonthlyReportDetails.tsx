@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { useTranslation } from 'react-i18next';
 import { useMonthlyIncidentReport } from "../../../hooks/useReports";
 import { ErrorMessage } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -10,7 +9,6 @@ import { formatCategoryName } from "../../../utils/categoryFormatter";
 export const MonthlyReportDetails: React.FC = () => {
   const { barangayId } = useParams<{ barangayId: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   
   // Initialize with current month and year
   const now = new Date();

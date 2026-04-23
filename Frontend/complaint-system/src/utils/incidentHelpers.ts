@@ -8,7 +8,7 @@ export const getSeverityColor = (severity: string): string => {
   return severityMap[severity] || "bg-gray-100 text-gray-800";
 };
 
-export const getStatusColor = (status: string, userRole?: string): string => {
+export const getStatusColor = (status: string, _userRole?: string): string => {
   const lowerStatus = status.toLowerCase();
   
   const statusMap: Record<string, string> = {
@@ -27,7 +27,7 @@ export const getStatusColor = (status: string, userRole?: string): string => {
   return statusMap[lowerStatus] || "bg-gray-100 text-gray-800";
 };
 
-export const formatStatus = (status: string, userRole?: string): string => {
+export const formatStatus = (status: string, _userRole?: string): string => {
   if (!status) return "N/A";
   
   const lowerStatus = status.toLowerCase();

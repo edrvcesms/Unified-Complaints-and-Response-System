@@ -2,8 +2,9 @@ import { departmentApi } from "../axios/apiServices";
 
 interface DailyCounts {
   [date: string]: {
-    forwarded: number;
-    resolved: number;
+    forwarded?: number;
+    under_review?: number;
+    resolved?: number;
   };
 }
 

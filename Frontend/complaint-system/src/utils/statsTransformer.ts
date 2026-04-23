@@ -25,7 +25,7 @@ const MONTH_ORDER = [
 function buildSeries(
   countsMap: StatusCountsMap,
   categoryMap: CategoryByPeriodMap,
-  labelKey: "day" | "date" | "month"
+  _labelKey: "day" | "date" | "month"
 ): TimeSeriesPoint[] {
   return Object.entries(countsMap).map(([key, counts]) => {
     const catCounts = categoryMap[key] ?? {};

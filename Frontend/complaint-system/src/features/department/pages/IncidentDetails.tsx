@@ -26,7 +26,6 @@ export const DepartmentIncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
-  const [attachmentError, setAttachmentError] = useState('');
 
   const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -44,12 +43,6 @@ export const DepartmentIncidentDetails: React.FC = () => {
     const [isMapOpen, setIsMapOpen] = useState(false);
 
   
-  useEffect(() => {
-  if (!actionsTakenModal.isOpen) {
-    setAttachmentError('');
-  }
-}, [actionsTakenModal.isOpen]);
-
   // Handle successful resolve
   useEffect(() => {
     if (resolveIncidentMutation.isSuccess) {
@@ -150,7 +143,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         try{
           const validationError = validateAttachments(attachments);
           if (validationError) {
-            setAttachmentError(validationError);
+            return;
           }
 
           actionsTakenModal.setIsLoading(true);
@@ -174,7 +167,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
         try {
           const validationError = validateAttachments(attachments);
           if (validationError) {
-            setAttachmentError(validationError);
+            return;
           }
 
           actionsTakenModal.setIsLoading(true);
@@ -206,7 +199,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
       onConfirm: async (actionsTaken: string, attachments: File[]) => {
         const validationError = validateAttachments(attachments);
           if (validationError) {
-            setAttachmentError(validationError);
+            return;
           }
 
         try {

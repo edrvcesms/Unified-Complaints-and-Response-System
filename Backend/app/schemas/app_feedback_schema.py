@@ -23,11 +23,29 @@ class PostIncidentFeedbackCreate(BaseModel):
     ratings: float
     message: str | None = None
     
+class UsersData(BaseModel):
+    id: int
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+
+    class Config:
+        from_attributes = True
+        
+class IncidentDatas(BaseModel):
+    id: int
+    title: str | None = None
+    description: str | None = None
+    resolver_id: int | None = None
+
+    class Config:
+        from_attributes = True
+
 class PostIncidentFeedbackResponse(PostIncidentFeedbackCreate):
     id: int
     created_at: datetime
-    user: UserData
-    incident: IncidentData
+    user: UsersData
+    incident: IncidentDatas
 
     class Config:
         from_attributes = True

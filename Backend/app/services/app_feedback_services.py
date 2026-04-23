@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.app_feedback import AppFeedback
 from app.models.user import User
@@ -111,39 +112,10 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         )
         db.add(new_feedback)
         await db.commit()
-        feedback_result = await db.execute(
-            select(PostIncidentFeedback)
-            .options(
-                selectinload(PostIncidentFeedback.user),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.category),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.barangay),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.user),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.barangay),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.category),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.department_account),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.attachment),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-               
-            )
-            .where(PostIncidentFeedback.id == new_feedback.id)
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content="Post-incident feedback submitted successfully"
         )
-        saved_feedback = feedback_result.scalar_one()
-        return PostIncidentFeedbackResponse.model_validate(saved_feedback)
     
     except HTTPException:
         raise
@@ -161,29 +133,7 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
             select(PostIncidentFeedback)
             .options(
                 selectinload(PostIncidentFeedback.user),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.category),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.barangay),
                 selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.user),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.barangay),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.category),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.department_account),
-                selectinload(PostIncidentFeedback.incident)
-                .selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.attachment),
-                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
             )
             .where(PostIncidentFeedback.incident_id == incident_id)
             .order_by(PostIncidentFeedback.created_at.desc())

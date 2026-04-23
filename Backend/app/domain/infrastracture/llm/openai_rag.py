@@ -261,7 +261,7 @@ HARD LIMITS
 
             return answer
 
-        # ⏱️ TIMEOUT (very important for slow connections)
+     
         except asyncio.TimeoutError:
             logger.warning("[OpenAI] %s TIMEOUT", label)
             return (
@@ -269,23 +269,23 @@ HARD LIMITS
                 "Pakisubukang muli pagkatapos ng ilang sandali."
             )
 
-        # 🌐 NETWORK ISSUE (no internet, DNS, etc.)
+      
         except APIConnectionError:
             logger.error("[OpenAI] %s CONNECTION ERROR", label, exc_info=True)
             return (
-                "Paumanhin, hindi makakonek sa server. "
+                "Paumanhin, mabagal ang koneksyon sa ngayon. "
                 "Pakisuri ang inyong internet connection at subukang muli."
             )
 
-        # ⏱️ OPENAI TIMEOUT (internal)
+     
         except APITimeoutError:
             logger.warning("[OpenAI] %s API TIMEOUT", label)
             return (
-                "Paumanhin, mabagal ang tugon ng system. "
-                "Pakisubukang muli."
+                "Paumanhin, mabagal ang koneksyon sa ngayon. "
+                "Pakisuri ang inyong internet connection at subukang muli."
             )
 
-        # 💸 RATE LIMIT
+   
         except RateLimitError:
             logger.warning("[OpenAI] %s RATE LIMITED", label)
             return (

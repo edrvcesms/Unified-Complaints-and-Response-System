@@ -1,11 +1,16 @@
 import React, { useCallback, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { knowledgeBaseApi } from "../../../services/axios/apiServices";
+import { superAdminApi } from "../../../services/axios/apiServices";
 
 interface UploadResponse {
   message: string;
   chunks_indexed: number;
   chunk_titles: string[];
+}
+
+interface ClearDataResponse {
+  detail: string;
 }
 
 interface ApiError {
@@ -29,11 +34,13 @@ function getErrorMessage(err: unknown): string {
 
 const MAX_FILE_SIZE_MB = 20;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const INDEX_NAME = "ucrs-rag-index"; // Define your index name
 
 export default function KnowledgeBase() {
   const [file, setFile] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (f: File): string | null => {
@@ -47,7 +54,7 @@ export default function KnowledgeBase() {
     const err = validateFile(f);
     setValidationError(err);
     setFile(err ? null : f);
-    mutation.reset();
+    uploadMutation.reset();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +77,8 @@ export default function KnowledgeBase() {
 
   const handleDragLeave = () => setIsDragging(false);
 
-  const mutation = useMutation<UploadResponse, unknown, File>({
+  // Upload mutation
+  const uploadMutation = useMutation<UploadResponse, unknown, File>({
     mutationFn: async (f: File) => {
       const formData = new FormData();
       formData.append("file", f);
@@ -86,32 +94,146 @@ export default function KnowledgeBase() {
     },
   });
 
+  // Clear data mutation
+  const clearDataMutation = useMutation<ClearDataResponse, unknown, void>({
+    mutationFn: async () => {
+      const data = await superAdminApi.delete<ClearDataResponse>(
+        "/delete-pinecone-data",
+        { params: { index_name: INDEX_NAME } }
+      );
+      return data as ClearDataResponse;
+    },
+    onSuccess: (data) => {
+      setShowConfirmDialog(false);
+      // Optional: Show a success toast or notification
+      console.log("Data cleared:", data.detail);
+    },
+    onError: (error) => {
+      console.error("Failed to clear data:", getErrorMessage(error));
+    },
+  });
+
   const handleSubmit = () => {
     if (!file) return;
     const err = validateFile(file);
     if (err) { setValidationError(err); return; }
-    mutation.mutate(file);
+    uploadMutation.mutate(file);
   };
 
   const handleRemoveFile = () => {
     setFile(null);
     setValidationError(null);
-    mutation.reset();
+    uploadMutation.reset();
   };
 
-  const isSuccess = mutation.isSuccess;
-  const isError = mutation.isError;
-  const isPending = mutation.isPending;
+  const handleClearData = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const confirmClearData = () => {
+    clearDataMutation.mutate();
+  };
+
+  const cancelClearData = () => {
+    setShowConfirmDialog(false);
+  };
+
+  const isSuccess = uploadMutation.isSuccess;
+  const isError = uploadMutation.isError;
+  const isPending = uploadMutation.isPending;
+  const isClearing = clearDataMutation.isPending;
+
+  // Disable clear button if uploading or clearing
+  const isClearButtonDisabled = isPending || isClearing;
 
   return (
     <div className="space-y-6">
-      {/* Page Header — matches admin pattern */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Upload a PDF to extract, chunk, and index its contents into Pinecone.
-        </p>
+      {/* Page Header with Clear Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Knowledge Base</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Upload a PDF to extract, chunk, and index its contents into Pinecone.
+          </p>
+        </div>
+        
+        {/* Clear Chatbot Data Button - Disabled during upload */}
+        <button
+          type="button"
+          onClick={handleClearData}
+          disabled={isClearButtonDisabled}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+            isClearButtonDisabled
+              ? "bg-gray-100 text-gray-400 border border-gray-200"
+              : "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+          }`}
+        >
+          {isClearing ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Clearing...
+            </>
+          ) : isPending ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Uploading...
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+              </svg>
+              Clear Chatbot Data
+            </>
+          )}
+        </button>
       </div>
+
+      {/* Rest of your component remains the same */}
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Clear Chatbot Data</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete all indexed data from the Pinecone index "{INDEX_NAME}"? This will remove all knowledge base content from the chatbot.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={cancelClearData}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearData}
+                disabled={isClearing || isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+              >
+                {isClearing ? "Clearing..." : "Yes, Clear Data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
         {/* Card header */}
@@ -189,12 +311,22 @@ export default function KnowledgeBase() {
               <svg className="h-4 w-4 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
               </svg>
-              <p className="text-xs text-red-700 font-medium">{getErrorMessage(mutation.error)}</p>
+              <p className="text-xs text-red-700 font-medium">{getErrorMessage(uploadMutation.error)}</p>
+            </div>
+          )}
+
+          {/* Clear data error */}
+          {clearDataMutation.isError && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+              <svg className="h-4 w-4 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <p className="text-xs text-red-700 font-medium">{getErrorMessage(clearDataMutation.error)}</p>
             </div>
           )}
 
           {/* Success result */}
-          {isSuccess && mutation.data && (
+          {isSuccess && uploadMutation.data && (
             <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
@@ -202,16 +334,16 @@ export default function KnowledgeBase() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 </div>
-                <p className="text-sm font-semibold text-green-800">{mutation.data.message}</p>
+                <p className="text-sm font-semibold text-green-800">{uploadMutation.data.message}</p>
               </div>
 
-              {mutation.data.chunk_titles.length > 0 && (
+              {uploadMutation.data.chunk_titles.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-green-700 mb-2">
-                    Indexed sections ({mutation.data.chunks_indexed})
+                    Indexed sections ({uploadMutation.data.chunks_indexed})
                   </p>
                   <ul className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                    {mutation.data.chunk_titles.map((title, i) => (
+                    {uploadMutation.data.chunk_titles.map((title, i) => (
                       <li key={i} className="flex items-center gap-2 text-xs text-green-800">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
                         {title}
@@ -220,6 +352,20 @@ export default function KnowledgeBase() {
                   </ul>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Clear data success message */}
+          {clearDataMutation.isSuccess && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100">
+                  <svg className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-green-800">{clearDataMutation.data?.detail || "Chatbot data cleared successfully!"}</p>
+              </div>
             </div>
           )}
 

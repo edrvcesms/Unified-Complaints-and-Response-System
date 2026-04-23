@@ -28,6 +28,7 @@ class IncidentModel(Base):
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
     lgu_account_id = Column(Integer, ForeignKey("user.id"), nullable=True)
+    resolver_id = Column(Integer, ForeignKey("user.id"), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     hearing_date = Column(DateTime(timezone=True), nullable=True)
@@ -54,12 +55,22 @@ class IncidentModel(Base):
     last_viewed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
+    resolver = relationship(
+    "User",
+    back_populates="resolver_incidents",
+    foreign_keys=[resolver_id]
+)
+
+    lgu_account = relationship(
+        "User",
+        back_populates="incidents",
+        foreign_keys=[lgu_account_id]
+    )
     responses = relationship("Response", back_populates="incident", cascade="all, delete-orphan")
     complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")
     barangay = relationship("Barangay", back_populates="incidents")
     category = relationship("Category", back_populates="incidents")
     department_account = relationship("DepartmentAccount", back_populates="incidents")
-    lgu_account = relationship("User", back_populates="incidents")
     post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="incident", cascade="all, delete-orphan")
     __table_args__ = (
         # Composite index for the most common query pattern:

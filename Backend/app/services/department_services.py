@@ -12,8 +12,10 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from app.utils.logger import logger
 from datetime import datetime, timedelta
-from app.utils.caching import set_cache, get_cache, delete_cache
+from app.utils.caching import set_cache, get_cache
+from app.services.complaint_services import log_status_change
 from app.models.response import Response
+from app.models.complaint_logs import ComplaintLogs
 
 
 async def get_all_departments(db: AsyncSession):
@@ -170,6 +172,7 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
                 IncidentModel.department_account_id == department_account_id,
                 Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+                    ComplaintStatus.REVIEWED_BY_DEPARTMENT.value,
                     ComplaintStatus.RESOLVED_BY_DEPARTMENT.value
                 ])
             )
@@ -182,12 +185,44 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
         for stat in stats:
             date_str = stat.date.isoformat()
             if date_str not in daily_counts:
-                daily_counts[date_str] = {"forwarded": 0, "resolved": 0}
+                daily_counts[date_str] = {"forwarded": 0, "under_review": 0, "resolved": 0}
             
             if stat.status == ComplaintStatus.FORWARDED_TO_DEPARTMENT.value:
                 daily_counts[date_str]["forwarded"] = stat.count
+            elif stat.status == ComplaintStatus.REVIEWED_BY_DEPARTMENT.value:
+                daily_counts[date_str]["under_review"] = stat.count
             elif stat.status == ComplaintStatus.RESOLVED_BY_DEPARTMENT.value:
                 daily_counts[date_str]["resolved"] = stat.count
+
+        # Keep forwarded bucket sticky using complaint logs.
+        forwarded_ids_by_day = {}
+        forwarded_logs = await db.execute(
+            select(
+                ComplaintLogs.complaint_id,
+                func.date(Complaint.created_at).label('date')
+            )
+            .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
+            .join(IncidentComplaintModel, IncidentComplaintModel.complaint_id == Complaint.id)
+            .join(IncidentModel, IncidentModel.id == IncidentComplaintModel.incident_id)
+            .where(
+                func.date(Complaint.created_at) >= week_ago,
+                IncidentModel.department_account_id == department_account_id,
+                ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+            )
+        )
+
+        for row in forwarded_logs.all():
+            if not row.date:
+                continue
+            date_str = row.date.isoformat()
+            if date_str not in forwarded_ids_by_day:
+                forwarded_ids_by_day[date_str] = set()
+            forwarded_ids_by_day[date_str].add(row.complaint_id)
+            if date_str not in daily_counts:
+                daily_counts[date_str] = {"forwarded": 0, "under_review": 0, "resolved": 0}
+
+        for date_str, complaint_ids in forwarded_ids_by_day.items():
+            daily_counts[date_str]["forwarded"] = len(complaint_ids)
         
         return {"daily_counts": daily_counts}
     

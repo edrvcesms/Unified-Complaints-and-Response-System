@@ -22,6 +22,7 @@ from app.utils.caching import delete_cache, set_cache, get_cache
 from app.models.user import User
 from sqlalchemy.orm import selectinload
 from app.utils.cache_invalidator import invalidate_cache
+from app.services.complaint_services import log_status_change
 
 async def get_all_incidents(db: AsyncSession):
     try:
@@ -202,6 +203,13 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 forwarded_at=datetime.now(timezone.utc),
                 is_rejected_by_lgu=False
             )
+        )
+        
+        await log_status_change(
+            complaint_ids=complaint_ids,
+            new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
+            changed_by_user_id=responder_id,
+            db=db
         )
         
         incident.complaint_count = len(complaint_ids)

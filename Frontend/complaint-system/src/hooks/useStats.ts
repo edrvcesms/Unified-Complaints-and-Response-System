@@ -4,6 +4,7 @@ import { getWeeklyForwardedIncidentsStats, getComplaintCountsByBarangayCategory 
 interface DailyCounts {
   [date: string]: {
     forwarded: number;
+    forwarded_to_department: number;
     resolved: number;
     under_review: number;
   };

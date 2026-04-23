@@ -8,6 +8,7 @@ import type { Department } from "../types/department/department";
 interface DailyCounts {
   [date: string]: {
     forwarded: number;
+    under_review: number;
     resolved: number;
   };
 }

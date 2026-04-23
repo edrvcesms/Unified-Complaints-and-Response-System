@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from app.utils.logger import logger
 
@@ -33,7 +33,7 @@ async def invalidate_cache(
         - include_global → if True, also clears global caches like "all_complaints", "all_barangays", etc.
     """
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     tasks = set()
     
     if response_id:
@@ -49,6 +49,7 @@ async def invalidate_cache(
     if include_global:
         tasks.update([
             "all_complaints",
+            "all_incidents",
             "all_barangays",
             "all_forwarded_incidents",
             "lgu:complaint_counts_by_barangay_category"
@@ -71,7 +72,6 @@ async def invalidate_cache(
 
     if barangay_id:
         tasks.update([
-            f"all_incidents:{barangay_id}",
             f"barangay_incidents:{barangay_id}",
             f"barangay_{barangay_id}_complaints",
             f"complaint_stats:weekly:{barangay_id}",

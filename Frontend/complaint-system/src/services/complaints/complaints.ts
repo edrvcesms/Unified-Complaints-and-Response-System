@@ -21,7 +21,7 @@ export const getComplaintById = async (complaintId: number): Promise<Complaint> 
 
 export const getWeeklyComplaintStats = async (): Promise<WeeklyComplaintStats> => {
   try {
-    return await complaintsApi.get("/stats/weekly");
+    return await complaintsApi.get("/weekly");
   } catch (error) {
     console.error("Error fetching weekly complaint stats:", error);
     throw error;

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { validateAttachments } from "../../utils/attachmentHelper";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -49,6 +50,13 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
 
+    const validationError = validateAttachments(files);
+    if (validationError) {
+      setFileError(validationError);
+      event.target.value = "";
+      return;
+    }
+
     setSelectedFiles((prev) => {
       const nextFiles = [...prev, ...files];
       if (nextFiles.length > MAX_UPLOAD_FILES) {
@@ -75,6 +83,9 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (fileError || externalError) {
+              return;
+            }
             try {
                onConfirm(actionsTaken, selectedFiles);
             } catch (err) {
@@ -111,7 +122,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime,video/x-msvideo,video/x-ms-wmv,.jpg,.jpeg,.png,.mp4,.mpeg,.mpg,.mov,.avi,.wmv"
                 onChange={handleFileSelect}
                 className="hidden"
                 disabled={isLoading}

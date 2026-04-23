@@ -18,6 +18,7 @@ export class NotificationService {
   private isManuallyDisconnected = false;
   private buffer = '';
   private isConnecting = false;
+  private isStreamOpen = false;
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private pendingDisconnectTimeout: number | null = null;
 
@@ -25,6 +26,11 @@ export class NotificationService {
     if (this.pendingDisconnectTimeout) {
       clearTimeout(this.pendingDisconnectTimeout);
       this.pendingDisconnectTimeout = null;
+    }
+
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
     }
 
     if (this.eventSource || this.isConnecting) {
@@ -75,6 +81,7 @@ export class NotificationService {
 
       this.eventSource = {} as EventSource;
       this.isConnecting = false;
+      this.isStreamOpen = true;
       this.reconnectAttempts = 0;
 
       console.log("✅ Connected to notification stream");
@@ -88,6 +95,7 @@ export class NotificationService {
               console.log("Stream ended");
               this.eventSource = null;
               this.reader = null;
+              this.isStreamOpen = false;
               if (!this.isManuallyDisconnected) {
                 this.scheduleReconnect();
               }
@@ -101,6 +109,7 @@ export class NotificationService {
           console.error("Error reading stream:", error);
           this.eventSource = null;
           this.reader = null;
+          this.isStreamOpen = false;
           if (!this.isManuallyDisconnected) {
             this.scheduleReconnect();
           }
@@ -114,6 +123,7 @@ export class NotificationService {
       this.eventSource = null;
       this.reader = null;
       this.isConnecting = false;
+      this.isStreamOpen = false;
       if (!this.isManuallyDisconnected) {
         this.scheduleReconnect();
       }
@@ -180,6 +190,7 @@ export class NotificationService {
 
     this.buffer = '';
     this.isConnecting = false;
+    this.isStreamOpen = false;
     this.reconnectAttempts = 0;
   }
 
@@ -267,7 +278,7 @@ export class NotificationService {
   }
 
   isConnected(): boolean {
-    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
+    return this.isStreamOpen;
   }
 }
 

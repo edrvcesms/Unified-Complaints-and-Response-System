@@ -22,6 +22,7 @@ export interface CategoryByPeriodMap {
 // ── Weekly ────────────────────────────────────────────────────────────────────
 export interface WeeklyStats {
   period: "weekly";
+  total_complaints: number;
   total_submitted: number;
   total_resolved: number;
   total_forwarded: number;
@@ -36,6 +37,7 @@ export interface MonthlyStats {
   period: "monthly";
   year: number;
   month: number;
+  total_complaints: number;
   total_submitted: number;
   total_resolved: number;
   total_forwarded: number;
@@ -49,6 +51,7 @@ export interface MonthlyStats {
 export interface YearlyStats {
   period: "yearly";
   year: number;
+  total_complaints: number;
   total_submitted: number;
   total_resolved: number;
   total_forwarded: number;

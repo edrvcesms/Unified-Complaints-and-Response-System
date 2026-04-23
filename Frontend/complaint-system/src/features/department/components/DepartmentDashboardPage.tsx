@@ -13,7 +13,7 @@ import { Bar as ChartJsBar } from "react-chartjs-2";
 import type { Incident } from "../../../types/complaints/incident";
 import { useWeeklyDepartmentStats } from "../../../hooks/useDepartment";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
-import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
+import { PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { utcToLocal } from "../../../utils/dateUtils";
 
@@ -48,6 +48,7 @@ interface DepartmentDashboardPageProps {
 interface WeeklyDataPoint {
   day: string;
   forwarded: number;
+  under_review: number;
   resolved: number;
 }
 
@@ -55,19 +56,13 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
   const { t } = useTranslation();
 
   const stats = useMemo(() => ({
-    total: incidents.length,
-    pending: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'pending' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ||
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' ||
+    forwardedToDepartment: incidents.filter(i =>
       i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department'
     ).length,
-    underReview: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' ||
+    reviewedByDepartment: incidents.filter(i =>
       i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department'
     ).length,
-    resolved: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' ||
+    resolvedByDepartment: incidents.filter(i =>
       i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department'
     ).length,
   }), [incidents]);
@@ -88,11 +83,12 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
       const date = new Date();
       date.setDate(today.getDate() - (6 - i));
       const iso = date.toISOString().split("T")[0];
-      const counts = weeklyStats.daily_counts[iso] || { forwarded: 0, resolved: 0 };
+      const counts = weeklyStats.daily_counts[iso] || { forwarded: 0, under_review: 0, resolved: 0 };
 
       return {
         day: dayNames[date.getDay()],
         forwarded: counts.forwarded,
+        under_review: counts.under_review,
         resolved: counts.resolved,
       };
     });
@@ -101,8 +97,9 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
   const weeklyChartData = {
     labels: WEEKLY_DATA.map((row) => row.day),
     datasets: [
-      { label: "Assigned", data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
-      { label: "Resolved", data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
+      { label: "Forwarded to Department", data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
+      { label: "Reviewed by Department", data: WEEKLY_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+      { label: "Resolved by Department", data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
     ],
   };
 
@@ -141,38 +138,30 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
         <p className="text-base text-gray-600 mt-1">{t('dashboard.dept.description')}</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <StatCard 
-              label={t('dashboard.dept.totalAssigned')} 
-              value={stats.total} 
-              color="text-primary-700" 
-              bg="bg-primary-50" 
-              border="border-primary-100" 
-              icon={<TotalIcon />} 
-            />
-            <StatCard 
-              label={t('dashboard.dept.pending')} 
-              value={stats.pending} 
-              color="text-yellow-700" 
-              bg="bg-yellow-50" 
-              border="border-yellow-100" 
+              label="Forwarded to Department" 
+              value={stats.forwardedToDepartment} 
+              color="text-blue-700" 
+              bg="bg-blue-50" 
+              border="border-blue-100" 
               icon={<PendingIcon />} 
             />
             <StatCard 
-              label={t('dashboard.dept.underReview')} 
-              value={stats.underReview} 
+              label="Reviewed by Department" 
+              value={stats.reviewedByDepartment} 
               color="text-indigo-700" 
               bg="bg-indigo-50" 
               border="border-indigo-100" 
               icon={<ReviewIcon />} 
             />
             <StatCard 
-              label={t('dashboard.dept.resolved')} 
-              value={stats.resolved} 
+              label="Resolved by Department" 
+              value={stats.resolvedByDepartment} 
               color="text-green-700" 
               bg="bg-green-50" 
               border="border-green-100" 

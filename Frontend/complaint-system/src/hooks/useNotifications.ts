@@ -18,6 +18,11 @@ interface UseNotificationsOptions {
    * Auto-connect on mount (default: true)
    */
   autoConnect?: boolean;
+
+  /**
+   * Interval for connection health checks in milliseconds (default: 10000)
+   */
+  reconnectIntervalMs?: number;
 }
 
 /**
@@ -45,7 +50,12 @@ interface UseNotificationsOptions {
  * });
  */
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
-  const { events = ['*'], onNotification, autoConnect = true } = options;
+  const {
+    events = ['*'],
+    onNotification,
+    autoConnect = true,
+    reconnectIntervalMs = 10000,
+  } = options;
   const { isAuthenticated, accessToken } = useAuthStore();
   
   // Use ref to store the latest handler without causing re-renders
@@ -88,6 +98,22 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       notificationService.disconnectIfIdle();
     };
   }, [isAuthenticated, accessToken, memoizedEvents, handleNotification, autoConnect]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !accessToken || !autoConnect) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (!notificationService.isConnected()) {
+        notificationService.connect();
+      }
+    }, reconnectIntervalMs);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated, accessToken, autoConnect, reconnectIntervalMs]);
 
   return {
     connect: () => notificationService.connect(),

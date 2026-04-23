@@ -44,6 +44,16 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     announcements = relationship("Announcement", back_populates="uploader", cascade="all, delete-orphan")
     app_feedbacks = relationship("AppFeedback", back_populates="user", cascade="all, delete-orphan")
-    incidents = relationship("IncidentModel", back_populates="lgu_account", cascade="all, delete-orphan")
+    incidents = relationship(
+    "IncidentModel",
+    back_populates="lgu_account",
+    foreign_keys="[IncidentModel.lgu_account_id]"
+)
     responses = relationship("Response", back_populates="user", cascade="all, delete-orphan")
     post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="user", cascade="all, delete-orphan")
+    logs = relationship("ComplaintLogs", back_populates="updated_by_user", cascade="all, delete-orphan")
+    resolver_incidents = relationship(
+    "IncidentModel",
+    back_populates="resolver",
+    foreign_keys="[IncidentModel.resolver_id]"
+)

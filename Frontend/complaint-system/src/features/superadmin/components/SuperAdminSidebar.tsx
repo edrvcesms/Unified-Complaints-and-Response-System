@@ -8,10 +8,10 @@ interface SuperAdminSidebarProps {
 
 export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ isOpen, onClose }) => {
   const navItems = [
-    { path: "/superadmin/accounts", label: "Accounts", icon: <Users className="w-5 h-5" /> },
+    { path: "/superadmin/accounts", label: "Manage Official Accounts", icon: <Users className="w-5 h-5" /> },
     { path: "/superadmin/categories", label: "Categories", icon: <Tags className="w-5 h-5" /> },
     { path: "/superadmin/emergency-hotlines", label: "Emergency Hotlines", icon: <PhoneCall className="w-5 h-5" /> },
-    { path: "/superadmin/verify-users", label: "Verify Users", icon: <ShieldCheck className="w-5 h-5" /> },
+    { path: "/superadmin/verify-users", label: "Verify Resident Accounts", icon: <ShieldCheck className="w-5 h-5" /> },
     { path: "/superadmin/knowledge-base", label: "Knowledge Base", icon: <ShieldCheck className="w-5 h-5" /> },
   ];
 
@@ -20,7 +20,7 @@ export const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ isOpen, on
       isOpen={isOpen}
       onClose={onClose}
       navItems={navItems}
-      navigationLabel="Super Admin"
+      navigationLabel="Super Admin Dashboard"
       footerText="Admin Console"
     />
   );

@@ -7,6 +7,21 @@ import type {
   CategoryByPeriodMap,
 } from "../types/general/stats";
 
+const MONTH_ORDER = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
 function buildSeries(
   countsMap: StatusCountsMap,
   categoryMap: CategoryByPeriodMap,
@@ -24,7 +39,9 @@ function buildSeries(
 
 export function transformWeekly(stats: WeeklyStats): TimeSeriesPoint[] {
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  return buildSeries(stats.daily_counts, stats.daily_by_category, "day").map(
+  return buildSeries(stats.daily_counts, stats.daily_by_category, "day")
+    .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime())
+    .map(
     (p) => ({
       ...p,
       label: DAYS[new Date(p.label + "T00:00:00").getDay()],
@@ -33,7 +50,9 @@ export function transformWeekly(stats: WeeklyStats): TimeSeriesPoint[] {
 }
 
 export function transformMonthly(stats: MonthlyStats): TimeSeriesPoint[] {
-  return buildSeries(stats.daily_counts, stats.daily_by_category, "date").map(
+  return buildSeries(stats.daily_counts, stats.daily_by_category, "date")
+    .sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime())
+    .map(
     (p) => ({
       ...p,
       // Show "Mar 5" style labels
@@ -50,6 +69,8 @@ export function transformYearly(stats: YearlyStats): TimeSeriesPoint[] {
     stats.monthly_counts,
     stats.monthly_by_category,
     "month"
+  ).sort(
+    (a, b) => MONTH_ORDER.indexOf(a.label) - MONTH_ORDER.indexOf(b.label)
   );
 }
 

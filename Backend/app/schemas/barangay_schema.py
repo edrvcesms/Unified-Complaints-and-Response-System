@@ -4,12 +4,16 @@ from datetime import datetime
 from .user_schema import UserData
 
 class BarangayModel(BaseModel):
+    id: int
     barangay_name: str
     barangay_address: str
     barangay_contact_number: str
     barangay_email: EmailStr
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    
+    class Config:
+        from_attributes = True
 
 class BarangayAccountCreate(BarangayModel):
     password: str

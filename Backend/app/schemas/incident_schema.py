@@ -26,6 +26,9 @@ class IncidentComplaintClusterModel(BaseModel):
     linked_at: datetime
     complaint: ComplaintWithUserData
 
+    class Config:
+        from_attributes = True
+
 class IncidentData(IncidentBaseModel):
     id: int
     severity_score: float

@@ -41,6 +41,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
           duration: 5000,
         });
         break;
+      case 'complaint_reject':
+        console.log('Complaint rejected:', notification.data);
+        showToast({
+          type: 'error',
+          title: 'Complaint Rejected',
+          message: notification.data.message || 'A complaint has been rejected',
+          duration: 5000,
+        });
+        break;
       case 'system_alert':
         console.log('System alert:', notification.data);
         showToast({

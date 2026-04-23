@@ -19,11 +19,15 @@ from app.schemas.response_schema import ResponseCreateSchema
 from app.models.complaint import Complaint
 from app.models.barangay import Barangay
 from app.models.category import Category
+from app.models.complaint_logs import ComplaintLogs
 from sqlalchemy import select, func, update
 from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from app.constants.complaint_status import ComplaintStatus
 from typing import List
+from app.services.complaint_services import log_status_change
+
+
 async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
         forwarded_incidents_cache = await get_cache(f"forwarded_barangay_incidents:{barangay_id}")
@@ -35,7 +39,12 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
             .where(
-                Complaint.status.in_([ComplaintStatus.FORWARDED_TO_LGU.value, ComplaintStatus.REVIEWED_BY_LGU.value]),
+                Complaint.status.in_([
+                    ComplaintStatus.FORWARDED_TO_LGU.value,
+                    ComplaintStatus.REVIEWED_BY_LGU.value,
+                    ComplaintStatus.RESOLVED_BY_LGU.value,
+                    ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+                ]),
                 IncidentModel.barangay_id == barangay_id
             )
             .options(
@@ -84,7 +93,10 @@ async def get_all_forwarded_incidents(db: AsyncSession):
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
-            .where(Complaint.status.in_([ComplaintStatus.FORWARDED_TO_LGU.value, ComplaintStatus.REVIEWED_BY_LGU.value]))
+            .where(Complaint.status.in_([
+                ComplaintStatus.FORWARDED_TO_LGU.value,
+                ComplaintStatus.REVIEWED_BY_LGU.value,
+            ]))
             .options(
                 selectinload(IncidentModel.category),
                 selectinload(IncidentModel.barangay),
@@ -134,7 +146,8 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
                 Complaint.status.in_([
                     ComplaintStatus.FORWARDED_TO_LGU.value,
                     ComplaintStatus.REVIEWED_BY_LGU.value,
-                    ComplaintStatus.RESOLVED_BY_LGU.value
+                    ComplaintStatus.RESOLVED_BY_LGU.value,
+                    ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
                 ])
             )
             .group_by(func.date(Complaint.created_at), Complaint.status)
@@ -146,14 +159,86 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
         for stat in stats:
             date_str = stat.date.isoformat()
             if date_str not in daily_counts:
-                daily_counts[date_str] = {"forwarded": 0, "resolved": 0, "under_review": 0}
+                daily_counts[date_str] = {
+                    "forwarded": 0,
+                    "forwarded_to_department": 0,
+                    "resolved": 0,
+                    "under_review": 0,
+                }
             
             if stat.status == ComplaintStatus.FORWARDED_TO_LGU.value:
                 daily_counts[date_str]["forwarded"] = stat.count
+            elif stat.status == ComplaintStatus.FORWARDED_TO_DEPARTMENT.value:
+                daily_counts[date_str]["forwarded_to_department"] = stat.count
             elif stat.status == ComplaintStatus.RESOLVED_BY_LGU.value:
                 daily_counts[date_str]["resolved"] = stat.count
             elif stat.status == ComplaintStatus.REVIEWED_BY_LGU.value:
                 daily_counts[date_str]["under_review"] = stat.count
+
+        # Keep forwarded buckets sticky by deriving them from status-change logs.
+        forwarded_ids_by_day = {}
+        forwarded_to_dept_ids_by_day = {}
+
+        forwarded_logs = await db.execute(
+            select(
+                ComplaintLogs.complaint_id,
+                func.date(Complaint.created_at).label('date')
+            )
+            .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
+            .where(
+                func.date(Complaint.created_at) >= week_ago,
+                ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_LGU.value,
+            )
+        )
+
+        for row in forwarded_logs.all():
+            if not row.date:
+                continue
+            date_str = row.date.isoformat()
+            if date_str not in forwarded_ids_by_day:
+                forwarded_ids_by_day[date_str] = set()
+            forwarded_ids_by_day[date_str].add(row.complaint_id)
+            if date_str not in daily_counts:
+                daily_counts[date_str] = {
+                    "forwarded": 0,
+                    "forwarded_to_department": 0,
+                    "resolved": 0,
+                    "under_review": 0,
+                }
+
+        forwarded_to_department_logs = await db.execute(
+            select(
+                ComplaintLogs.complaint_id,
+                func.date(Complaint.created_at).label('date')
+            )
+            .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
+            .where(
+                func.date(Complaint.created_at) >= week_ago,
+                ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+            )
+        )
+
+        for row in forwarded_to_department_logs.all():
+            if not row.date:
+                continue
+            date_str = row.date.isoformat()
+            if date_str not in forwarded_to_dept_ids_by_day:
+                forwarded_to_dept_ids_by_day[date_str] = set()
+            forwarded_to_dept_ids_by_day[date_str].add(row.complaint_id)
+            if date_str not in daily_counts:
+                daily_counts[date_str] = {
+                    "forwarded": 0,
+                    "forwarded_to_department": 0,
+                    "resolved": 0,
+                    "under_review": 0,
+                }
+
+        for date_str, complaint_ids in forwarded_ids_by_day.items():
+            daily_counts[date_str]["forwarded"] = len(complaint_ids)
+
+        for date_str, complaint_ids in forwarded_to_dept_ids_by_day.items():
+            daily_counts[date_str]["forwarded_to_department"] = len(complaint_ids)
+
         return {"daily_counts": daily_counts}
     
     except HTTPException:
@@ -248,6 +333,13 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
             update(IncidentModel)
             .where(IncidentModel.id == incident_id)
             .values(department_account_id=department_account_id)
+        )
+        
+        await log_status_change(
+            complaint_ids=complaint_ids,
+            new_status=ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+            changed_by_user_id=responder_id,
+            db=db
         )
         await db.commit()
         

@@ -16,8 +16,8 @@ import {
 } from "chart.js";
 import { Line, Bar as ChartJsBar, Pie as ChartJsPie } from "react-chartjs-2";
 
-import type { Complaint, ComplaintStats } from "../../../types/complaints/complaint";
-import type { Period } from "../../../types/general/stats";
+import type { Complaint } from "../../../types/complaints/complaint";
+import type { AnyStats, Period } from "../../../types/general/stats";
 import {
   useWeeklyStats,
   useMonthlyStats,
@@ -143,7 +143,7 @@ function StatusChart({ data }: StatusChartProps) {
     datasets: [
       { label: "Submitted", data: data.map((row) => row.submitted), backgroundColor: "#eab308", borderRadius: 4 },
       { label: "Under Review", data: data.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
-      { label: "Forwarded to LGU", data: data.map((row) => row.forwarded), backgroundColor: "#f97316", borderRadius: 4 },
+      { label: "Forwarded", data: data.map((row) => row.forwarded), backgroundColor: "#f97316", borderRadius: 4 },
       { label: "Resolved", data: data.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
     ],
   };
@@ -340,27 +340,37 @@ function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
   );
 }
 
-// ─── Stat summary from raw complaints (top cards) ─────────────────────────────
+// ─── Card summary from active period stats ───────────────────────────────────
 
-function useComplaintStats(complaints: Complaint[]): ComplaintStats {
-  return useMemo(
-    () => ({
+function useDashboardCardStats(
+  activeStats: AnyStats | undefined,
+  complaints: Complaint[]
+) {
+  return useMemo(() => {
+    if (activeStats) {
+      return {
+        total: activeStats.total_complaints,
+        submitted: activeStats.total_submitted,
+        underReview: activeStats.total_under_review,
+        forwarded: activeStats.total_forwarded,
+        resolved: activeStats.total_resolved,
+      };
+    }
+
+    return {
       total: complaints.length,
       submitted: complaints.filter((c) => c.status === "submitted").length,
       underReview: complaints.filter(
-        (c) => c.status === "under_review" || c.status === "reviewed_by_barangay"
+        (c) => c.status === "reviewed_by_barangay"
       ).length,
       forwarded: complaints.filter(
-        (c) =>
-          c.status === "forwarded_to_lgu" ||
-          c.status === "forwarded_to_department"
+        (c) => c.status === "forwarded_to_lgu"
       ).length,
       resolved: complaints.filter(
-        (c) => c.status === "resolved" || c.status === "resolved_by_barangay"
+        (c) => c.status === "resolved_by_barangay"
       ).length,
-    }),
-    [complaints]
-  );
+    };
+  }, [activeStats, complaints]);
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -370,7 +380,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   isLoading,
 }) => {
   const { t } = useTranslation();
-  const stats = useComplaintStats(complaints);
 
   // Period state
   const now = new Date();
@@ -390,6 +399,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     : yearly;
 
   const { data, isLoading: statsLoading, isError, error, isFetching } = activeQuery;
+  const cardStats = useDashboardCardStats(data, complaints);
 
   // Transform to chart data
   const chartData = useMemo(() => {
@@ -433,11 +443,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t("dashboard.totalComplaints")} value={stats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
-            <StatCard label={t("dashboard.submitted")} value={stats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
-            <StatCard label={t("dashboard.underReview")} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label="Forwarded" value={stats.forwarded ?? 0} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
-            <StatCard label={t("dashboard.resolved")} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label={t("dashboard.totalComplaints")} value={cardStats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
+            <StatCard label={t("dashboard.submitted")} value={cardStats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
+            <StatCard label={t("dashboard.underReview")} value={cardStats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
+            <StatCard label="Forwarded" value={cardStats.forwarded} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
+            <StatCard label={t("dashboard.resolved")} value={cardStats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
           </>
         )}
       </div>

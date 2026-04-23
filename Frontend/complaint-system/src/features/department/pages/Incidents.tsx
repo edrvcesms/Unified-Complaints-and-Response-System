@@ -9,6 +9,10 @@ import { ErrorMessage, PageHeader } from "../../general";
 export const DepartmentIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAssignedIncidents();
   const { t } = useTranslation();
+  const manageIncidents = (incidents || []).filter((incident) => {
+    const incidentStatus = incident.complaint_clusters[0]?.complaint?.status || incident.status;
+    return incidentStatus !== "forwarded_to_lgu";
+  });
 
   const {
     search,
@@ -28,7 +32,7 @@ export const DepartmentIncidents: React.FC = () => {
     handleDateToChange,
     handleClearDateFilter,
     setCurrentPage,
-  } = useComplaintsFilter(incidents || []);
+  } = useComplaintsFilter(manageIncidents);
 
   if (isError) {
     return <ErrorMessage message="Failed to load assigned incidents. Please refresh." />;

@@ -21,8 +21,8 @@ async def create_app_feedback(request: Request, feedbackData: AppFeedbackCreate,
 
 @router.post("/post-incident", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
-async def create_post_incident_feedback(request: Request, feedbackData: PostIncidentFeedbackCreate, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await post_incident_feedback(feedbackData, current_user.id, incident_id, db)
+async def create_post_incident_feedback(request: Request, feedbackData: PostIncidentFeedbackCreate, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await post_incident_feedback(feedbackData, current_user.id, db)
 
 @router.get("/post-incident/{incident_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

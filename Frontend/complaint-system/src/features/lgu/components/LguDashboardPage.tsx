@@ -47,6 +47,14 @@ interface DashboardPageProps {
 interface WeeklyDataPoint {
   day: string;
   forwarded: number;
+  forwarded_to_department: number;
+  resolved: number;
+  under_review: number;
+}
+
+interface WeeklyCounts {
+  forwarded: number;
+  forwarded_to_department: number;
   resolved: number;
   under_review: number;
 }
@@ -55,28 +63,16 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const stats = useMemo(() => ({
-    total: incidents.length,
-    pending: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu'
-    ).length,
-    underReview: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_lgu'
-    ).length,
-    resolved: incidents.filter(i => 
-      i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_lgu'
-    ).length,
-  }), [incidents]);
-
   const recent = [...incidents]
     .sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime())
     .slice(0, 5);
 
   const { stats: weeklyStats } = useWeeklyForwardedIncidentsStats();
+  const weeklyDailyCounts = (weeklyStats as { daily_counts?: Record<string, WeeklyCounts> } | undefined)?.daily_counts;
   const { stats: categoryStats, isLoading: isCategoryLoading } = useComplaintCountsByBarangayCategory();
 
   const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
-    if (!weeklyStats?.daily_counts) return [];
+    if (!weeklyDailyCounts) return [];
 
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const today = new Date();
@@ -85,16 +81,56 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
       const date = new Date();
       date.setDate(today.getDate() - (6 - i));
       const iso = date.toISOString().split("T")[0];
-      const counts = weeklyStats.daily_counts[iso] || { forwarded: 0, resolved: 0, under_review: 0 };
+      const counts = weeklyDailyCounts[iso] || {
+        forwarded: 0,
+        forwarded_to_department: 0,
+        resolved: 0,
+        under_review: 0,
+      };
 
       return {
         day: dayNames[date.getDay()],
         forwarded: counts.forwarded,
+        forwarded_to_department: counts.forwarded_to_department,
         resolved: counts.resolved,
         under_review: counts.under_review,
       };
     });
-  }, [weeklyStats]);
+  }, [weeklyDailyCounts]);
+
+  const stats = useMemo(() => {
+    if (WEEKLY_DATA.length > 0) {
+      return WEEKLY_DATA.reduce(
+        (acc, row) => ({
+          forwardedToLgu: acc.forwardedToLgu + row.forwarded,
+          reviewedByLgu: acc.reviewedByLgu + row.under_review,
+          resolvedByLgu: acc.resolvedByLgu + row.resolved,
+          forwardedToDepartment: acc.forwardedToDepartment + row.forwarded_to_department,
+        }),
+        {
+          forwardedToLgu: 0,
+          reviewedByLgu: 0,
+          resolvedByLgu: 0,
+          forwardedToDepartment: 0,
+        }
+      );
+    }
+
+    return {
+      forwardedToLgu: incidents.filter(
+        (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "forwarded_to_lgu"
+      ).length,
+      reviewedByLgu: incidents.filter(
+        (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "reviewed_by_lgu"
+      ).length,
+      resolvedByLgu: incidents.filter(
+        (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "resolved_by_lgu"
+      ).length,
+      forwardedToDepartment: incidents.filter(
+        (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "forwarded_to_department"
+      ).length,
+    };
+  }, [WEEKLY_DATA, incidents]);
 
   const CATEGORY_COLORS = [
     "#0ea5e9",
@@ -141,9 +177,10 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
   const weeklyChartData = {
     labels: WEEKLY_DATA.map((row) => row.day),
     datasets: [
-      { label: t('chart.forwarded'), data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
-      { label: t('chart.resolved'), data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
-      { label: t('chart.underReview'), data: WEEKLY_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+      { label: "Forwarded to LGU", data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
+      { label: "Reviewed by LGU", data: WEEKLY_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+      { label: "Resolved by LGU", data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
+      { label: "Forwarded to Department", data: WEEKLY_DATA.map((row) => row.forwarded_to_department), backgroundColor: "#f97316", borderRadius: 4 },
     ],
   };
 
@@ -228,10 +265,10 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t('dashboard.lgu.totalForwarded')} value={stats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
-            <StatCard label={t('dashboard.lgu.pending')} value={stats.pending} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
-            <StatCard label={t('dashboard.lgu.underReview')} value={stats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label={t('dashboard.lgu.resolved')} value={stats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label="Forwarded to LGU" value={stats.forwardedToLgu} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
+            <StatCard label="Reviewed by LGU" value={stats.reviewedByLgu} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
+            <StatCard label="Resolved by LGU" value={stats.resolvedByLgu} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label="Forwarded to Department" value={stats.forwardedToDepartment} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<TotalIcon />} />
           </>
         )}
       </div>

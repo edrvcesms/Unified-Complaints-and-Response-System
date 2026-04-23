@@ -6,6 +6,7 @@ from app.models.post_incident_feedback import PostIncidentFeedback
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.incident_model import IncidentModel
 from app.models.complaint import Complaint
+from app.models.response import Response
 from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -65,10 +66,10 @@ async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
         )
         
 
-async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_id: int, incident_id: int, db: AsyncSession) -> PostIncidentFeedbackResponse:
+async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_id: int, db: AsyncSession) -> PostIncidentFeedbackResponse:
     try:
         result = await db.execute(
-            select(IncidentModel).where(IncidentModel.id == incident_id)
+            select(IncidentModel).where(IncidentModel.id == feedbackData.incident_id)
         )
         incident = result.scalar_one_or_none()
         if not incident:
@@ -80,7 +81,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         complaints_result = await db.execute(
             select(Complaint.status)
             .join(IncidentComplaintModel, IncidentComplaintModel.complaint_id == Complaint.id)
-            .where(IncidentComplaintModel.incident_id == incident_id)
+            .where(IncidentComplaintModel.incident_id == feedbackData.incident_id)
         )
         complaint_statuses = complaints_result.scalars().all()
         if not complaint_statuses:
@@ -103,7 +104,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
             
         new_feedback = PostIncidentFeedback(
             user_id=user_id,
-            incident_id=incident_id,
+            incident_id=feedbackData.incident_id,
             ratings=feedbackData.ratings,
             message=feedbackData.message,
             created_at=datetime.now(timezone.utc)
@@ -112,7 +113,33 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         await db.commit()
         feedback_result = await db.execute(
             select(PostIncidentFeedback)
-            .options(selectinload(PostIncidentFeedback.user))
+            .options(
+                selectinload(PostIncidentFeedback.user),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.category),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.barangay),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.user),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.barangay),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.category),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.department_account),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.attachment),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
+               
+            )
             .where(PostIncidentFeedback.id == new_feedback.id)
         )
         saved_feedback = feedback_result.scalar_one()
@@ -132,9 +159,33 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
     try:
         result = await db.execute(
             select(PostIncidentFeedback)
-            .options(selectinload(PostIncidentFeedback.user),
+            .options(
+                selectinload(PostIncidentFeedback.user),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.category),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.barangay),
                 selectinload(PostIncidentFeedback.incident)
-            ).where(PostIncidentFeedback.incident_id == incident_id)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.user),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.barangay),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.category),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.department_account),
+                selectinload(PostIncidentFeedback.incident)
+                .selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.attachment),
+                selectinload(PostIncidentFeedback.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
+            )
+            .where(PostIncidentFeedback.incident_id == incident_id)
             .order_by(PostIncidentFeedback.created_at.desc())
         )
         feedbacks = result.scalars().all()

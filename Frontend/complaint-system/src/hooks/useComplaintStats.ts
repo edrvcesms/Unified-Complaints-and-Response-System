@@ -11,6 +11,8 @@ export function useWeeklyStats(): UseQueryResult<WeeklyStats, Error> {
       return res;
     },
     staleTime: 1000 * 60 * 5,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 2,
   });
 }
@@ -24,6 +26,8 @@ export function useMonthlyStats(year: number, month: number): UseQueryResult<Mon
       return res;
     },
     staleTime: 1000 * 60 * 5,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 2,
     enabled: !!year && !!month,
   });
@@ -38,6 +42,8 @@ export function useYearlyStats(year: number): UseQueryResult<YearlyStats, Error>
       return res;
     },
     staleTime: 1000 * 60 * 5,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: 2,
     enabled: !!year,
   });

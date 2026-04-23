@@ -730,7 +730,8 @@ def cluster_complaint_task(self, complaint_data: dict):
                                 title="Hearing update",
                                 message=f"Hearing already happened on {incident_hearing_date}",
                                 complaint_id=cluster_data.complaint_id,
-                                notification_type="info"
+                                notification_type="info",
+                                channel="in_app",
                             )
 
             await db.commit()
@@ -781,6 +782,7 @@ def send_notifications_task(
     message: str,
     complaint_id: int = None,
     notification_type: str = "info",
+    channel: str = "in_app",
     event: str = None,
 ):
 
@@ -809,6 +811,7 @@ def send_notifications_task(
                     "sent_at": datetime.now(timezone.utc).isoformat(),
                     "complaint_id": complaint_id,
                     "notification_type": notification_type,
+                    "channel": channel,
                 },
                 event=event or notification_type,
             )

@@ -9,6 +9,10 @@ import { ErrorMessage, PageHeader } from "../../general";
 export const LguIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAllForwardedIncidents();
   const { t } = useTranslation();
+  const manageIncidents = (incidents || []).filter((incident) => {
+    const incidentStatus = incident.complaint_clusters[0]?.complaint?.status || incident.status;
+    return incidentStatus !== "forwarded_to_department";
+  });
   const {
     search,
     filterStatus,
@@ -19,6 +23,7 @@ export const LguIncidents: React.FC = () => {
     maxDate,
     currentPage,
     paginated,
+    filtered,
     totalPages,
     handleSearch,
     handleFilterChange,
@@ -27,7 +32,7 @@ export const LguIncidents: React.FC = () => {
     handleDateToChange,
     handleClearDateFilter,
     setCurrentPage,
-  } = useComplaintsFilter(incidents || []);
+  } = useComplaintsFilter(manageIncidents);
 
   if (isError) {
     return <ErrorMessage message="Failed to load forwarded incidents. Please refresh." />;
@@ -39,6 +44,10 @@ export const LguIncidents: React.FC = () => {
         title="Forwarded Incidents"
         description="Review and manage incidents forwarded from barangays"
       />
+
+      <div className="text-sm text-gray-600">
+        Showing <span className="font-semibold">{filtered.length}</span> of <span className="font-semibold">{manageIncidents.length}</span> incidents
+      </div>
 
       <div>
         <SearchInput value={search} onChange={handleSearch} placeholder={t('search.placeholder')} />

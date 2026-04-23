@@ -372,6 +372,7 @@ export const IncidentDetails: React.FC = () => {
   const isSubmitted = incidentStatus === "submitted";
   const isUnderReview =
     incidentStatus === "reviewed_by_barangay" || incidentStatus === "reviewed_by_department";
+  const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
 
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
@@ -590,28 +591,28 @@ export const IncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={isUnderReview}
+          disabled={isUnderReview || isResolved}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
           onClick={handleForwardToLgu}
-          disabled={forwardToLguMutation.isPending || isSubmitted}
+          disabled={forwardToLguMutation.isPending || isSubmitted || isResolved}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
         </button>
         <button
           onClick={handleReject}
-          disabled={rejectIncidentMutation.isPending}
+          disabled={rejectIncidentMutation.isPending || isResolved}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
         </button>
         <button
           onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending || isSubmitted}
+          disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved}
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
@@ -640,7 +641,7 @@ export const IncidentDetails: React.FC = () => {
         {hasScheduledHearingDate ? (
           <button
             onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending || isSubmitted}
+            disabled={notifyHearingMutation.isPending || isSubmitted || isResolved}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {notifyHearingMutation.isPending ? "Notifying..." : "Reschedule Hearing Date"}
@@ -648,7 +649,7 @@ export const IncidentDetails: React.FC = () => {
         ) : (
           <button
             onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending || isSubmitted}
+            disabled={notifyHearingMutation.isPending || isSubmitted || isResolved}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}

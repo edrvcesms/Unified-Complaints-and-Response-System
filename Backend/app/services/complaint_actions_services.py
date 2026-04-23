@@ -3,6 +3,7 @@ from typing import List, Optional
 from fastapi import HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.response_schema import ResponseCreateSchema
+from app.models.incident_model import IncidentModel
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
@@ -14,6 +15,7 @@ from app.utils.cache_invalidator import invalidate_cache
 from app.tasks import send_notifications_task, send_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
+from app.services.complaint_services import log_status_change
 from fastapi.responses import JSONResponse
 from app.utils.logger import logger
 from app.constants.roles import UserRole
@@ -49,6 +51,13 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
             .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value if reviewer.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.REVIEWED_BY_LGU.value)
+        )
+        
+        await log_status_change(
+            complaint_ids=complaint_ids,
+            new_status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value if reviewer.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.REVIEWED_BY_LGU.value,
+            changed_by_user_id=responder_id,
+            db=db
         )
 
         await db.commit()
@@ -141,11 +150,24 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This incident is already resolved"
                 )
+                
+        await db.execute(
+            update(IncidentModel)
+            .where(IncidentModel.id == incident_id)
+            .values(resolver_id=responder_id)
+        )
 
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
             .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.now(timezone.utc))
+        )
+        
+        await log_status_change(
+            complaint_ids=complaint_ids,
+            new_status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value,
+            changed_by_user_id=responder_id,
+            db=db
         )
             
         await db.commit()
@@ -244,25 +266,33 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
            notification_type = "rejected_by_barangay"
         
         if rejector.role in [UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
-            
+
             for complaint in complaints:
                 if complaint.is_rejected_by_lgu:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the LGU")
                 if complaint.is_rejected_by_department:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the department")
-                
-            if rejector.role == UserRole.LGU_OFFICIAL:
-                await db.execute(
-                    update(Complaint)
-                    .where(Complaint.id.in_(complaint_ids))
-                    .values(is_rejected_by_lgu=True, status=ComplaintStatus.SUBMITTED.value)
-                )
-                send_notifications_task.delay(
-                    user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
-                    title="The LGU has rejected the complaints under this incident",
-                    message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
-                    complaint_id=complaints[0].id if complaints else None,
-                )
+
+        if rejector.role == UserRole.LGU_OFFICIAL:
+            await db.execute(
+                update(Complaint)
+                .where(Complaint.id.in_(complaint_ids))
+                .values(is_rejected_by_lgu=True, status=ComplaintStatus.SUBMITTED.value)
+            )
+            await log_status_change(
+                complaint_ids=complaint_ids,
+                new_status=ComplaintStatus.SUBMITTED.value,
+                changed_by_user_id=rejector_id,
+                db=db
+            )
+            send_notifications_task.delay(
+                user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
+                title="The LGU has rejected the complaints under this incident",
+                message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
+                complaint_id=complaints[0].id if complaints else None,
+                notification_type="complaint_rejected",
+                event="reject"
+            )
         elif rejector.role == UserRole.DEPARTMENT_STAFF:
             await db.execute(
                 update(Complaint)
@@ -270,18 +300,27 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 .values(
                     is_rejected_by_department=True,
                     status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                    forwarded_at=datetime.utcnow()
+                    forwarded_at=datetime.now(timezone.utc)
                 )
+            )
+            await log_status_change(
+                complaint_ids=complaint_ids,
+                new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
+                changed_by_user_id=rejector_id,
+                db=db
             )
             lgu = await db.execute(
                 select(User).where(User.role == UserRole.LGU_OFFICIAL)
                 )
             lgu = lgu.scalars().first()
+            logger.info(f"LGU user found for notification: {lgu.id if lgu else 'No LGU user found'}")
             send_notifications_task.delay(
                 user_id=lgu.id if lgu else None,
                 title="The department has rejected the complaints under this incident",
                 message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
                 complaint_id=complaints[0].id if complaints else None,
+                notification_type="complaint_rejected",
+                event="reject"
             )
             
         else:
@@ -290,8 +329,12 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 .where(Complaint.id.in_(complaint_ids))
                 .values(status=ComplaintStatus.REJECTED.value)
             )
-        
-        await db.commit()
+            await log_status_change(
+                complaint_ids=complaint_ids,
+                new_status=ComplaintStatus.REJECTED.value,
+                changed_by_user_id=rejector_id,
+                db=db
+            )
         
         response = Response(
             incident_id=incident_id,
@@ -326,12 +369,12 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                     notification_type=notification_type
                 )
                 send_push_notification_task.delay(
-    token=complaint.user.push_token,
-    enabled=complaint.user.push_notifications_enabled,
-    title="Complaint Rejected",
-    body=f"Your complaint regarding '{complaint.title}' has been rejected by the {rejected_by}.",
-    data={"complaint_id": complaint.id}
-)
+                    token=complaint.user.push_token,
+                    enabled=complaint.user.push_notifications_enabled,
+                    title="Complaint Rejected",
+                    body=f"Your complaint regarding '{complaint.title}' has been rejected by the {rejected_by}.",
+                    data={"complaint_id": complaint.id}
+                )
             
         await invalidate_cache(
             complaint_ids=complaint_ids,

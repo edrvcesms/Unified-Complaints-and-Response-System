@@ -9,8 +9,6 @@ from app.tasks import get_openai_embedding_service
 import os
 import asyncio
 
-from dotenv import load_dotenv
-load_dotenv()
 
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")

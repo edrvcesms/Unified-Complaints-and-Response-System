@@ -1,9 +1,7 @@
 from openai import AsyncOpenAI
-from dotenv import load_dotenv
 import logging
 import os
 
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 client = AsyncOpenAI(api_key=os.getenv("OPEN_AI_API_KEY"))

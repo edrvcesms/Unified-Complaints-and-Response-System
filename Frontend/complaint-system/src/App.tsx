@@ -37,6 +37,7 @@ import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, De
 import { DepartmentArchiveIncidents } from "./features/department/pages/ArchiveIncidents"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
+import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -89,6 +90,7 @@ function App() {
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="events" element={<EventsPage />} />
+              <Route path="feedbacks" element={<FeedbacksPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
@@ -108,6 +110,7 @@ function App() {
               <Route path="monthly-reports/:barangayId" element={<MonthlyReportDetails />} />
               <Route path="monthly-reports/:barangayId/category/:categoryName" element={<CategoryIncidents />} />
               <Route path="announcements" element={<LguAnnouncements />} />
+              <Route path="feedbacks" element={<FeedbacksPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               {/* Additional LGU routes can be added here */}
             </Route>
@@ -122,6 +125,7 @@ function App() {
               <Route path="incidents/:incidentId" element={<DepartmentIncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<DepartmentIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<DepartmentComplaintDetails />} />
+              <Route path="feedbacks" element={<FeedbacksPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>

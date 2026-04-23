@@ -150,3 +150,38 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving post-incident feedback: {str(e)}"
         )
+        
+async def get_my_resolved_incidents_feedback(user_id: int, db: AsyncSession) -> list[PostIncidentFeedbackResponse]:
+    try:
+        result = await db.execute(
+            select(PostIncidentFeedback)
+            .options(
+                selectinload(PostIncidentFeedback.user),
+                selectinload(PostIncidentFeedback.incident)
+            )
+            .join(IncidentModel, PostIncidentFeedback.incident_id == IncidentModel.id)
+            .join(IncidentComplaintModel, IncidentComplaintModel.incident_id == IncidentModel.id)
+            .join(Complaint, Complaint.id == IncidentComplaintModel.complaint_id)
+            .where(
+                PostIncidentFeedback.user_id == user_id,
+                Complaint.status.in_([
+                    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
+                    ComplaintStatus.RESOLVED_BY_LGU.value,
+                ]),
+                IncidentModel.resolver_id == user_id
+            )
+            .order_by(PostIncidentFeedback.created_at.desc())
+        )
+        feedbacks = result.scalars().all()
+        return [PostIncidentFeedbackResponse.model_validate(feedback) for feedback in feedbacks]
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"Error retrieving my resolved incidents feedback: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving my resolved incidents feedback: {str(e)}"
+        )

@@ -9,8 +9,6 @@ from app.schemas.chatbot_schema import ChatRequest, ChatResponse
 from app.dependencies.auth_dependency import get_current_user
 from app.models.user import User
 from app.core.redis import redis_client 
-from dotenv import load_dotenv
-load_dotenv()
 
 
 router = APIRouter()

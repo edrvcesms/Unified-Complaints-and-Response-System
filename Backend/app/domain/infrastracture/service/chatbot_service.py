@@ -1,6 +1,5 @@
 import os
 import logging
-from dotenv import load_dotenv
 
 from app.domain.chatbot.rag_service import RAGService, RAGResponse
 from app.domain.IEmbeddingService.vector_store.pinecone_rag_repository import PineconeRAGVectorRepository
@@ -10,7 +9,6 @@ from app.services.rag_memory_service import RedisMemoryService
 from app.core.config import settings
 from app.core.redis import redis_client
 
-load_dotenv()
 from app.utils.logger import logger
 
 

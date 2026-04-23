@@ -34,12 +34,10 @@ from app.domain.application.use_cases.recalculate_severity import RecalculateSev
 from app.domain.weighted_severity_calculator.detect_velocity_spike import DetectVelocitySpikeUseCase
 from app.domain.IEmbeddingService.vector_store.pinecone_vector_repository import PineconeVectorRepository
 from app.domain.repository.incident_repository import IncidentRepository
-from dotenv import load_dotenv
 from app.utils.push_notifications import send_push_notification
 from app.domain.infrastracture.llm.openai_incident_verifier import OpenAIIncidentVerifier
 from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 from app.utils.attachments import validate_encoded_upload
-load_dotenv()
 from app.core.config import settings
 
 _vector_repository = None

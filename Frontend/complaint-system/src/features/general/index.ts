@@ -4,3 +4,4 @@ export { PageHeader } from './PageHeader';
 export { SearchInput } from './SearchInput';
 export { StatCard } from './StatCard';
 export { Sidebar } from './Sidebar';
+export { FeedbacksPage } from './pages/FeedbacksPage';

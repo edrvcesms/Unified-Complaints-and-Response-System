@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from Backend.app.domain.entities import incident
 from app.models.app_feedback import AppFeedback
 from app.models.user import User
 from app.models.post_incident_feedback import PostIncidentFeedback
@@ -66,12 +67,15 @@ async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
             detail=f"Error retrieving app feedback: {str(e)}"
         )
         
-
 async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_id: int, db: AsyncSession) -> PostIncidentFeedbackResponse:
     try:
         result = await db.execute(
-            select(IncidentModel).where(IncidentModel.id == feedbackData.incident_id)
+            select(IncidentModel)
+            .join(IncidentComplaintModel, IncidentComplaintModel.incident_id == IncidentModel.id)
+            .where(IncidentComplaintModel.complaint_id == feedbackData.complaint_id)
         )
+        
+             
         incident = result.scalar_one_or_none()
         if not incident:
             raise HTTPException(
@@ -79,39 +83,35 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
                 detail="Incident not found"
             )
 
-        complaints_result = await db.execute(
-            select(Complaint.status)
-            .join(IncidentComplaintModel, IncidentComplaintModel.complaint_id == Complaint.id)
-            .where(IncidentComplaintModel.incident_id == feedbackData.incident_id)
-        )
-        complaint_statuses = complaints_result.scalars().all()
-        if not complaint_statuses:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No complaints found for this incident"
+        
+        # check if complaint status is resolved before allowing user to submit feedback
+        complaint_result = await db.execute(
+            select(Complaint)
+            .where(
+                Complaint.id == feedbackData.complaint_id,
+                Complaint.status.in_([
+                    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
+                    ComplaintStatus.RESOLVED_BY_LGU.value,
+                ])
             )
-
-        resolved_statuses = {
-            ComplaintStatus.RESOLVED_BY_BARANGAY.value,
-            ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
-            ComplaintStatus.RESOLVED_BY_LGU.value,
-        }
-
-        if any(status not in resolved_statuses for status in complaint_statuses):
+        )
+        if not complaint_result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot submit feedback for an unresolved incident"
+                detail="Feedback can only be submitted for resolved complaints"
             )
             
         new_feedback = PostIncidentFeedback(
             user_id=user_id,
-            incident_id=feedbackData.incident_id,
+            incident_id=incident.id,
             ratings=feedbackData.ratings,
             message=feedbackData.message,
             created_at=datetime.now(timezone.utc)
         )
         db.add(new_feedback)
         await db.commit()
+        
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
             content="Post-incident feedback submitted successfully"

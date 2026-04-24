@@ -12,6 +12,7 @@ export const LoginPage: React.FC = () => {
     errors,
     showPassword,
     isLoading,
+    turnstileRenderKey,
     handleChange,
     handleSubmit,
     handleForgotPassword,
@@ -40,6 +41,7 @@ export const LoginPage: React.FC = () => {
           onForgotPassword={handleForgotPassword}
           onTogglePassword={togglePasswordVisibility}
           onTurnstileToken={handleTurnstileToken}
+          turnstileRenderKey={turnstileRenderKey}
         />
 
         <p className="mt-6 text-xs text-gray-400 text-center">

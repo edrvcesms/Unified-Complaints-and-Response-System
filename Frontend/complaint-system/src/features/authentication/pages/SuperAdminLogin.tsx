@@ -12,6 +12,7 @@ export const SuperAdminLoginPage: React.FC = () => {
     errors,
     showPassword,
     isLoading,
+    turnstileRenderKey,
     handleChange,
     handleSubmit,
     handleForgotPassword,
@@ -42,6 +43,7 @@ export const SuperAdminLoginPage: React.FC = () => {
           title={t('auth.superAdminLogin')}
           subtitle={t('auth.superAdminLoginInstruction')}
           onTurnstileToken={handleTurnstileToken}
+          turnstileRenderKey={turnstileRenderKey}
         />
 
         <p className="mt-6 text-xs text-gray-400 text-center">

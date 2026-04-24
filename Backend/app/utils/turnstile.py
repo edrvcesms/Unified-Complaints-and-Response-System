@@ -1,8 +1,10 @@
+import logging
 from fastapi import HTTPException, Request, status
 import httpx
 from app.core.config import settings
 
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+logger = logging.getLogger(__name__)
 
 
 async def verify_turnstile(token: str | None, request: Request) -> None:
@@ -39,6 +41,7 @@ async def verify_turnstile(token: str | None, request: Request) -> None:
         )
 
     if not result.get("success"):
+        logger.warning("Turnstile verification failed: %s", result)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Turnstile verification failed."

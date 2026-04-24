@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token
 from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
-from app.utils.cookies import set_cookies
+from app.utils.cookies import set_cookies, clear_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.tasks import send_otp_email_task
 from fastapi.responses import JSONResponse
@@ -458,6 +458,8 @@ async def logout_user(request: Request):
             await delete_cache(f"user_data:{user_id}")
             await delete_cache(f"auth_user:{user_id}")
         logger.info("User logged out successfully and cache cleared.")
+        
+        
         response = JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
@@ -467,7 +469,7 @@ async def logout_user(request: Request):
         )
         await sse_manager.disconnect()
         logger.info("SSE connection closed for user during logout.")
-        response.delete_cookie(key="refresh_token")
+        clear_cookies(response, ["refresh_token", "access_token"])
         return response
     
     except HTTPException:

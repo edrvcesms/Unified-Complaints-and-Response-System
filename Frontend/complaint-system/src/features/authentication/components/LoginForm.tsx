@@ -11,6 +11,7 @@ interface LoginFormProps {
   errors: LoginFormErrors;
   showPassword: boolean;
   isLoading: boolean;
+  turnstileRenderKey?: number;
   title?: string;
   subtitle?: string;
   turnstileToken?: string;
@@ -26,6 +27,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   errors,
   showPassword,
   isLoading,
+  turnstileRenderKey,
   title,
   subtitle,
   onTurnstileToken,
@@ -105,6 +107,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {siteKey && (
         <div className="space-y-2 flex flex-col items-center">
           <Turnstile
+            key={`login-turnstile-${turnstileRenderKey ?? 0}`}
             siteKey={siteKey}
             options={{ theme: "light", appearance: "always" }}
             onSuccess={(token) => onTurnstileToken?.(token)}

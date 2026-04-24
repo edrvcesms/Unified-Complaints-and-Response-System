@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from contextlib import asynccontextmanager
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -43,10 +44,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-origins = [
+default_origins = [
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://cfms-stamaria.com"
 ]
+
+raw_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
+configured_origins = [
+    origin.strip().rstrip("/")
+    for origin in raw_origins.split(",")
+    if origin.strip()
+]
+origins = list(dict.fromkeys([*default_origins, *configured_origins]))
 
 app.add_middleware(
     CORSMiddleware,

@@ -39,6 +39,7 @@ from app.domain.infrastracture.llm.openai_incident_verifier import OpenAIInciden
 from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 from app.utils.attachments import validate_encoded_upload
 from app.core.config import settings
+from app.utils.redis_pub import publish_sse_event
 
 _vector_repository = None
 _severity_calculator = None
@@ -801,17 +802,20 @@ def send_notifications_task(
             logger.info(f"Notification saved to DB for user_id={user_id}, complaint_id={complaint_id}")
 
             await delete_cache(f"user_notifications:{user_id}")
-            await sse_manager.send(
-                user_id=user_id,
-                data={
-                    "title": title,
-                    "message": message,
-                    "sent_at": datetime.now(timezone.utc).isoformat(),
-                    "complaint_id": complaint_id,
-                    "notification_type": notification_type,
-                    "channel": channel,
-                },
-                event=event or notification_type,
+            await publish_sse_event(
+                "sse:user",
+                {
+                    "target": str(user_id),
+                    "event": event or notification_type,
+                    "data": {
+                        "title": title,
+                        "message": message,
+                        "sent_at": datetime.now(timezone.utc).isoformat(),
+                        "complaint_id": complaint_id,
+                        "notification_type": notification_type,
+                        "channel": channel,
+                    }
+                }
             )
             
     run_async(_run())

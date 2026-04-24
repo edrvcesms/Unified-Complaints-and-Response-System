@@ -19,7 +19,7 @@ class AppFeedbackResponse(AppFeedbackBase):
         from_attributes = True
         
 class PostIncidentFeedbackCreate(BaseModel):
-    incident_id: int
+    complaint_id: int
     ratings: float
     message: str | None = None
     

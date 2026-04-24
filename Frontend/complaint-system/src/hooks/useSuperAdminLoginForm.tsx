@@ -16,6 +16,7 @@ export const useSuperAdminLoginForm = () => {
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [turnstileRenderKey, setTurnstileRenderKey] = useState<number>(0);
 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: LoginRequestData) => loginSuperAdmin(data),
@@ -28,6 +29,11 @@ export const useSuperAdminLoginForm = () => {
       setErrors({
         general: error.message || "Login failed. Please try again.",
       });
+    },
+    onSettled: () => {
+      // Turnstile tokens are single-use, so force a fresh challenge after each login attempt.
+      setFormData((prev) => ({ ...prev, turnstile_token: "" }));
+      setTurnstileRenderKey((prev) => prev + 1);
     },
   });
 
@@ -86,6 +92,7 @@ export const useSuperAdminLoginForm = () => {
     errors,
     showPassword,
     isLoading: isPending,
+    turnstileRenderKey,
     handleChange,
     handleSubmit,
     handleForgotPassword,

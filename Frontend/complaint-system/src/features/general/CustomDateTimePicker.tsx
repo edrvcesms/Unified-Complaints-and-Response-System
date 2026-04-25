@@ -14,7 +14,7 @@ import {
   isBefore,
   startOfDay,
 } from "date-fns";
-import { ChevronLeftIcon, ChevronRightIcon, CalendarIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 export const CustomDateTimePicker = ({
   value,

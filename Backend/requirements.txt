@@ -1,6 +1,7 @@
 # For Backend dependencies
 fastapi[all]
 uvicorn[standard]
+gunicorn
 sqlalchemy
 alembic
 websockets

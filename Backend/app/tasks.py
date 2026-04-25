@@ -22,7 +22,6 @@ from app.models.incident_complaint import IncidentComplaintModel
 from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import (upload_multiple_files_to_cloudinary,delete_multiple_from_cloudinary,extract_public_id_from_url,)
 from app.utils.caching import delete_cache
-from app.utils.cache_invalidator import invalidate_cache
 from sqlalchemy import select
 from app.utils.logger import logger
 from fastapi import UploadFile
@@ -39,6 +38,7 @@ from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 from app.utils.attachments import validate_encoded_upload
 from app.core.config import settings
 from app.utils.redis_pub import publish_sse_event
+from app.utils.cache_invalidator_optimized import CacheInvalidator, invalidate_cache
 
 resend.api_key = settings.RESEND_API_KEY
 _vector_repository = None

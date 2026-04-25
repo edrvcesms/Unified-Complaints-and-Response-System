@@ -230,7 +230,6 @@ export const DepartmentIncidentDetails: React.FC = () => {
   
   const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
   const isSubmitted = incidentStatus === "submitted";
-  const isUnderReviewByBarangay = incidentStatus === "reviewed_by_barangay";
   const isUnderReviewByDepartment = incidentStatus === "reviewed_by_department";
   const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
   const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";

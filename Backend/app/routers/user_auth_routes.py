@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.logger import logger
 from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
 from app.services.user_auth_services import logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code
-from app.utils.turnstile import verify_turnstile
 from slowapi.errors import RateLimitExceeded
+from app.utils.turnstile import verify_turnstile
 from fastapi.requests import Request
 import json
 

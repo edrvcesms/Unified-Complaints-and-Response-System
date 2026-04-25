@@ -53,6 +53,8 @@ export const FeedbacksPage: React.FC = () => {
 
   const totalFeedbacks = feedbacks?.length || 0;
   const totalPages = Math.max(1, Math.ceil(totalFeedbacks / FEEDBACKS_PER_PAGE));
+  // Star of one feedback
+  console.log("First feedback rating:", feedbacks?.[0]?.ratings);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -160,7 +162,7 @@ export const FeedbacksPage: React.FC = () => {
                     <div className="flex flex-col items-start gap-2 sm:items-end">
                       <div className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                         <Star className="mr-1 h-3.5 w-3.5 fill-current" />
-                        {feedback.ratings.toFixed(1)} / 5
+                        {feedback.ratings?.toFixed(1)} / 5
                       </div>
                       {renderStars(feedback.ratings)}
                       <p className="text-xs text-slate-500">{getFormattedDate(feedback.created_at)}</p>

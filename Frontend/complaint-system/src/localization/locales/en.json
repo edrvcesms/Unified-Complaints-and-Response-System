@@ -29,7 +29,8 @@
       "dashboard": "Dashboard",
       "incidents": "Manage Incidents",
       "announcements": "Announcements",
-      "events": "Events"
+      "events": "Events",
+      "notifications": "Notifications"
     },
     "lgu": {
       "dashboard": "Dashboard",
@@ -150,8 +151,12 @@
     "statuses": {
       "submitted": "Submitted",
       "underReview": "Under Review",
-      "resolved": "Resolved",
+      "resolved_by_lgu": "Resolved by LGU",
+      "resolved_by_barangay": "Resolved by Barangay",
+      "resolved_by_department": "Resolved by Department",
       "forwarded": "Forwarded",
+      "forwardedToLgu": "Forwarded to LGU",
+      "forwardedToDepartment": "Forwarded to Department",
       "reviewedByBarangay": "Reviewed by Barangay",
       "reviewedByDepartment": "Reviewed by Department",
         "rejected": "Rejected"
@@ -177,14 +182,14 @@
       "totalAssigned": "Total Assigned",
       "pending": "Pending",
       "underReview": "Under Review",
-      "resolved": "Resolved",
+      "resolved_by_department": "Resolved by Department",
       "weeklyTitle": "Weekly Activity",
       "weeklyDescription": "Incidents assigned and resolved in the last 7 days"
     }
   },
   "chart": {
     "forwarded": "Forwarded",
-    "resolved": "Resolved",
+    "resolved_by_lgu": "Resolved by LGU",
     "underReview": "Under Review"
   },
   "incidents": {

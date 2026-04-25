@@ -6,7 +6,7 @@ from app.models.user import User
 from app.utils.logger import logger
 from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
 from sqlalchemy import select
-from app.core.security import hash_password, decrypt_password, verify_token
+from app.core.security import hash_password, decrypt_password, verify_token, is_token_revoked, revoke_token_jti
 from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
@@ -50,7 +50,6 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
 
         generated_otp = generate_otp()
         await set_cache(f"otp:{user_data.email}", generated_otp, expiration=300)
-        print(f"OTP set in cache for {user_data.email}: {generated_otp}")
         logger.info(f"OTP generated for {user_data.email} and stored in cache.")
 
         send_otp_email_task.delay(user_data.email, generated_otp, purpose="Registration")
@@ -159,7 +158,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error during OTP verification and registration for {user_data.email}: {str(e)}")
+        logger.exception(f"Error during OTP verification and registration for {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during OTP verification. Please try again later."
@@ -167,7 +166,6 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
         
 async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
     try:
-        print(f"Resend OTP requested for {email.email}")
         await delete_cache(f"otp:{email.email}")
         result = await db.execute(select(User).where(User.email == email.email))
         existing_user = result.scalars().first()
@@ -181,7 +179,6 @@ async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
 
         generated_otp = generate_otp()
         await set_cache(f"otp:{email.email}", generated_otp, expiration=300)
-        print(f"OTP set in cache for {email.email}: {generated_otp}")
         logger.info(f"OTP generated for {email.email} and stored in cache.")
 
         send_otp_email_task.delay(email.email, generated_otp, purpose="Registration")
@@ -195,7 +192,7 @@ async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
         raise   
     
     except Exception as e:
-        logger.error(f"Error during OTP resend for {email.email}: {str(e)}")
+        logger.exception(f"Error during OTP resend for {email.email}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while resending OTP. Please try again later."
@@ -208,7 +205,7 @@ async def login_user(login_data: LoginData, db: AsyncSession):
 
         if not user:
             logger.warning(f"Login attempt with unregistered email: {login_data.email}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This email is not registered. Please check your email or register for a new account.")
 
         if not decrypt_password(login_data.password, user.hashed_password):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
@@ -240,7 +237,7 @@ async def login_user(login_data: LoginData, db: AsyncSession):
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error during login for {login_data.email}: {str(e)}")
+        logger.exception(f"Error during login for {login_data.email}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
 
 async def officials_login(login_data: LoginData, db: AsyncSession):
@@ -308,7 +305,7 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error during login for {login_data.email}: {str(e)}")
+        logger.exception(f"Error during login for {login_data.email}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
 
 async def superadmin_login(login_data: LoginData, db: AsyncSession):
@@ -350,7 +347,7 @@ async def superadmin_login(login_data: LoginData, db: AsyncSession):
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error during login for {login_data.email}: {str(e)}")
+        logger.exception(f"Error during login for {login_data.email}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred during login. Please try again later.")
 
 async def refresh_access_token(request: Request, db: AsyncSession):
@@ -368,9 +365,15 @@ async def refresh_access_token(request: Request, db: AsyncSession):
                 detail="Expired or invalid refresh token."
             )
         try:
-            payload = verify_token(refresh_token)
+            payload = verify_token(refresh_token, expected_token_type="refresh")
         except JWTError:
             logger.warning("Invalid refresh token provided during token refresh attempt.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token during token refresh attempt."
+            )
+        if await is_token_revoked(payload.get("jti")):
+            logger.warning("Revoked refresh token used during token refresh attempt.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token during token refresh attempt."
@@ -385,11 +388,16 @@ async def refresh_access_token(request: Request, db: AsyncSession):
             
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalars().first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token during token refresh attempt."
+            )
         
         barangay_data = None
         department_data = None
         cached_user_data = await get_cache(f"user_data:{user_id}")
-        logger.info(f"Cache data retrieved for user_id: {user_id} during token refresh attempt: {cached_user_data}")
+        logger.info(f"Cache lookup completed for user_id: {user_id} during token refresh attempt.")
         
         if user.role == UserRole.BARANGAY_OFFICIAL:
             barangay_json_data = cached_user_data.get("barangay_data") if cached_user_data else None
@@ -414,24 +422,29 @@ async def refresh_access_token(request: Request, db: AsyncSession):
                 department_data = DepartmentWithUserData.model_validate(department, from_attributes=True)
         
 
+        new_refresh_token = create_refresh_token(data={"user_id": user_id})
         new_access_token = create_access_token(data={"user_id": user_id})
+        await revoke_token_jti(payload.get("jti"), payload.get("exp"))
         logger.info(f"Access token refreshed for user_id: {user_id} during token refresh attempt.")
 
-        return JSONResponse(
+        response = JSONResponse(
             status_code=status.HTTP_200_OK,
             content=jsonable_encoder({
                 "message": "Access token refreshed successfully",
                 "access_token": new_access_token,
+                "refresh_token": new_refresh_token,
                 "role": user.role,
                 "barangayAccountData": barangay_data if user.role == UserRole.BARANGAY_OFFICIAL else None,
                 "departmentAccountData": department_data if user.role == UserRole.DEPARTMENT_STAFF else None
             })
         )
+        await set_cookies(response, refresh_token=new_refresh_token)
+        return response
     
     except HTTPException:   
         raise
     except Exception as e:
-        logger.error(f"Error during access token refresh: {str(e)}")
+        logger.exception("Error during access token refresh")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while refreshing access token. Please try again later.")
@@ -457,6 +470,12 @@ async def logout_user(request: Request):
         if user_id:
             await delete_cache(f"user_data:{user_id}")
             await delete_cache(f"auth_user:{user_id}")
+        try:
+            payload = verify_token(token)
+            if payload.get("token_type") == "refresh":
+                await revoke_token_jti(payload.get("jti"), payload.get("exp"))
+        except JWTError:
+            pass
         logger.info("User logged out successfully and cache cleared.")
         
         
@@ -469,14 +488,14 @@ async def logout_user(request: Request):
         )
         await sse_manager.disconnect()
         logger.info("SSE connection closed for user during logout.")
-        clear_cookies(response, ["refresh_token", "access_token"])
+        await clear_cookies(response, "refresh_token")
         return response
     
     except HTTPException:
         raise
     
     except Exception as e:
-        logger.error(f"Error during logout: {str(e)}")
+        logger.exception("Error during logout")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during logout. Please try again later."

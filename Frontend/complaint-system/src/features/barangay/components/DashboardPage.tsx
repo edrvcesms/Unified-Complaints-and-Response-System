@@ -561,7 +561,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
         ) : recent.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-md bg-gray-100 mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -643,27 +643,27 @@ function StatusBadge({ status }: { status: string }) {
       className: "bg-primary-100 text-primary-800",
     },
     reviewed_by_department: {
-      label: t("dashboard.statuses.underReview"),
+      label: t("dashboard.statuses.reviewedByDepartment"),
       className: "bg-primary-100 text-primary-800",
     },
     forwarded_to_lgu: {
-      label: "Forwarded",
+      label: t("dashboard.statuses.forwardedToLgu"),
       className: "bg-orange-100 text-orange-800",
     },
     forwarded_to_department: {
-      label: "Forwarded",
+      label: t("dashboard.statuses.forwardedToDepartment"),
       className: "bg-orange-100 text-orange-800",
     },
-    resolved: {
-      label: t("dashboard.statuses.resolved"),
+    resolved_by_lgu: {
+      label: t("dashboard.statuses.resolved_by_lgu"),
       className: "bg-green-100 text-green-800",
     },
     resolved_by_barangay: {
-      label: t("dashboard.statuses.resolved"),
+      label: t("dashboard.statuses.resolved_by_barangay"),
       className: "bg-green-100 text-green-800",
     },
     resolved_by_department: {
-      label: t("dashboard.statuses.resolved"),
+      label: t("dashboard.statuses.resolved_by_department"),
       className: "bg-green-100 text-green-800",
     },
     rejected: {
@@ -679,7 +679,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-sm font-semibold ${className}`}
+      className={`inline-flex px-2 py-0.5 rounded-md text-sm font-semibold ${className}`}
     >
       {label}
     </span>

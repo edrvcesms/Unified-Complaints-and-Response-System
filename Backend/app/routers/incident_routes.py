@@ -52,12 +52,14 @@ async def get_incidents(db: AsyncSession = Depends(get_async_db), current_user: 
 
 @router.get("/all", status_code=status.HTTP_200_OK)
 @router.get("/all/", status_code=status.HTTP_200_OK)
+@router.get("/archive", status_code=status.HTTP_200_OK)
+@router.get("/archive/", status_code=status.HTTP_200_OK)
 async def get_all_incidents_endpoint(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
 
-    return await get_all_incidents(db)
+    return await get_all_incidents(current_user, db)
 
 @router.get("/department", status_code=status.HTTP_200_OK)
 async def get_department_incidents(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

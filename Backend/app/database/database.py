@@ -5,13 +5,21 @@ from app.core.config import settings
 
 async_engine = create_async_engine(
     settings.DATABASE_URL_ASYNC,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30,
-    pool_recycle=300,
-    pool_pre_ping=True,
-    pool_use_lifo=True,
-    echo=False
+    # Connection pool configuration for optimal performance
+    pool_size=20,              # Base pool size for typical concurrent requests
+    max_overflow=30,           # Additional connections for burst traffic
+    pool_timeout=30,           # Wait up to 30s for available connection
+    pool_recycle=3600,         # Recycle connections every hour (prevent idle connection issues)
+    pool_pre_ping=True,        # Verify connection health before using (prevents "connection lost" errors)
+    pool_use_lifo=True,        # LIFO stack for better connection reuse (hot connections)
+    echo=False,                # Set to True only for debugging SQL queries
+    # Additional performance settings
+    connect_args={
+        "timeout": 30,         # Connection timeout
+        "server_settings": {
+            "jit": "off",      # Disable JIT compilation for predictable performance
+        }
+    }
     )
 AsyncSessionLocal = sessionmaker(
     bind=async_engine, class_=AsyncSession, expire_on_commit=False

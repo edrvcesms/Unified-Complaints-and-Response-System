@@ -4,6 +4,11 @@ import type { RequestResetPassword, VerifyResetPasswordOtp, CreateNewPassword } 
 import { handleApiError } from "../../utils/apiErrorHandler";
 import { useAuthStore } from "../../store/authStore";
 
+const isTurnstileValidationError = (error: any): boolean => {
+  const detail = String(error?.response?.data?.detail || "").toLowerCase();
+  return detail.includes("turnstile verification required");
+};
+
 export const loginAccount = async (
   data: LoginRequestData
 ): Promise<LoginResponseData> => {
@@ -25,6 +30,9 @@ export const loginAccount = async (
   } catch (error: any) {
     if (error.response?.status === 401) {
       throw new Error("Invalid email or password. Please try again.");
+    }
+    if (isTurnstileValidationError(error)) {
+      throw new Error("Login failed. Please try again.");
     }
     if (error.message?.includes("Unauthorized")) {
       throw error;
@@ -93,6 +101,9 @@ export const loginSuperAdmin = async (
   } catch (error: any) {
     if (error.response?.status === 401) {
       throw new Error("Invalid email or password. Please try again.");
+    }
+    if (isTurnstileValidationError(error)) {
+      throw new Error("Login failed. Please try again.");
     }
     if (error.message?.includes("Unauthorized")) {
       throw error;

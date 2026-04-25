@@ -9,7 +9,7 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15")) # Default to 5 minutes
     REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "10080"))  # Default to 7 days
     SMTP_SERVER: str = os.getenv("SMTP_SERVER")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT"))
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
     SMTP_USERNAME: str = os.getenv("SMTP_USERNAME")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD")
     MAIL_FROM: str = os.getenv("MAIL_FROM")
@@ -22,7 +22,6 @@ class Settings:
     EXPO_PUSH_URL = os.getenv("EXPO_PUSH_URL")
     TURNSTILE_SECRET_KEY: str = os.getenv("TURNSTILE_SECRET_KEY") or os.getenv("RECAPTCHA_SITE_KEY")
     OPEN_AI_API_KEY: str = os.getenv("OPEN_AI_API_KEY")
-    PHILSMS_API_URL: str = os.getenv("PHILSMS_API_URL")
-    PHILMSMS_API_TOKEN: str = os.getenv("PHILMSMS_API_TOKEN")
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY")
 
 settings = Settings()

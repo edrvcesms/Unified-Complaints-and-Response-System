@@ -8,13 +8,12 @@ from app.models.barangay_account import BarangayAccount
 from app.models.announcements import Announcement
 from app.models.announcement_media import AnnouncementMedia
 from app.schemas.announcement_schema import AnnouncementCreate, AnnouncementOut
-from app.utils.cache_invalidator import invalidate_cache
-from app.tasks import upload_announcement_media_task, delete_cloudinary_media_task, delete_announcement_media_task
+from app.utils.cache_invalidator_optimized import invalidate_cache
+from app.tasks import upload_announcement_media_task, delete_announcement_media_task
 from app.utils.logger import logger
 from app.models.user import User
-from app.utils.caching import get_cache, set_cache, delete_cache
+from app.utils.caching import get_cache, set_cache
 from app.constants.roles import UserRole
-from app.utils.cloudinary import extract_public_id_from_url
 from app.utils.attachments import validate_upload_files
 
 async def get_all_announcements(db: AsyncSession):

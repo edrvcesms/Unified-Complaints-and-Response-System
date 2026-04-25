@@ -35,6 +35,14 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
       <td className="px-4 py-3 text-sm text-gray-600 text-center">
         {incident.first_reported_at ? new Date(incident.first_reported_at).toLocaleDateString() : "N/A"}
       </td>
+      <td className="px-4 py-3 text-sm text-gray-600 text-center">
+        <button
+          onClick={handleView}
+          className="px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+        >
+          View
+        </button>
+      </td>
     </tr>
   );
 };
@@ -66,6 +74,7 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
     { label: "Status", className: "text-center" },
     { label: "Complaints", className: "hidden sm:table-cell text-center" },
     { label: "Date Reported", className: "text-center" },
+    { label: "Actions", className: "text-center" },
   ];
 
   return (
@@ -93,7 +102,7 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
               </>
             ) : incidents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-16 text-center text-sm text-gray-500">
+                <td colSpan={8} className="px-4 py-16 text-center text-sm text-gray-500">
                   {emptyMessage}
                 </td>
               </tr>

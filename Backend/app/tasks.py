@@ -15,7 +15,7 @@ from app.models.attachment import Attachment
 from app.models.announcement_media import AnnouncementMedia
 from app.models.response import Response
 from app.models.event_media import EventMedia
-from fastapi_mail import FastMail, MessageSchema
+import resend
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from sqlalchemy.orm import selectinload
 from app.models.incident_complaint import IncidentComplaintModel
@@ -23,7 +23,6 @@ from app.database.database import AsyncSessionLocal
 from app.utils.cloudinary import (upload_multiple_files_to_cloudinary,delete_multiple_from_cloudinary,extract_public_id_from_url,)
 from app.utils.caching import delete_cache
 from app.utils.cache_invalidator import invalidate_cache
-from app.core.email_config import conf
 from sqlalchemy import select
 from app.utils.logger import logger
 from fastapi import UploadFile
@@ -41,6 +40,7 @@ from app.utils.attachments import validate_encoded_upload
 from app.core.config import settings
 from app.utils.redis_pub import publish_sse_event
 
+resend.api_key = settings.RESEND_API_KEY
 _vector_repository = None
 _severity_calculator = None
 _openai_incident_verifier = None
@@ -119,20 +119,19 @@ def run_async(coro):
 
     return loop.run_until_complete(coro)
 
-@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def send_email_task(self, subject: str, recipient: str, body: str):
-    async def _send():
-        message = MessageSchema(subject=subject, recipients=[recipient], body=body, subtype="html")
-        fm = FastMail(conf)
-        await fm.send_message(message)
+def _send_email(subject, recipient, body):
+    response = resend.Emails.send({
+        "from": settings.MAIL_FROM,
+        "to": [recipient],
+        "subject": subject,
+        "html": body,
+    })
 
-    try:
-        run_async(_send())
-        logger.info(f"Email sent to {recipient}")
-    except Exception as e:
-        logger.error(f"Email failed: {e}")
-        raise self.retry(exc=e)
+    logger.info(
+        f"[EMAIL_SENT] to={recipient} subject={subject} id={response.get('id')}"
+    )
 
+    return response
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_push_notification_task(self, token: str, enabled: bool, title: str = None, body: str = "", data: dict = None, sound: str = "default", expo_token: str = None):
@@ -156,9 +155,23 @@ def send_push_notification_task(self, token: str, enabled: bool, title: str = No
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
-    subject = f"OTP Code ({purpose})"
-    body = render_template("email_otp.html", {"otp": otp, "purpose": purpose})
-    send_email_task.delay(subject, recipient, body)
+    try:
+        subject = f"OTP Code ({purpose})"
+        body = render_template("email_otp.html", {"otp": otp, "purpose": purpose})
+
+        _send_email(subject, recipient, body)
+
+        logger.info(f"[OTP_EMAIL_SENT] to={recipient}")
+
+    except Exception as e:
+        msg = str(e).lower()
+
+        if any(x in msg for x in ["invalid", "not verified", "domain"]):
+            logger.error(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            raise e  # don't retry
+
+        logger.warning(f"[RETRY_EMAIL] to={recipient} error={e}")
+        raise self.retry(exc=e)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def notify_user_for_hearing_task(
@@ -177,25 +190,38 @@ def notify_user_for_hearing_task(
     notified_month: str,
     notified_year: str
 ):
-    subject = "Notice of Hearing for Your Complaint - Unified Complaints and Response System (UCRS)"
-    body = render_template(
-        "hearing_notification_email.html",
-        {
-            "barangay_name": barangay_name,
-            "compliant_name": compliant_name,
-            "hearing_day": hearing_day,
-            "hearing_month": hearing_month,
-            "hearing_year": hearing_year,
-            "hearing_time": hearing_time,
-            "issued_day": issued_day,
-            "issued_month": issued_month,
-            "issued_year": issued_year,
-            "notified_day": notified_day,
-            "notified_month": notified_month,
-            "notified_year": notified_year
-        }
-    )
-    send_email_task.delay(subject=subject, recipient=recipient, body=body)
+    try:
+        subject = "Notice of Hearing for Your Complaint - Unified Complaints and Response System (UCRS)"
+        body = render_template(
+            "hearing_notification_email.html",
+            {
+                "barangay_name": barangay_name,
+                "compliant_name": compliant_name,
+                "hearing_day": hearing_day,
+                "hearing_month": hearing_month,
+                "hearing_year": hearing_year,
+                "hearing_time": hearing_time,
+                "issued_day": issued_day,
+                "issued_month": issued_month,
+                "issued_year": issued_year,
+                "notified_day": notified_day,
+                "notified_month": notified_month,
+                "notified_year": notified_year
+            }
+        )
+        _send_email(subject, recipient, body)
+        
+        logger.info(f"[HEARING_NOTIFICATION_SENT] to={recipient}")
+        
+    except Exception as e:
+        msg = str(e).lower()
+
+        if any(x in msg for x in ["invalid", "not verified", "domain"]):
+            logger.error(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            raise e  # don't retry
+
+        logger.warning(f"[RETRY_EMAIL] to={recipient} error={e}")
+        raise self.retry(exc=e)
 
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -290,7 +316,6 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
 
                 db.add_all(media_records)
                 await db.commit()
-                await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
 
             return urls
 
@@ -405,7 +430,6 @@ def upload_event_media_task(self, files_data, event_id: int):
 
                 db.add_all(media_records)
                 await db.commit()
-                await invalidate_cache(event_ids=[event_id])
 
             return urls
 
@@ -518,7 +542,6 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
 
                 db.add_all(remarks_files)
                 await db.commit()
-                await invalidate_cache(response_id=response_id)
 
             return urls
 

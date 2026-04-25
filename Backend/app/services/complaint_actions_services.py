@@ -11,7 +11,8 @@ from app.models.user import User
 from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
-from app.utils.cache_invalidator import invalidate_cache
+
+from app.utils.cache_invalidator_optimized import invalidate_cache
 from app.tasks import send_notifications_task, send_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
@@ -290,7 +291,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 title="The LGU has rejected the complaints under this incident",
                 message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
                 complaint_id=complaints[0].id if complaints else None,
-                notification_type="complaint_rejected",
+                notification_type=notification_type,
                 event="reject"
             )
         elif rejector.role == UserRole.DEPARTMENT_STAFF:
@@ -319,7 +320,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 title="The department has rejected the complaints under this incident",
                 message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
                 complaint_id=complaints[0].id if complaints else None,
-                notification_type="complaint_rejected",
+                notification_type=notification_type,
                 event="reject"
             )
             

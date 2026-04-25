@@ -7,7 +7,7 @@ from jose import JWTError
 from app.models.user import User
 from app.dependencies.db_dependency import get_async_db
 from app.utils.caching import get_cache, set_cache
-from app.core.security import verify_token
+from app.core.security import is_token_revoked, verify_token
 from app.constants.roles import UserRole
 from app.models.barangay_account import BarangayAccount
 from app.models.department_account import DepartmentAccount
@@ -74,8 +74,11 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Authorization token missing")
 
     try:
-        payload = verify_token(token.credentials)
+        payload = verify_token(token.credentials, expected_token_type="access")
     except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if await is_token_revoked(payload.get("jti")):
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user_id = payload.get("user_id")

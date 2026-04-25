@@ -9,6 +9,7 @@ import {
 import { PageHeader } from "../../general";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
+import LoadingIndicator from "../../general/LoadingIndicator";
 import { 
   Upload, 
   X, 
@@ -346,13 +347,14 @@ export const AnnouncementsPage: React.FC = () => {
             {editingAnnouncement ? t('announcements.editTab') : t('announcements.createTab')}
           </button>
         </div>
-
+
+
         {/* Manage Tab - Show announcements list */}
         {activeTab === "manage" && (
           <div className="p-6">
             {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+              <div className="flex justify-center py-12">
+                <LoadingIndicator />
               </div>
             ) : announcements && announcements.length > 0 ? (
               <div className="space-y-4">

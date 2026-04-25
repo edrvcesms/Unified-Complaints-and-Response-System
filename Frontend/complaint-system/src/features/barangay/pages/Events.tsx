@@ -5,6 +5,7 @@ import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { useCreateEvent, useDeleteEvent, useEvents, useUpdateEvent } from "../../../hooks/useEvent";
 import { validateDescription, validateTitle } from "../../../utils/validators";
+import LoadingIndicator from "../../general/LoadingIndicator";
 import type { Event } from "../../../types/general/event";
 import { Calendar, Edit, FileImage, FileVideo, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
 
@@ -277,8 +278,8 @@ export const EventsPage: React.FC = () => {
         {activeTab === "manage" && (
           <div className="p-6">
             {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+              <div className="flex justify-center py-12">
+                <LoadingIndicator />
               </div>
             ) : events && events.length > 0 ? (
               <div className="space-y-4">

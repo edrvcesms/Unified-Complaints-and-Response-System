@@ -49,19 +49,19 @@ const getStatusColor = (status: string) => {
 const formatStatus = (status: string) => {
   if (!status) return "N/A";
   const lowerStatus = status.toLowerCase();
-  
+
   if (lowerStatus === 'forwarded_to_lgu' || lowerStatus === 'forwarded_to_department') {
     return "FORWARDED";
   }
-  
+
   if (lowerStatus === 'resolved_by_department' || lowerStatus === 'resolved_by_barangay') {
     return "RESOLVED";
   }
-  
+
   if (lowerStatus === 'reviewed_by_department' || lowerStatus === 'reviewed_by_barangay') {
     return "UNDER REVIEW";
   }
-  
+
   return status.replace("_", " ").toUpperCase();
 };
 
@@ -87,11 +87,14 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
           <div className="truncate max-w-xs sm:max-w-sm md:max-w-md" title={incident.title}>
             {incident.title}
           </div>
-          {hasNewComplaints && incident.new_complaint_count && incident.new_complaint_count > 0 && (
-            <div className="flex items-center justify-center w-5 h-5 bg-orange-500 text-white rounded-full shrink-0" title={`${incident.new_complaint_count} new complaint${incident.new_complaint_count > 1 ? 's' : ''}`}>
-              <span className="text-xs font-bold">{incident.new_complaint_count}</span>
-            </div>
-          )}
+    {hasNewComplaints && incident.new_complaint_count && incident.new_complaint_count > 0 && (
+  <div className="relative flex items-center justify-center shrink-0" title={`${incident.new_complaint_count} new complaint${incident.new_complaint_count > 1 ? 's' : ''}`}>
+    <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-orange-400 opacity-50" />
+    <span className="relative flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-white text-xs font-bold">
+      {incident.new_complaint_count}
+    </span>
+  </div>
+)}
         </div>
       </td>
 
@@ -159,58 +162,58 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
   ];
 
   return (
-  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-    <div className="overflow-x-auto -mx-4 sm:mx-0">
-      <div className="inline-block min-w-full align-middle">
-        <div className="overflow-hidden">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-200 text-center">
-            {TABLE_HEADERS.map(({ label, className }) => (
-              <th
-                key={label}
-                className={`px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide ${className}`}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto -mx-4 sm:mx-0">
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-center">
+                  {TABLE_HEADERS.map(({ label, className }) => (
+                    <th
+                      key={label}
+                      className={`px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide ${className}`}
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-        <tbody className="divide-y divide-gray-100">
-          {isLoading ? (
-            <>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </>
-          ) : incidents.length === 0 ? (
-            <tr>
-              <td
-                colSpan={7}
-                className="px-4 py-16 text-center text-sm text-gray-500"
-              >
-                No incidents found.
-              </td>
-            </tr>
-          ) : (
-            incidents.map((incident) => (
-              <IncidentTableRow key={incident.id} incident={incident} />
-            ))
-          )}
-        </tbody>
-      </table>
+              <tbody className="divide-y divide-gray-100">
+                {isLoading ? (
+                  <>
+                    <SkeletonRow />
+                    <SkeletonRow />
+                    <SkeletonRow />
+                    <SkeletonRow />
+                    <SkeletonRow />
+                  </>
+                ) : incidents.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="px-4 py-16 text-center text-sm text-gray-500"
+                    >
+                      No incidents found.
+                    </td>
+                  </tr>
+                ) : (
+                  incidents.map((incident) => (
+                    <IncidentTableRow key={incident.id} incident={incident} />
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
 
-    <Pagination
-      currentPage={currentPage}
-      totalPages={totalPages}
-      onPageChange={onPageChange}
-    />
-  </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+      />
+    </div>
   );
 };

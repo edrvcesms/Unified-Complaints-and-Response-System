@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
 import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, Send } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, Send, CalendarIcon } from "lucide-react";
+import { CustomDateTimePicker } from '../../general/CustomDateTimePicker';
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -357,11 +358,15 @@ export const LguIncidentDetails: React.FC = () => {
       </div>
     );
   }
-
+  
   const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
   const isSubmitted = incidentStatus === "submitted";
-  const isUnderReview =
-    incidentStatus === "reviewed_by_barangay" || incidentStatus === "reviewed_by_department" || incidentStatus === "reviewed_by_lgu";
+  const isUnderReviewByBarangay = incidentStatus === "reviewed_by_barangay";
+  const isUnderReviewByDepartment = incidentStatus === "reviewed_by_department";
+  const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
+  const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
+  const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
+  const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
 
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
@@ -562,7 +567,7 @@ export const LguIncidentDetails: React.FC = () => {
               </p>
             </div>
 
-            {isForwardedIncident || isUnderReview && (
+            {isForwardedIncident || isUnderReviewByLgu && (
               <div className="border-t pt-6 mt-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
                   Assignment Actions
@@ -587,95 +592,126 @@ export const LguIncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending || isUnderReview}
+          disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
           onClick={handleReject}
-          disabled={rejectIncidentMutation.isPending}
+          disabled={rejectIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
         </button>
         <button
           onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending || isSubmitted}
+          disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+      
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-end gap-3">
         {hasScheduledHearingDate && (
-          <p className="text-sm text-gray-700 sm:mr-2 sm:text-right">
-            Hearing Date: <span className="font-semibold">{formatHearingDate(incidentHearingDate as string)}</span>
-          </p>
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
+            Hearing Date: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
+          </div>
         )}
 
-        {hasScheduledHearingDate ? (
-          <button
-            onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending || isSubmitted}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {notifyHearingMutation.isPending ? "Notifying..." : "Reschedule Hearing Date"}
-          </button>
-        ) : (
-          <button
-            onClick={handleOpenHearingModal}
-            disabled={notifyHearingMutation.isPending || isSubmitted}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {notifyHearingMutation.isPending ? "Notifying..." : "Notify Complainants for Hearing"}
-          </button>
-        )}
+        <button
+          onClick={handleOpenHearingModal}
+          disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isForwardedToDepartment || isForwardedToLgu}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <CalendarIcon className="w-4 h-4 text-primary-200" />
+          {notifyHearingMutation.isPending
+            ? "Notifying..."
+            : hasScheduledHearingDate
+              ? "Reschedule Hearing Date"
+              : "Notify Complainants for Hearing"}
+        </button>
       </div>
 
+      {/* Modal */}
       {isHearingModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-sm w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              {hasScheduledHearingDate ? "Reschedule Hearing Date" : "Notify Complainants for Hearing"}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Select the hearing date and time, then confirm to notify all complainants.
-            </p>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black bg-opacity-50"
+          onClick={(e) => e.target === e.currentTarget && setIsHearingModalOpen(false)}
+        >
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full max-w-sm overflow-hidden">
 
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hearing Date & Time</label>
-              <input
-                type="datetime-local"
-                value={hearingDate}
-                onChange={(event) => setHearingDate(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-medium text-gray-900">
+                  {hasScheduledHearingDate ? "Reschedule Hearing Date" : "Notify Complainants for Hearing"}
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
+                  Select a date and time to notify all complainants.
+                </p>
+              </div>
               <button
-                type="button"
                 onClick={() => setIsHearingModalOpen(false)}
-                disabled={notifyHearingMutation.isPending}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors text-sm"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleNotifyHearing}
-                disabled={notifyHearingMutation.isPending || !hearingDate}
-                className="px-4 py-2 text-sm font-medium text-white rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                {notifyHearingMutation.isPending
-                  ? "Notifying..."
-                  : hasScheduledHearingDate
-                    ? "Confirm & Reschedule"
-                    : "Confirm & Notify"}
+                ✕
               </button>
             </div>
+
+            <div className="px-6 pt-5 pb-6">
+              <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary-700 mb-2.5">
+                <CalendarIcon className="w-3.5 h-3.5" />
+                Date &amp; Time
+              </label>
+
+              <div className="mb-4">
+                <CustomDateTimePicker
+                  value={hearingDate ? new Date(hearingDate) : null}
+                  onChange={(date) => setHearingDate(date.toISOString())}
+                />
+              </div>
+
+              {hearingDate && (
+                <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-50 rounded-full text-xs text-primary-800 mb-5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0" />
+                  {new Date(hearingDate).toLocaleDateString("en-US", {
+                    weekday: "short", month: "short", day: "numeric", year: "numeric"
+                  }) + " · " + new Date(hearingDate).toLocaleTimeString("en-US", {
+                    hour: "numeric", minute: "2-digit"
+                  })}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsHearingModalOpen(false)}
+                  disabled={notifyHearingMutation.isPending}
+                  className="px-4 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNotifyHearing}
+                  disabled={notifyHearingMutation.isPending || !hearingDate}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="w-4 h-4 rounded-full border border-primary-300 flex items-center justify-center text-[9px]">✓</span>
+                  {notifyHearingMutation.isPending
+                    ? "Notifying..."
+                    : hasScheduledHearingDate
+                      ? "Confirm & Reschedule"
+                      : "Confirm & Notify"}
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

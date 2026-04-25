@@ -41,8 +41,10 @@ class IncidentDatas(BaseModel):
     class Config:
         from_attributes = True
 
-class PostIncidentFeedbackResponse(PostIncidentFeedbackCreate):
+class PostIncidentFeedbackResponse(BaseModel):
     id: int
+    ratings: float
+    message: str | None = None
     created_at: datetime
     user: UsersData
     incident: IncidentDatas

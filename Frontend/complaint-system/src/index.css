@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: "Inter", sans-serif;
+  font-size: clamp(18px, 1.5rem, 20px); /* increased font size */
+  line-height: 1.5;
+}
+
 html {
   font-size: 125%; /* 16px → 20px — scales all rem units */
   -webkit-text-size-adjust: 100%; /* prevent iOS font inflation */
@@ -32,4 +38,10 @@ html {
 
 @media (min-width: 1024px) {
   :root { --navbar-h: 127.5px; } /* 102px × 1.25 */
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }

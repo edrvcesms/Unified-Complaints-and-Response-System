@@ -9,7 +9,8 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import set_cache, get_cache
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
-from app.utils.cache_invalidator import invalidate_cache
+from app.utils.cache_invalidator_optimized import invalidate_cache
+from app.utils.cache_invalidator_optimized import CacheInvalidator
 from app.tasks import send_notifications_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
@@ -26,6 +27,7 @@ from sqlalchemy.orm import selectinload
 from app.constants.complaint_status import ComplaintStatus
 from typing import List
 from app.services.complaint_services import log_status_change
+from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
 
 
 async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession):
@@ -34,6 +36,7 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         if forwarded_incidents_cache is not None:
             logger.info(f"Cache hit for forwarded incidents of barangay ID: {barangay_id}")
             return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in forwarded_incidents_cache]
+        
         result = await db.execute(
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
@@ -47,29 +50,13 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
                 ]),
                 IncidentModel.barangay_id == barangay_id
             )
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses).selectinload(Response.user),
-                
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
-            )
+            .options(*QueryOptions.incident_full())
             .distinct()
             .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info(f"Executed query to get forwarded incidents for barangay ID: {barangay_id}")
         
         incidents = result.scalars().all()
-        
-        
         logger.info(f"Found {len(incidents)} forwarded incidents for barangay ID: {barangay_id}")
         incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
         await set_cache(f"forwarded_barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
@@ -77,9 +64,9 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
       
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error in get_forwarded_incidents_by_barangay: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in get_forwarded_incidents_by_barangay")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
       
       
 async def get_all_forwarded_incidents(db: AsyncSession):
@@ -97,20 +84,7 @@ async def get_all_forwarded_incidents(db: AsyncSession):
                 ComplaintStatus.FORWARDED_TO_LGU.value,
                 ComplaintStatus.REVIEWED_BY_LGU.value,
             ]))
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters).selectinload(IncidentComplaintModel.complaint)
-                    .selectinload(Complaint.user)
-            )
+            .options(*QueryOptions.incident_full())
             .distinct()
             .order_by(IncidentModel.first_reported_at.asc())
         )
@@ -124,9 +98,9 @@ async def get_all_forwarded_incidents(db: AsyncSession):
     except HTTPException:
         raise
     
-    except Exception as e:
-        logger.error(f"Error in get_all_forwarded_incidents: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in get_all_forwarded_incidents")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
     
 async def weekly_forwarded_incidents_stats(db: AsyncSession):
     try:
@@ -244,9 +218,9 @@ async def weekly_forwarded_incidents_stats(db: AsyncSession):
     except HTTPException:
         raise
     
-    except Exception as e:
-        logger.error(f"Error in weekly_forwarded_incidents_stats: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in weekly_forwarded_incidents_stats")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
 async def complaint_counts_by_barangay_category(db: AsyncSession):
@@ -303,9 +277,9 @@ async def complaint_counts_by_barangay_category(db: AsyncSession):
 
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error in complaint_counts_by_barangay_category: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in complaint_counts_by_barangay_category")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
     
    
 async def assign_incident_to_department(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, department_account_id: int, attachments: List[UploadFile], db: AsyncSession):
@@ -343,17 +317,17 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
         )
         await db.commit()
         
-        for complaint_id in complaint_ids:
-            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-            complaint = result.scalars().first()
-            if complaint:
-                send_notifications_task.delay(
-                    user_id=complaint.user_id,
-                    title="Complaint Forwarded to Department",
-                    message="Your complaint has been forwarded to the department for further processing.",
-                    complaint_id=complaint.id,
-                    notification_type="update"
-                )
+        complaints_result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = complaints_result.scalars().all()
+
+        for complaint in complaints:
+            send_notifications_task.delay(
+                user_id=complaint.user_id,
+                title="Complaint Forwarded to Department",
+                message="Your complaint has been forwarded to the department for further processing.",
+                complaint_id=complaint.id,
+                notification_type="update"
+            )
                 
         response = Response(
             incident_id=incident_id,
@@ -386,7 +360,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
             
         await invalidate_cache(
             complaint_ids=complaint_ids,
-            user_ids=[complaint.user_id for complaint in await db.execute(select(Complaint.user_id).where(Complaint.id.in_(complaint_ids)))],
+            user_ids=[complaint.user_id for complaint in complaints],
             barangay_id=barangay_id,
             incident_ids=[incident_id],
             department_account_id=department_account_id,
@@ -401,6 +375,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
     except HTTPException:
         raise
     
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Error in assign_incident_to_department")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")

@@ -5,3 +5,4 @@ export { LguAnnouncements } from './Announcements';
 export { MonthlyBarangayReports } from './MonthlyBarangayReports';
 export { MonthlyReportDetails } from './MonthlyReportDetails';
 export { CategoryIncidents } from './CategoryIncidents';
+export { LguFeedbacks } from './Feedbacks';

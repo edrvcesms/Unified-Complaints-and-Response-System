@@ -9,7 +9,7 @@ python-dotenv
 python-multipart
 bcrypt
 cloudinary
-fastapi-mail
+resend
 databases
 slowapi
 asyncpg

@@ -18,53 +18,62 @@ from app.models.complaint import Complaint
 from app.tasks import send_notifications_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
-from app.utils.caching import delete_cache, set_cache, get_cache
+from app.utils.caching import set_cache, get_cache
 from app.models.user import User
-from sqlalchemy.orm import selectinload
-from app.utils.cache_invalidator import invalidate_cache
 from app.services.complaint_services import log_status_change
+from app.constants.roles import UserRole
+from app.utils.query_optimization import QueryOptions, BatchLoader
+from app.utils.cache_invalidator_optimized import CacheInvalidator
 
-async def get_all_incidents(db: AsyncSession):
+
+def _active_statuses_by_role(role: str) -> set[str]:
+    if role == UserRole.BARANGAY_OFFICIAL:
+        return {
+            ComplaintStatus.SUBMITTED.value,
+            ComplaintStatus.REVIEWED_BY_BARANGAY.value,
+        }
+
+    if role == UserRole.LGU_OFFICIAL:
+        return {
+            ComplaintStatus.FORWARDED_TO_LGU.value,
+            ComplaintStatus.REVIEWED_BY_LGU.value,
+        }
+
+    if role == UserRole.DEPARTMENT_STAFF:
+        return {
+            ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
+            ComplaintStatus.REVIEWED_BY_DEPARTMENT.value,
+        }
+
+    return set()
+
+
+async def get_all_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
-        all_incidents_cache = await get_cache("all_incidents")
+        all_incidents_cache = await get_cache(f"all_incidents: barangay_id:{barangay_id}")
         if all_incidents_cache is not None:
             logger.info("Cache hit for all incidents")
             return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in all_incidents_cache]
         
         result = await db.execute(
             select(IncidentModel)
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.user),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.incident),
-            )
+            .options(*QueryOptions.incident_full())
             .order_by(IncidentModel.first_reported_at.asc())
+            .where(IncidentModel.barangay_id == barangay_id)
         )
 
         incidents = result.scalars().all()
         incidents_data =  [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
-        await set_cache("all_incidents", [i.model_dump_json() for i in incidents_data], expiration=3600)
+        await set_cache(f"all_incidents: barangay_id:{barangay_id}", [i.model_dump_json() for i in incidents_data], expiration=3600)
         return incidents_data
     
     except HTTPException:
         raise
     
-    except Exception as e:
-        logger.error(f"Error in get_all_incidents: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-    
+    except Exception:
+        logger.exception("Error in get_all_incidents")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
 
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
     try:
@@ -92,23 +101,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
                 IncidentModel.barangay_id == barangay_id,
                 subq
             )
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.user),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.incident),
-            )
+            .options(*QueryOptions.incident_full())
             .order_by(IncidentModel.first_reported_at.asc())
         )
 
@@ -120,11 +113,11 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
       
     except HTTPException:
         raise
-    except Exception as e:  
-        logger.error(f"Error in get_incidents_by_barangay: {e}")
+    except Exception:
+        logger.exception("Error in get_incidents_by_barangay")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error"
         )
     
 async def get_incident_by_id(incident_id: int, db: AsyncSession):
@@ -136,23 +129,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
         
         result = await db.execute(
             select(IncidentModel)
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.user),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.incident),
-            )
+            .options(*QueryOptions.incident_full())
             .where(IncidentModel.id == incident_id)
         )
         
@@ -173,9 +150,9 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
     except HTTPException:
         raise
         
-    except Exception as e:
-        logger.error(f"Error in get_incident_by_id: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in get_incident_by_id")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
     
 async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
@@ -217,10 +194,12 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
         incident.updated_at = datetime.now(timezone.utc)
         await db.commit()
         
+        # OPTIMIZED: Batch fetch all complaints at once instead of in loop
+        complaints_dict = await BatchLoader.fetch_complaints_by_ids(db, complaint_ids, minimal=True)
         
+        # Send notifications using cached complaints
         for complaint_id in complaint_ids:
-            result = await db.execute(select(Complaint).where(Complaint.id == complaint_id))
-            complaint = result.scalars().first()
+            complaint = complaints_dict.get(complaint_id)
             if complaint:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
@@ -259,9 +238,10 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
 
             )
             
-        await invalidate_cache(
+        # OPTIMIZED: Use new CacheInvalidator with pipeline
+        await CacheInvalidator.invalidate_cache(
             complaint_ids=complaint_ids,
-            user_ids=[complaint.user_id for complaint in await db.execute(select(Complaint.user_id).where(Complaint.id.in_(complaint_ids)))],
+            user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, complaint_ids),
             barangay_id=barangay_id,
             incident_ids=[incident_id],
             include_global=True
@@ -276,9 +256,10 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
     except HTTPException:
         raise
     
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.exception("Error in forward_incident_to_lgu")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
     
 
 
@@ -288,23 +269,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         result = await db.execute(
             select(IncidentModel)
             .where(IncidentModel.id == incident_id)
-            .options(
-                selectinload(IncidentModel.category),
-                selectinload(IncidentModel.barangay),
-                selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.attachment),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.incident_links),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.complaint)
-                        .selectinload(Complaint.user),
-                selectinload(IncidentModel.complaint_clusters)
-                    .selectinload(IncidentComplaintModel.incident),
-            )
+            .options(*QueryOptions.incident_full())
         )
         incident = result.scalars().first()
         
@@ -321,7 +286,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         await db.commit()
         await db.refresh(incident)
         
-        await invalidate_cache(
+        await CacheInvalidator.invalidate_cache(
             incident_ids=[incident_id],
             barangay_id=incident.barangay_id,
             department_account_id=incident.department_account_id,
@@ -334,6 +299,128 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
     except HTTPException:
         raise
     
-    except Exception as e:
-        logger.error(f"Error in mark_incident_as_viewed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except Exception:
+        logger.exception("Error in mark_incident_as_viewed")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+
+async def get_all_incidents(current_user: User, db: AsyncSession):
+    try:
+        role = current_user.role
+        active_statuses = _active_statuses_by_role(role)
+        archive_statuses = [status_value for status_value in ComplaintStatus if status_value.value not in active_statuses]
+
+        if role == UserRole.BARANGAY_OFFICIAL:
+            barangay_account = getattr(current_user, "barangay_account", None)
+            if not barangay_account:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay account not found for current user")
+
+            barangay_id = barangay_account.barangay_id
+            cache_key = f"archive_incidents:barangay:{barangay_id}"
+
+            cached = await get_cache(cache_key)
+            if cached is not None:
+                logger.info(f"Cache hit for archive incidents of barangay ID: {barangay_id}")
+                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+
+            archive_filter = (
+                select(IncidentComplaintModel.incident_id)
+                .join(IncidentComplaintModel.complaint)
+                .where(
+                    IncidentComplaintModel.incident_id == IncidentModel.id,
+                    Complaint.status.in_([s.value for s in archive_statuses]),
+                )
+                .exists()
+            )
+
+            result = await db.execute(
+                select(IncidentModel)
+                .where(
+                    IncidentModel.barangay_id == barangay_id,
+                    archive_filter,
+                )
+                .options(*QueryOptions.incident_full())
+                .order_by(IncidentModel.first_reported_at.asc())
+            )
+
+            incidents = result.scalars().all()
+            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=360)
+            return incidents_data
+
+        if role == UserRole.LGU_OFFICIAL:
+            cache_key = "archive_incidents:lgu"
+
+            cached = await get_cache(cache_key)
+            if cached is not None:
+                logger.info("Cache hit for archive incidents of LGU")
+                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+
+            archive_filter = (
+                select(IncidentComplaintModel.incident_id)
+                .join(IncidentComplaintModel.complaint)
+                .where(
+                    IncidentComplaintModel.incident_id == IncidentModel.id,
+                    Complaint.status.in_([s.value for s in archive_statuses]),
+                )
+                .exists()
+            )
+
+            result = await db.execute(
+                select(IncidentModel)
+                .where(archive_filter)
+                .options(*QueryOptions.incident_full())
+                .order_by(IncidentModel.first_reported_at.asc())
+            )
+
+            incidents = result.scalars().all()
+            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
+            return incidents_data
+
+        if role == UserRole.DEPARTMENT_STAFF:
+            department_account = getattr(current_user, "department_account", None)
+            if not department_account:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department account not found for current user")
+
+            department_account_id = department_account.id
+            cache_key = f"archive_incidents:department:{department_account_id}"
+
+            cached = await get_cache(cache_key)
+            if cached is not None:
+                logger.info(f"Cache hit for archive incidents of department account ID: {department_account_id}")
+                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+
+            archive_filter = (
+                select(IncidentComplaintModel.incident_id)
+                .join(IncidentComplaintModel.complaint)
+                .where(
+                    IncidentComplaintModel.incident_id == IncidentModel.id,
+                    Complaint.status.in_([s.value for s in archive_statuses]),
+                )
+                .exists()
+            )
+
+            result = await db.execute(
+                select(IncidentModel)
+                .where(
+                    IncidentModel.department_account_id == department_account_id,
+                    archive_filter,
+                )
+                .options(*QueryOptions.incident_full())
+                .order_by(IncidentModel.first_reported_at.asc())
+            )
+
+            incidents = result.scalars().all()
+            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
+            return incidents_data
+
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Error in get_all_incidents")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")

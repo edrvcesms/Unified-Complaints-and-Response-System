@@ -18,12 +18,13 @@ from datetime import datetime
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
-from app.utils.cache_invalidator import invalidate_cache
-from app.utils.caching import set_cache, get_cache, delete_cache
+from app.utils.caching import set_cache, get_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
 from app.tasks import cluster_complaint_task, send_notifications_task, notify_user_for_hearing_task, save_response_task
 from app.utils.reverse_geocoding import reverse_geocode
+from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
+from app.utils.cache_invalidator_optimized import CacheInvalidator
 
 
 def _empty_status_counts():
@@ -56,17 +57,21 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         if complaint_cache is not None:
             logger.info(f"Cache hit for complaint ID: {complaint_id}")
             return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
-        result = await db.execute(select(Complaint).options(selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user),selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)).options(selectinload(Complaint.user), selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment)
-                ).where(Complaint.id == complaint_id))
+        
+        result = await db.execute(
+            select(Complaint)
+            .options(*QueryOptions.complaint_full())
+            .where(Complaint.id == complaint_id)
+        )
         complaint = result.scalars().first()
 
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
         logger.info(f"Fetched complaint with ID {complaint_id}")
-        complaint = ComplaintWithUserData.model_validate(complaint, from_attributes=True)
-        await set_cache(f"complaint:{complaint_id}", complaint.model_dump_json(), expiration=3600)
-        return complaint
+        complaint_data = ComplaintWithUserData.model_validate(complaint, from_attributes=True)
+        await set_cache(f"complaint:{complaint_id}", complaint_data.model_dump_json(), expiration=3600)
+        return complaint_data
     
     except HTTPException:
         raise
@@ -83,21 +88,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             logger.info(f"Cache hit for complaints (barangay_id: {barangay_id or 'all'})")
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         
-        query = select(Complaint).options(
-            selectinload(Complaint.user), 
-            selectinload(Complaint.barangay), 
-            selectinload(Complaint.category), 
-            selectinload(Complaint.attachment),
-            selectinload(Complaint.incident_links)
-                .selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses)
-                .selectinload(Response.user),
-                
-            selectinload(Complaint.incident_links)
-                .selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses)   
-                .selectinload(Response.response_attachments)
-        )
+        query = select(Complaint).options(*QueryOptions.complaint_full())
         
         if barangay_id is not None:
             query = query.where(Complaint.barangay_id == barangay_id)
@@ -128,14 +119,12 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
         if complaints_cache is not None:
             logger.info(f"Cache hit for complaints of incident ID: {incident_id}")
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
+        
         result = await db.execute(
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
-            .options(selectinload(Complaint.user), 
-                     selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.user),
-                        selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
-                     selectinload(Complaint.barangay), selectinload(Complaint.category), selectinload(Complaint.attachment))
+            .options(*QueryOptions.complaint_full())
             .order_by(Complaint.created_at.asc())
         )
         complaints = result.scalars().all()
@@ -148,6 +137,9 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
     except HTTPException:
         raise
     
+    except Exception as e:
+        logger.error(f"Error in get_complaints_by_incident: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except Exception as e:
         logger.error(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -182,12 +174,21 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
         return cached
 
     since = datetime.now(timezone.utc) - timedelta(days=7)
+    until = datetime.now(timezone.utc)
 
-    categories = (await db.execute(select(Category))).scalars().all()
+    # Get status counts from database aggregation
+    status_totals, date_status_rows = await StatisticsHelper.get_status_counts_by_date_range(
+        db, barangay_id, since, until
+    )
+    
+    # Get category counts from database aggregation
+    total_by_category = await StatisticsHelper.get_category_counts(
+        db, barangay_id, since, until
+    )
 
+    # Initialize daily counts
     daily_counts: dict = {}
     daily_by_category: dict = {}
-
     for i in range(7):
         day = (datetime.now(timezone.utc) - timedelta(days=6 - i)).strftime("%Y-%m-%d")
         daily_counts[day] = {
@@ -196,82 +197,44 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
             "forwarded": 0,
             "under_review": 0
         }
-        daily_by_category[day] = {cat.category_name: 0 for cat in categories}
+        daily_by_category[day] = {cat: 0 for cat in total_by_category.keys()}
 
-    # -----------------------------
-    # CATEGORY + STATUS (WEEKLY, LATEST STATUS ONLY)
-    # -----------------------------
+    # Get daily breakdown for categories (still need to load minimal data)
     complaints = (await db.execute(
         select(Complaint)
-        .options(selectinload(Complaint.category))
+        .options(*QueryOptions.complaint_for_stats())
         .where(
             Complaint.barangay_id == barangay_id,
             Complaint.created_at >= since
         )
     )).scalars().all()
 
-    totals = _empty_status_counts()
-    forwarded_ids_total = set()
-    forwarded_ids_by_day: dict[str, set[int]] = {day: set() for day in daily_counts}
-
+    # Populate daily category counts from loaded complaints
     for c in complaints:
         day = c.created_at.strftime("%Y-%m-%d")
-        _increment_status(totals, c.status)
-        if day in daily_counts:
-            _increment_status(daily_counts[day], c.status)
-            if c.status == ComplaintStatus.FORWARDED_TO_LGU.value:
-                forwarded_ids_by_day[day].add(c.id)
-                forwarded_ids_total.add(c.id)
         if day in daily_by_category and c.category:
             daily_by_category[day][c.category.category_name] += 1
 
-    # Keep forwarded sticky in dashboard by using complaint logs.
-    forwarded_log_rows = (await db.execute(
-        select(
-            ComplaintLogs.complaint_id,
-            Complaint.created_at,
-        )
-        .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
-        .where(
-            Complaint.barangay_id == barangay_id,
-            Complaint.created_at >= since,
-            ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_LGU.value
-        )
-    )).all()
+    # Populate daily status counts
+    for date_val, status_val, count in date_status_rows:
+        day = date_val.strftime("%Y-%m-%d") if hasattr(date_val, 'strftime') else str(date_val)
+        if day in daily_counts:
+            if status_val == 'submitted':
+                daily_counts[day]['submitted'] = count
+            elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+                daily_counts[day]['resolved'] = count
+            elif status_val == 'forwarded_to_lgu':
+                daily_counts[day]['forwarded'] = count
+            elif status_val == 'reviewed_by_barangay':
+                daily_counts[day]['under_review'] = count
 
-    for row in forwarded_log_rows:
-        day = row.created_at.strftime("%Y-%m-%d")
-        if day in forwarded_ids_by_day:
-            forwarded_ids_by_day[day].add(row.complaint_id)
-        forwarded_ids_total.add(row.complaint_id)
-
-    for day in daily_counts:
-        daily_counts[day]["forwarded"] = len(forwarded_ids_by_day[day])
-
-    
-    total_submitted = totals["submitted"]
-    total_resolved = totals["resolved"]
-    total_forwarded = len(forwarded_ids_total)
-    total_under_review = totals["under_review"]
-    total_complaints = len(complaints)
-
-    total_by_category = {
-        cat.category_name: sum(
-            1 for c in complaints if c.category_id == cat.id
-        )
-        for cat in categories
-    }
-
-    # -----------------------------
-    # FINAL OUTPUT
-    # -----------------------------
     stats = {
         "period": "weekly",
-        "total_complaints": total_complaints,
-        "total_submitted": total_submitted,
-        "total_resolved": total_resolved,
-        "total_forwarded": total_forwarded,
-        "total_under_review": total_under_review,
+        "total_complaints": len(complaints),
+        "total_submitted": status_totals["submitted"],
+        "total_resolved": status_totals["resolved"],
+        "total_forwarded": status_totals["forwarded"],
+        "total_under_review": status_totals["under_review"],
         "total_by_category": total_by_category,
         "daily_counts": daily_counts,
         "daily_by_category": daily_by_category,
@@ -287,31 +250,31 @@ async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSe
         return cached
 
     _, days_in_month = calendar.monthrange(year, month)
-
     start = datetime(year, month, 1, tzinfo=timezone.utc)
     end = datetime(year, month, days_in_month, 23, 59, 59, tzinfo=timezone.utc)
 
-    categories = (await db.execute(select(Category))).scalars().all()
+    # Get status counts from database aggregation
+    status_totals, date_status_rows = await StatisticsHelper.get_status_counts_by_date_range(
+        db, barangay_id, start, end
+    )
+    
+    # Get category counts from database aggregation
+    total_by_category = await StatisticsHelper.get_category_counts(
+        db, barangay_id, start, end
+    )
 
+    # Initialize daily counts
     daily_counts = {}
     daily_by_category = {}
-
     for d in range(1, days_in_month + 1):
         day = f"{year}-{month:02d}-{d:02d}"
-        daily_counts[day] = {
-            "submitted": 0,
-            "resolved": 0,
-            "forwarded": 0,
-            "under_review": 0
-        }
-        daily_by_category[day] = {c.category_name: 0 for c in categories}
+        daily_counts[day] = {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
+        daily_by_category[day] = {cat: 0 for cat in total_by_category.keys()}
 
-    # -----------------------------
-    # CATEGORY + STATUS (MONTHLY, LATEST STATUS ONLY)
-    # -----------------------------
+    # Get daily breakdown for categories
     complaints = (await db.execute(
         select(Complaint)
-        .options(selectinload(Complaint.category))
+        .options(*QueryOptions.complaint_for_stats())
         .where(
             Complaint.barangay_id == barangay_id,
             Complaint.created_at >= start,
@@ -319,65 +282,34 @@ async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSe
         )
     )).scalars().all()
 
-    totals = _empty_status_counts()
-    forwarded_ids_total = set()
-    forwarded_ids_by_day: dict[str, set[int]] = {day: set() for day in daily_counts}
-
+    # Populate daily category counts
     for c in complaints:
         day = c.created_at.strftime("%Y-%m-%d")
-        _increment_status(totals, c.status)
-        if day in daily_counts:
-            _increment_status(daily_counts[day], c.status)
-            if c.status == ComplaintStatus.FORWARDED_TO_LGU.value:
-                forwarded_ids_by_day[day].add(c.id)
-                forwarded_ids_total.add(c.id)
         if day in daily_by_category and c.category:
             daily_by_category[day][c.category.category_name] += 1
 
-    # Keep forwarded sticky in dashboard by using complaint logs.
-    forwarded_log_rows = (await db.execute(
-        select(
-            ComplaintLogs.complaint_id,
-            Complaint.created_at,
-        )
-        .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
-        .where(
-            Complaint.barangay_id == barangay_id,
-            Complaint.created_at >= start,
-            Complaint.created_at <= end,
-            ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_LGU.value
-        )
-    )).all()
-
-    for row in forwarded_log_rows:
-        day = row.created_at.strftime("%Y-%m-%d")
-        if day in forwarded_ids_by_day:
-            forwarded_ids_by_day[day].add(row.complaint_id)
-        forwarded_ids_total.add(row.complaint_id)
-
-    for day in daily_counts:
-        daily_counts[day]["forwarded"] = len(forwarded_ids_by_day[day])
-
-    total_submitted = totals["submitted"]
-    total_resolved = totals["resolved"]
-    total_forwarded = len(forwarded_ids_total)
-    total_under_review = totals["under_review"]
-    total_complaints = len(complaints)
-
-    total_by_category = {
-        c.category_name: sum(1 for x in complaints if x.category_id == c.id)
-        for c in categories
-    }
+    # Populate daily status counts
+    for date_val, status_val, count in date_status_rows:
+        day = date_val.strftime("%Y-%m-%d") if hasattr(date_val, 'strftime') else str(date_val)
+        if day in daily_counts:
+            if status_val == 'submitted':
+                daily_counts[day]['submitted'] = count
+            elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+                daily_counts[day]['resolved'] = count
+            elif status_val == 'forwarded_to_lgu':
+                daily_counts[day]['forwarded'] = count
+            elif status_val == 'reviewed_by_barangay':
+                daily_counts[day]['under_review'] = count
 
     stats = {
         "period": "monthly",
         "year": year,
         "month": month,
-        "total_complaints": total_complaints,
-        "total_submitted": total_submitted,
-        "total_resolved": total_resolved,
-        "total_forwarded": total_forwarded,
-        "total_under_review": total_under_review,
+        "total_complaints": len(complaints),
+        "total_submitted": status_totals["submitted"],
+        "total_resolved": status_totals["resolved"],
+        "total_forwarded": status_totals["forwarded"],
+        "total_under_review": status_totals["under_review"],
         "total_by_category": total_by_category,
         "daily_counts": daily_counts,
         "daily_by_category": daily_by_category,
@@ -395,26 +327,30 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
     start = datetime(year, 1, 1, tzinfo=timezone.utc)
     end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
-    categories = (await db.execute(select(Category))).scalars().all()
+    # Get status counts from database aggregation
+    status_totals, date_status_rows = await StatisticsHelper.get_status_counts_by_date_range(
+        db, barangay_id, start, end
+    )
+    
+    # Get category counts from database aggregation
+    total_by_category = await StatisticsHelper.get_category_counts(
+        db, barangay_id, start, end
+    )
 
     MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
     monthly_counts = {
         m: {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
         for m in MONTHS
     }
-
     monthly_by_category = {
-        m: {c.category_name: 0 for c in categories}
+        m: {cat: 0 for cat in total_by_category.keys()}
         for m in MONTHS
     }
 
-    # -----------------------------
-    # CATEGORY + STATUS (YEARLY, LATEST STATUS ONLY)
-    # -----------------------------
+    # Get monthly breakdown for categories
     complaints = (await db.execute(
         select(Complaint)
-        .options(selectinload(Complaint.category))
+        .options(*QueryOptions.complaint_for_stats())
         .where(
             Complaint.barangay_id == barangay_id,
             Complaint.created_at >= start,
@@ -422,62 +358,33 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
         )
     )).scalars().all()
 
-    totals = _empty_status_counts()
-    forwarded_ids_total = set()
-    forwarded_ids_by_month: dict[str, set[int]] = {month_label: set() for month_label in MONTHS}
-
+    # Populate monthly category counts
     for c in complaints:
         label = MONTHS[c.created_at.month - 1]
-        _increment_status(totals, c.status)
-        _increment_status(monthly_counts[label], c.status)
-        if c.status == ComplaintStatus.FORWARDED_TO_LGU.value:
-            forwarded_ids_by_month[label].add(c.id)
-            forwarded_ids_total.add(c.id)
         if c.category:
             monthly_by_category[label][c.category.category_name] += 1
 
-    # Keep forwarded sticky in dashboard by using complaint logs.
-    forwarded_log_rows = (await db.execute(
-        select(
-            ComplaintLogs.complaint_id,
-            Complaint.created_at,
-        )
-        .join(Complaint, Complaint.id == ComplaintLogs.complaint_id)
-        .where(
-            Complaint.barangay_id == barangay_id,
-            Complaint.created_at >= start,
-            Complaint.created_at <= end,
-            ComplaintLogs.new_status == ComplaintStatus.FORWARDED_TO_LGU.value
-        )
-    )).all()
-
-    for row in forwarded_log_rows:
-        label = MONTHS[row.created_at.month - 1]
-        forwarded_ids_by_month[label].add(row.complaint_id)
-        forwarded_ids_total.add(row.complaint_id)
-
-    for month_label in monthly_counts:
-        monthly_counts[month_label]["forwarded"] = len(forwarded_ids_by_month[month_label])
-
-    total_submitted = totals["submitted"]
-    total_resolved = totals["resolved"]
-    total_forwarded = len(forwarded_ids_total)
-    total_under_review = totals["under_review"]
-    total_complaints = len(complaints)
-
-    total_by_category = {
-        c.category_name: sum(1 for x in complaints if x.category_id == c.id)
-        for c in categories
-    }
+    # Populate monthly status counts
+    for date_val, status_val, count in date_status_rows:
+        month_idx = date_val.month - 1 if hasattr(date_val, 'month') else int(str(date_val).split('-')[1]) - 1
+        label = MONTHS[month_idx]
+        if status_val == 'submitted':
+            monthly_counts[label]['submitted'] += count
+        elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+            monthly_counts[label]['resolved'] += count
+        elif status_val == 'forwarded_to_lgu':
+            monthly_counts[label]['forwarded'] += count
+        elif status_val == 'reviewed_by_barangay':
+            monthly_counts[label]['under_review'] += count
 
     stats = {
         "period": "yearly",
         "year": year,
-        "total_complaints": total_complaints,
-        "total_submitted": total_submitted,
-        "total_resolved": total_resolved,
-        "total_forwarded": total_forwarded,
-        "total_under_review": total_under_review,
+        "total_complaints": len(complaints),
+        "total_submitted": status_totals["submitted"],
+        "total_resolved": status_totals["resolved"],
+        "total_forwarded": status_totals["forwarded"],
+        "total_under_review": status_totals["under_review"],
         "total_by_category": total_by_category,
         "monthly_counts": monthly_counts,
         "monthly_by_category": monthly_by_category,
@@ -568,14 +475,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
 
         result = await db.execute(
             select(Complaint)
-            .options(
-                selectinload(Complaint.user),
-                selectinload(Complaint.barangay),
-                selectinload(Complaint.category),
-                selectinload(Complaint.attachment),
-                selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user),
-                selectinload(Complaint.incident_links)
-            )
+            .options(*QueryOptions.complaint_full())
             .where(Complaint.id == new_complaint.id)
         )
         updated_complaint = result.scalars().first()
@@ -595,11 +495,11 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
             )
             logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
             
-        await invalidate_cache(
+        await CacheInvalidator.invalidate_cache(
             complaint_ids=[updated_complaint.id],
             user_ids=[user_id],
             barangay_id=updated_complaint.barangay_id,
-            incident_ids=[link.incident_id for link in updated_complaint.incident_links] if updated_complaint.incident_links else None,
+            incident_ids=[link.incident_id for link in updated_complaint.incident_links] if updated_complaint.incident_links else [],
             include_global=True
         )
             
@@ -630,18 +530,11 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
 
         result = await db.execute(
             select(Complaint)
-            .options(
-                selectinload(Complaint.barangay),
-                selectinload(Complaint.category),
-                selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses).selectinload(Response.user),
-                selectinload(Complaint.incident_links).selectinload(IncidentComplaintModel.incident).selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
-            )
+            .options(*QueryOptions.complaint_full())
             .where(Complaint.user_id == user_id)
             .order_by(Complaint.created_at.asc())
         )
         complaints = result.scalars().all()
-        
         
         if not complaints:
             return []
@@ -669,7 +562,6 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
-    
 async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: AsyncSession):
     try:
         normalized_hearing_date = (
@@ -687,8 +579,9 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         if not complaint_ids:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
 
-        result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)).options(selectinload(Complaint.user), selectinload(Complaint.barangay)))
-        complaints = result.scalars().all()
+        # OPTIMIZED: Batch fetch all complaints at once instead of in loop
+        complaints_dict = await BatchLoader.fetch_complaints_by_ids(db, complaint_ids, minimal=False)
+        complaints = list(complaints_dict.values())
         
         result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = result.scalar()
@@ -699,6 +592,20 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         if not complaints:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
         
+        # Update all complaints and incident with hearing date
+        await db.execute(
+            update(Complaint)
+            .where(Complaint.id.in_(complaint_ids))
+            .values(hearing_date=normalized_hearing_date)
+        )
+        await db.execute(
+            update(IncidentModel)
+            .where(IncidentModel.id == incident_id)
+            .values(hearing_date=normalized_hearing_date)
+        )
+        await db.commit()
+        
+        # Send notifications using cached complaints
         for complaint in complaints:
             if not complaint:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
@@ -706,10 +613,6 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
             user = complaint.user
             if not user:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found for this complaint")
-            
-            complaint.hearing_date = normalized_hearing_date
-            incident.hearing_date = normalized_hearing_date
-
             
             user_name = f"{user.first_name} {user.last_name}".strip() or user.name or "User"
             
@@ -728,19 +631,24 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 notified_year=datetime.now(timezone.utc).strftime("%Y"),
                 hearing_time=normalized_hearing_date.strftime("%I:%M %p")
             )
+        
+        # Get complaint barangay_id from first complaint for cache invalidation
+        first_complaint = complaints[0] if complaints else None
+        complaint_barangay_id = first_complaint.barangay_id if first_complaint else None
             
-        await invalidate_cache(
+        await CacheInvalidator.invalidate_cache(
             complaint_ids=complaint_ids,
-            user_ids=[complaint.user_id for complaint in complaints],
-            barangay_id=complaint.barangay_id if complaint.barangay_id else None,
+            user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, complaint_ids),
+            barangay_id=complaint_barangay_id,
             incident_ids=[incident_id],
             include_global=False
         )
         
+        user_name = f"{first_complaint.user.first_name} {first_complaint.user.last_name}".strip() if first_complaint and first_complaint.user else "User"
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
-                "message": f"User {user_name} has been notified about the hearing scheduled for complaint '{complaint.title}'"
+                "message": f"User {user_name} has been notified about the hearing scheduled for complaint '{first_complaint.title if first_complaint else ''}'"
             }
         )
         

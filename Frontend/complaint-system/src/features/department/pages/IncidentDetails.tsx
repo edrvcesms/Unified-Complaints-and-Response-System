@@ -227,10 +227,15 @@ export const DepartmentIncidentDetails: React.FC = () => {
     );
   }
 
+  
   const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
   const isSubmitted = incidentStatus === "submitted";
-  const isUnderReview =
-    incidentStatus === "reviewed_by_barangay" || incidentStatus === "reviewed_by_department";
+  const isUnderReviewByBarangay = incidentStatus === "reviewed_by_barangay";
+  const isUnderReviewByDepartment = incidentStatus === "reviewed_by_department";
+  const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
+  const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
+  const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
+  const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
 
     // Check for valid coordinates
     const hasLocation =
@@ -448,21 +453,21 @@ export const DepartmentIncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending || isUnderReview}
+          disabled={reviewIncidentMutation.isPending || isUnderReviewByDepartment || isUnderReviewByLgu || isResolved || isSubmitted || isForwardedToLgu}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
           onClick={handleReject}
-          disabled={rejectIncidentMutation.isPending}
+          disabled={rejectIncidentMutation.isPending || isResolved || isSubmitted || isForwardedToLgu || isUnderReviewByDepartment || isUnderReviewByLgu}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
         </button>
         <button
           onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending || isSubmitted}
+          disabled={resolveIncidentMutation.isPending || isSubmitted || isForwardedToDepartment || isForwardedToLgu || isResolved }
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}

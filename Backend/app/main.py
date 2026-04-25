@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
 from fastapi.requests import Request
 from contextlib import asynccontextmanager
 import os
@@ -6,12 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import select
 from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
 from app.domain.infrastracture.jobs.incident_jobs import run_resolve_expired_incidents
 from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, department_routes, announcement_routes, report_routes, app_feedback_routes, event_routes, sms_routes
 from app.admin import _super_admin_routes as _super_admin
 from app.domain.infrastracture.jobs.incident_expiration_alert import run_expiry_warning_notifications
+from app.database.database import AsyncSessionLocal
+from app.core.redis import redis_client
 scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
@@ -24,6 +27,13 @@ async def lifespan(app: FastAPI):
         id="resolve_expired_incidents",
         replace_existing=True,
     )
+    scheduler.add_job(
+        run_expiry_warning_notifications,
+        trigger="interval",
+        minutes=30,
+        id="expiry_warning_notifications",
+        replace_existing=True,
+    )
     scheduler.start()
     logger.info("Scheduler started.")
 
@@ -31,15 +41,7 @@ async def lifespan(app: FastAPI):
     yield
 
     scheduler.shutdown()
-    
     logger.info("Scheduler shut down.")
-    scheduler.add_job(
-    run_expiry_warning_notifications,
-    trigger="interval",
-    minutes=30,
-    id="expiry_warning_notifications",
-    replace_existing=True,
-)
     logger.info("Application shutdown complete.")
 
 app = FastAPI(lifespan=lifespan)
@@ -47,7 +49,9 @@ app = FastAPI(lifespan=lifespan)
 default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://cfms-stamaria.com"
+    "https://cfms-stamaria.com",
+    "http://localhost:19006",
+    "http://127.0.0.1:19006",
 ]
 
 raw_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
@@ -62,10 +66,29 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+
+@app.get("/readyz")
+async def readyz():
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(select(1))
+        await redis_client.ping()
+        return {"status": "ready"}
+    except Exception:
+        logger.exception("Readiness check failed")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not ready"},
+        )
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):

@@ -15,9 +15,11 @@ export const getStatusColor = (status: string, _userRole?: string): string => {
     resolved: "bg-green-100 text-green-800",
     resolved_by_department: "bg-green-100 text-green-800",
     resolved_by_barangay: "bg-green-100 text-green-800",
+    resolved_by_lgu: "bg-green-100 text-green-800",
     under_review: "bg-primary-100 text-primary-800",
     reviewed_by_department: "bg-primary-100 text-primary-800",
     reviewed_by_barangay: "bg-primary-100 text-primary-800",
+    reviewed_by_lgu: "bg-primary-100 text-primary-800",
     submitted: "bg-yellow-100 text-yellow-800",
     in_progress: "bg-orange-100 text-orange-800",
     pending: "bg-gray-100 text-gray-800",
@@ -29,23 +31,6 @@ export const getStatusColor = (status: string, _userRole?: string): string => {
 
 export const formatStatus = (status: string, _userRole?: string): string => {
   if (!status) return "N/A";
-  
-  const lowerStatus = status.toLowerCase();
-  
-  // Handle forwarded statuses - generalized
-  if (lowerStatus === 'forwarded_to_lgu' || lowerStatus === 'forwarded_to_department') {
-    return "FORWARDED";
-  }
-  
-  // Handle resolved statuses
-  if (lowerStatus === 'resolved_by_department' || lowerStatus === 'resolved_by_barangay') {
-    return "RESOLVED";
-  }
-  
-  // Handle reviewed/under review statuses
-  if (lowerStatus === 'reviewed_by_department' || lowerStatus === 'reviewed_by_barangay') {
-    return "UNDER REVIEW";
-  }
-  
+
   return status.replace(/_/g, " ").toUpperCase();
 };

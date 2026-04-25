@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Archive, MessageSquare } from "lucide-react";
 import { Sidebar as GenericSidebar } from "../../general";
 import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon, EventsIcon } from "./Icons";
+import {LucideBell} from "lucide-react"
 
 interface SidebarProps {
   isOpen: boolean;

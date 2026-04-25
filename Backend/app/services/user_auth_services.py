@@ -64,7 +64,7 @@ async def register_user(user_data: RegisterData, db: AsyncSession):
         raise
 
     except Exception as e:
-        logger.error(f"Error during registration for {user_data.email}: {str(e)}")
+        logger.exception(f"Error during registration for {user_data.email}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during registration. Please try again later."
@@ -250,7 +250,7 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
 
         if not user:
             logger.warning(f"Login attempt with unregistered email: {login_data.email}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This email is not registered. Please check your email or register for a new account.")
 
         if not decrypt_password(login_data.password, user.hashed_password):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
@@ -315,7 +315,7 @@ async def superadmin_login(login_data: LoginData, db: AsyncSession):
 
         if not user:
             logger.warning(f"Login attempt with unregistered email: {login_data.email}")
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This email is not registered. Please check your email or register for a new account.")
 
         if not decrypt_password(login_data.password, user.hashed_password):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")

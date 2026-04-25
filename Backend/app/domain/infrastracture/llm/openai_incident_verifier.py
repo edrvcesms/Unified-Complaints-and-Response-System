@@ -73,5 +73,5 @@ OUTPUT: Reply YES or NO only. No punctuation. No explanation."""
             logger.info(f"OpenAI verification result: {answer}")
             return answer == "YES"
         except Exception as e:
-            logger.error(f"OpenAI verification failed: {e}")
+            logger.exception(f"OpenAI verification failed: {e}")
             return False

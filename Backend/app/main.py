@@ -19,6 +19,7 @@ scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    
     # ── Scheduler ──
     scheduler.add_job(
         run_resolve_expired_incidents,

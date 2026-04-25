@@ -335,7 +335,7 @@ HARD LIMITS
 
       
         except APIConnectionError:
-            logger.error("[OpenAI] %s CONNECTION ERROR", label, exc_info=True)
+            logger.exception("[OpenAI] %s CONNECTION ERROR", label, exc_info=True)
             return (
                 "Paumanhin, mabagal ang koneksyon sa ngayon. "
                 "Pakisuri ang inyong internet connection at subukang muli."
@@ -359,7 +359,7 @@ HARD LIMITS
 
         # ⚠️ GENERIC API ERROR
         except APIError as e:
-            logger.error(
+            logger.exception(
                 "[OpenAI] %s API ERROR | status=%s | message=%s",
                 label, getattr(e, "status_code", "unknown"), str(e),
                 exc_info=True

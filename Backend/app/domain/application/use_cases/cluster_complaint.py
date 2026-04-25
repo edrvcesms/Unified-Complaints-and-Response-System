@@ -321,7 +321,7 @@ class ClusterComplaintUseCase:
                 )
                 
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Failed to upsert vector for complaint_id={data.complaint_id} "
                     f"after merging into incident_id={incident.id}: {str(e)}"
                 )

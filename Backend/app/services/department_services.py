@@ -27,7 +27,7 @@ async def get_all_departments(db: AsyncSession):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in get_all_departments: {e}")
+        logger.exception(f"Error in get_all_departments: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWithUserData:
@@ -57,7 +57,7 @@ async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWi
         raise
       
     except Exception as e:
-        logger.error(f"Error in get_department_account: {e}")
+        logger.exception(f"Error in get_department_account: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
   
 async def get_department_forwarded_incidents(department_account_id: int, db: AsyncSession):
@@ -102,7 +102,7 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in get_department_forwarded_incidents: {e}")
+        logger.exception(f"Error in get_department_forwarded_incidents: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
@@ -151,7 +151,7 @@ async def forwarded_dept_incident_by_barangay(department_account_id: int, barang
         raise
     
     except Exception as e:
-        logger.error(f"Error in forwarded_dept_incident_by_barangay: {e}")
+        logger.exception(f"Error in forwarded_dept_incident_by_barangay: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def weekly_forwarded_incidents_stats(department_account_id: int, db: AsyncSession):
@@ -230,7 +230,7 @@ async def weekly_forwarded_incidents_stats(department_account_id: int, db: Async
         raise
     
     except Exception as e:
-        logger.error(f"Error in weekly_forwarded_incidents_stats: {e}")
+        logger.exception(f"Error in weekly_forwarded_incidents_stats: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
@@ -275,5 +275,5 @@ async def get_incidents_forwarded_to_department(department_account_id: int, db: 
         raise
     
     except Exception as e:
-        logger.error(f"Error in get_incidents_forwarded_to_department: {e}")
+        logger.exception(f"Error in get_incidents_forwarded_to_department: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -77,7 +77,7 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_complaint_by_id: {e}")
+        logger.exception(f"Error in get_complaint_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
@@ -109,7 +109,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_all_complaints: {e}")
+        logger.exception(f"Error in get_all_complaints: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
     
@@ -138,10 +138,10 @@ async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
         raise
     
     except Exception as e:
-        logger.error(f"Error in get_complaints_by_incident: {e}")
+        logger.exception(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except Exception as e:
-        logger.error(f"Error in get_complaints_by_incident: {e}")
+        logger.exception(f"Error in get_complaints_by_incident: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
     
@@ -164,7 +164,7 @@ async def user_complaints_statistics(user_id: int, db: AsyncSession):
         }
 
     except Exception as e:
-        logger.error(f"Error in user_complaints_statistics: {e}")
+        logger.exception(f"Error in user_complaints_statistics: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def get_weekly_stats(barangay_id: int, db: AsyncSession):
@@ -510,7 +510,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in submit_complaint: {e}")
+        logger.exception(f"Error in submit_complaint: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def get_geometric_location_details(latitude: float, longitude: float, barangay_name: str):
@@ -518,7 +518,7 @@ async def get_geometric_location_details(latitude: float, longitude: float, bara
         location = await reverse_geocode(latitude, longitude, barangay_name)
         return location
     except Exception as e:
-        logger.error(f"Error in get_geometric_location_details: {e}")
+        logger.exception(f"Error in get_geometric_location_details: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
  
 async def get_my_complaints(user_id: int, db: AsyncSession):
@@ -557,7 +557,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
         raise
 
     except Exception as e:
-        logger.error(f"Error in get_my_complaints: {e}")
+        logger.exception(f"Error in get_my_complaints: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
@@ -656,7 +656,7 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         raise
     
     except Exception as e:
-        logger.error(f"Error in notify_user_for_hearing: {e}")
+        logger.exception(f"Error in notify_user_for_hearing: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e))
@@ -684,4 +684,4 @@ async def log_status_change(complaint_ids: List[int], new_status: str, changed_b
     
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in log_status_change: {e}")
+        logger.exception(f"Error in log_status_change: {e}")

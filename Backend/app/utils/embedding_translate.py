@@ -40,5 +40,5 @@ async def translate_to_english(text: str) -> str:
         return translated
 
     except Exception as e:
-        logger.error(f"Translation failed (returning original): {e}")
+        logger.exception(f"Translation failed (returning original): {e}")
         return text

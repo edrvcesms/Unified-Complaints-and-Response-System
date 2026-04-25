@@ -31,7 +31,7 @@ async def create_notification(notification_data: NotificationCreateData, db: Asy
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in create_notification: {e}")
+        logger.exception(f"Error in create_notification: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_user_notifications(user_id: int, db: AsyncSession):
@@ -54,7 +54,7 @@ async def get_user_notifications(user_id: int, db: AsyncSession):
       
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in get_user_notifications: {e}")
+        logger.exception(f"Error in get_user_notifications: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
       
 async def mark_notification_as_read(notification_id: int, user_id: int, db: AsyncSession):
@@ -78,7 +78,7 @@ async def mark_notification_as_read(notification_id: int, user_id: int, db: Asyn
       
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in mark_notification_as_read: {e}")
+        logger.exception(f"Error in mark_notification_as_read: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def mark_all_notifications_as_read(user_id: int, db: AsyncSession):
@@ -101,6 +101,6 @@ async def mark_all_notifications_as_read(user_id: int, db: AsyncSession):
       
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error in mark_all_notifications_as_read: {e}")
+        logger.exception(f"Error in mark_all_notifications_as_read: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
       

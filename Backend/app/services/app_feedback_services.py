@@ -44,7 +44,7 @@ async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db:
       raise
     
     except Exception as e:
-      logger.error(f"Error submitting app feedback: {str(e)}")
+      logger.exception(f"Error submitting app feedback: {str(e)}")
       raise HTTPException(
           status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
           detail=f"Error submitting app feedback: {str(e)}"
@@ -60,7 +60,7 @@ async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
         raise
     
     except Exception as e:
-        logger.error(f"Error retrieving app feedback: {str(e)}")
+        logger.exception(f"Error retrieving app feedback: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving app feedback: {str(e)}"
@@ -120,7 +120,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         raise
     
     except Exception as e:
-        logger.error(f"Error submitting post-incident feedback: {str(e)}")
+        logger.exception(f"Error submitting post-incident feedback: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error submitting post-incident feedback: {str(e)}"
@@ -144,7 +144,7 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
         raise
     
     except Exception as e:
-        logger.error(f"Error retrieving post-incident feedback: {str(e)}")
+        logger.exception(f"Error retrieving post-incident feedback: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving post-incident feedback: {str(e)}"
@@ -169,7 +169,7 @@ async def get_resolver_feedbacks(user_id: int, db: AsyncSession) -> list[PostInc
         raise
     
     except Exception as e:
-        logger.error(f"Error retrieving resolver feedback: {str(e)}")
+        logger.exception(f"Error retrieving resolver feedback: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving resolver feedback: {str(e)}"

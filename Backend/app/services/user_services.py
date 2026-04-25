@@ -34,7 +34,7 @@ async def get_user_by_id(user_id: int, db: AsyncSession) -> UserData:
         raise
 
     except Exception as e:
-        logger.error(f"Error retrieving user by ID {user_id}: {str(e)}")
+        logger.exception(f"Error retrieving user by ID {user_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def forgot_password(email_data: VerifyEmailData, db: AsyncSession):
@@ -58,7 +58,7 @@ async def forgot_password(email_data: VerifyEmailData, db: AsyncSession):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error requesting forgot password for email {email_data.email}: {str(e)}")
+        logger.exception(f"Error requesting forgot password for email {email_data.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def create_new_password(password_data: ResetPasswordData, db: AsyncSession):
@@ -90,7 +90,7 @@ async def create_new_password(password_data: ResetPasswordData, db: AsyncSession
     
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error creating new password for email {password_data.email}: {str(e)}")
+        logger.exception(f"Error creating new password for email {password_data.email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
@@ -124,7 +124,7 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error requesting reset password for email {normalized_email}: {str(e)}")
+        logger.exception(f"Error requesting reset password for email {normalized_email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: AsyncSession):
@@ -164,7 +164,7 @@ async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: As
         raise
     except Exception as e:
         print(f"[VERIFY OTP] Unexpected error: {str(e)}")  # Added so hidden errors are visible
-        logger.error(f"Error verifying OTP for reset password: {str(e)}")
+        logger.exception(f"Error verifying OTP for reset password: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def change_password(password_data: ChangePasswordData, db: AsyncSession):
@@ -198,7 +198,7 @@ async def change_password(password_data: ChangePasswordData, db: AsyncSession):
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error changing password for user ID {password_data}: {str(e)}")
+        logger.exception(f"Error changing password for user ID {password_data}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 async def update_user_location(user_id: int, location_data: UserLocationData, db: AsyncSession):
@@ -230,7 +230,7 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
 
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating location for user ID {user_id}: {str(e)}")
+        logger.exception(f"Error updating location for user ID {user_id}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 

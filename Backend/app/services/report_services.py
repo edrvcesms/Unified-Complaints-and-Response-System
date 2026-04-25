@@ -122,5 +122,5 @@ async def get_monthly_report(barangay_id: int, user_id: int, db: AsyncSession, m
     raise
   
   except Exception as e:
-    logger.error(f"Error generating monthly report for barangay ID {barangay_id}: {str(e)}")
+    logger.exception(f"Error generating monthly report for barangay ID {barangay_id}: {str(e)}")
     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while generating the report.")

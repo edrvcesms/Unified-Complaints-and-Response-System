@@ -37,7 +37,7 @@ async def upload_to_cloudinary(file: UploadFile, folder: str) -> str:
         result = await asyncio.to_thread(sync_upload, file.file, **upload_params)
         return result.get("secure_url")
     except Exception as e:
-        logger.error(f"Failed to upload file {file.filename}: {e}")
+        logger.exception(f"Failed to upload file {file.filename}: {e}")
         raise ValueError(f"Failed to upload file {file.filename}: {e}")
 
 async def upload_multiple_files_to_cloudinary(files: List[UploadFile], folder: str, max_concurrent: int = 2) -> List[str]:
@@ -53,7 +53,7 @@ async def _destroy_with_retry(public_id: str, resource_type: str, max_attempts: 
         try:
             return await asyncio.to_thread(sync_destroy, public_id, resource_type=resource_type)
         except Exception as e:
-            logger.warning(
+            logger.exception(
                 f"Cloudinary delete failed (attempt {attempt}/{max_attempts}) for {public_id} as {resource_type}: {type(e).__name__}: {e}"
             )
             if attempt < max_attempts:
@@ -93,14 +93,14 @@ async def delete_from_cloudinary(public_id: str) -> bool:
                         logger.info(f"Successfully deleted {decoded_public_id} as {alt_type}")
                         return True
                 except Exception:
-                    pass
+                    logger.exception(f"Error trying alternative resource type {alt_type} for {decoded_public_id}")
             logger.error(f"Could not delete {decoded_public_id} with any resource type")
             return False
         else:
-            logger.error(f"Unexpected result deleting {decoded_public_id}: {result}")
+            logger.exception(f"Unexpected result deleting {decoded_public_id}: {result}")
             return False
     except Exception as e:
-        logger.error(f"Exception while deleting {public_id} from Cloudinary: {type(e).__name__}: {e}")
+        logger.exception(f"Exception while deleting {public_id} from Cloudinary: {type(e).__name__}: {e}")
         return False
 
 async def delete_multiple_from_cloudinary(public_ids: List[str], max_concurrent: int = 2) -> List[bool]:
@@ -121,7 +121,7 @@ def extract_public_id_from_url(url: str) -> str:
     try:
         parts = url.split('/upload/')
         if len(parts) < 2:
-            logger.error(f"Invalid Cloudinary URL format: {url}")
+            logger.exception(f"Invalid Cloudinary URL format: {url}")
             return ""
         
         path_after_upload = parts[1]
@@ -136,5 +136,5 @@ def extract_public_id_from_url(url: str) -> str:
         
         return public_id
     except Exception as e:
-        logger.error(f"Failed to extract public_id from URL {url}: {e}")
+        logger.exception(f"Failed to extract public_id from URL {url}: {e}")
         return ""

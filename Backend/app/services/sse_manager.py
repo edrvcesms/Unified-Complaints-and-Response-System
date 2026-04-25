@@ -57,12 +57,12 @@ class SSEManager:
                     else:
                         await self._fan_out_user(str(target), formatted)
                 except Exception as e:
-                    logger.error(f"Error processing SSE message: {e}")
+                    logger.exception(f"Error processing SSE message: {e}")
                     continue
         except asyncio.CancelledError:
             logger.info("SSE Redis listener task cancelled.")
         except Exception as e:
-            logger.error(f"Error in SSE listener: {e}")
+            logger.exception(f"Error in SSE listener: {e}")
             await asyncio.sleep(1)
             logger.info("Restarting SSE Redis listener task after failure.")
             self._listener_task = asyncio.create_task(self._redis_listener())

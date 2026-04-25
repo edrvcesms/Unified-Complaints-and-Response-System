@@ -2,7 +2,7 @@ from app.models.response import Response
 from app.models.response_attachments import ResponseAttachments
 from app.utils.template_renderer import render_template
 from datetime import datetime, timezone
-from app.services.sse_manager import sse_manager
+from asgiref.sync import async_to_sync
 import asyncio
 import atexit
 import base64
@@ -39,8 +39,10 @@ from app.utils.attachments import validate_encoded_upload
 from app.core.config import settings
 from app.utils.redis_pub import publish_sse_event
 from app.utils.cache_invalidator_optimized import CacheInvalidator, invalidate_cache
-
 resend.api_key = settings.RESEND_API_KEY
+from app.utils.upload_helper import prepare_upload_files
+
+
 _vector_repository = None
 _severity_calculator = None
 _openai_incident_verifier = None
@@ -74,50 +76,6 @@ def get_severity_calculator():
     return _severity_calculator
 
 
-_celery_event_loop = None
-
-def _get_or_create_celery_event_loop():
-    """Reuse one event loop per Celery worker process for async resources."""
-    global _celery_event_loop
-
-    if _celery_event_loop is not None and not _celery_event_loop.is_closed():
-        asyncio.set_event_loop(_celery_event_loop)
-        return _celery_event_loop
-
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            raise RuntimeError("Current event loop is closed")
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    _celery_event_loop = loop
-    return loop
-
-
-def _close_celery_event_loop():
-    global _celery_event_loop
-    if _celery_event_loop is not None and not _celery_event_loop.is_closed():
-        _celery_event_loop.close()
-    _celery_event_loop = None
-
-
-atexit.register(_close_celery_event_loop)
-
-
-def run_async(coro):
-    loop = _get_or_create_celery_event_loop()
-
-    if loop.is_running():
-        # Defensive fallback for unexpected nested-loop environments.
-        temp_loop = asyncio.new_event_loop()
-        try:
-            return temp_loop.run_until_complete(coro)
-        finally:
-            temp_loop.close()
-
-    return loop.run_until_complete(coro)
 
 def _send_email(subject, recipient, body):
     response = resend.Emails.send({
@@ -133,6 +91,7 @@ def _send_email(subject, recipient, body):
 
     return response
 
+
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_push_notification_task(self, token: str, enabled: bool, title: str = None, body: str = "", data: dict = None, sound: str = "default", expo_token: str = None):
     try:
@@ -146,11 +105,11 @@ def send_push_notification_task(self, token: str, enabled: bool, title: str = No
             expo_token=expo_token,
         )
         if not result["success"]:
-            logger.error(f"Push notification failed: {result}")
+            logger.exception(f"Push notification failed: {result}")
         else:
             logger.info(f"Push notification sent successfully: {result}")
     except Exception as e:
-        logger.error(f"Push notification task failed: {e}")
+        logger.exception(f"Push notification task failed: {e}")
         raise self.retry(exc=e)
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -167,10 +126,10 @@ def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
         msg = str(e).lower()
 
         if any(x in msg for x in ["invalid", "not verified", "domain"]):
-            logger.error(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            logger.exception(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
             raise e  # don't retry
 
-        logger.warning(f"[RETRY_EMAIL] to={recipient} error={e}")
+        logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
         raise self.retry(exc=e)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -217,10 +176,10 @@ def notify_user_for_hearing_task(
         msg = str(e).lower()
 
         if any(x in msg for x in ["invalid", "not verified", "domain"]):
-            logger.error(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            logger.exception(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
             raise e  # don't retry
 
-        logger.warning(f"[RETRY_EMAIL] to={recipient} error={e}")
+        logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
         raise self.retry(exc=e)
 
 
@@ -231,16 +190,7 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
         file_objs = []
 
         try:
-            for f in files_data:
-                validate_encoded_upload(f)
-                content_bytes = base64.b64decode(f["content_b64"])
-                file_obj = io.BytesIO(content_bytes)
-                upload_file = UploadFile(
-                    filename=f["filename"],
-                    file=file_obj,
-                    headers=Headers({"content-type": f["content_type"]}),
-                )
-                file_objs.append(upload_file)
+            file_objs = prepare_upload_files(files_data)
 
             urls = await upload_multiple_files_to_cloudinary(file_objs, folder="ucrs/attachments")
 
@@ -271,9 +221,9 @@ def upload_attachments_task(self, files_data, complaint_id: int, uploader_id: in
                     pass
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Upload failed: {e}")
+        logger.exception(f"Upload failed: {e}")
         raise self.retry(exc=e)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -284,16 +234,7 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
 
         try:
             # Prepare UploadFile objects
-            for f in files_data:
-                validate_encoded_upload(f)
-                content_bytes = base64.b64decode(f["content_b64"])
-                file_obj = io.BytesIO(content_bytes)
-                upload_file = UploadFile(
-                    filename=f["filename"],
-                    file=file_obj,
-                    headers=Headers({"content-type": f["content_type"]}),
-                )
-                file_objs.append(upload_file)
+            file_objs = prepare_upload_files(files_data)
 
             # Upload to Cloudinary
             urls = await upload_multiple_files_to_cloudinary(
@@ -326,14 +267,17 @@ def upload_announcement_media_task(self, files_data, announcement_id: int, uploa
                     f.file.close()
                 except:
                     pass
-            
-            await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+            try:
+                
+                await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+            except Exception as e:
+                logger.exception(f"Cache invalidation failed after upload: {e}")
             logger.info(f"Enqueued upload task for {len(files_data)} media files and invalidated relevant caches")
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Announcement media upload failed: {e}")
+        logger.exception(f"Announcement media upload failed: {e}")
         raise self.retry(exc=e)  
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -375,8 +319,10 @@ def delete_announcement_media_task(self, public_ids, announcement_id: int, uploa
                 .where(AnnouncementMedia.announcement_id == announcement_id)
             )
             await db.commit()
-
-        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+        try:
+            await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement_id)
+        except Exception as e:
+            logger.exception(f"Cache invalidation failed after deletion: {e}")
         logger.info(f"uploader_id={uploader_id} deletion task completed for announcement_id={announcement_id} with {sum(results)} successes and {len(results) - sum(results)} failures")
 
         return {
@@ -385,9 +331,9 @@ def delete_announcement_media_task(self, public_ids, announcement_id: int, uploa
         }
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Delete failed: {e}")
+        logger.exception(f"Delete failed: {e}")
         raise self.retry(exc=e)
         
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -398,17 +344,8 @@ def upload_event_media_task(self, files_data, event_id: int):
 
         try:
             # Prepare UploadFile objects
-            for f in files_data:
-                validate_encoded_upload(f)
-                content_bytes = base64.b64decode(f["content_b64"])
-                file_obj = io.BytesIO(content_bytes)
-                upload_file = UploadFile(
-                    filename=f["filename"],
-                    file=file_obj,
-                    headers=Headers({"content-type": f["content_type"]}),
-                )
-                file_objs.append(upload_file)
-
+            file_objs = prepare_upload_files(files_data)
+            
             # Upload to Cloudinary
             urls = await upload_multiple_files_to_cloudinary(
                 file_objs, folder="ucrs/events"
@@ -440,13 +377,14 @@ def upload_event_media_task(self, files_data, event_id: int):
                     f.file.close()
                 except:
                     pass
-
-            await invalidate_cache(event_ids=[event_id])
-
+            try:
+                await invalidate_cache(event_ids=[event_id])
+            except Exception as e:
+                logger.exception(f"Cache invalidation failed after event media upload: {e}")
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Event media upload failed: {e}")
+        logger.exception(f"Event media upload failed: {e}")
         raise self.retry(exc=e)
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -486,7 +424,10 @@ def delete_event_media_task(self, public_ids, event_id: int):
             )
             await db.commit()
 
-        await invalidate_cache(event_ids=[event_id])
+        try:
+            await invalidate_cache(event_ids=[event_id])
+        except Exception as e:
+            logger.exception(f"Cache invalidation failed after event media deletion: {e}")
         logger.info(
             f"event_id={event_id} deletion task completed with {sum(results)} successes and {len(results) - sum(results)} failures"
         )
@@ -497,9 +438,9 @@ def delete_event_media_task(self, public_ids, event_id: int):
         }
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Event media delete failed: {e}")
+        logger.exception(f"Event media delete failed: {e}")
         raise self.retry(exc=e)
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -510,16 +451,7 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
 
         try:
             # Prepare UploadFile objects
-            for f in files_data:
-                validate_encoded_upload(f)
-                content_bytes = base64.b64decode(f["content_b64"])
-                file_obj = io.BytesIO(content_bytes)
-                upload_file = UploadFile(
-                    filename=f["filename"],
-                    file=file_obj,
-                    headers=Headers({"content-type": f["content_type"]}),
-                )
-                file_objs.append(upload_file)
+            file_objs = prepare_upload_files(files_data)
 
             # Upload to Cloudinary
             urls = await upload_multiple_files_to_cloudinary(
@@ -552,14 +484,16 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
                     f.file.close()
                 except:
                     pass
-            
-            await invalidate_cache(response_id=response_id)
+            try:
+                await invalidate_cache(response_ids=[response_id])
+            except Exception as e:
+                logger.exception(f"Cache invalidation failed after remarks attachment upload: {e}")
             logger.info(f"Enqueued upload task for {len(files_data)} response attachments and invalidated relevant caches")
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Response attachment upload failed: {e}")
+        logger.exception(f"Response attachment upload failed: {e}")
         raise self.retry(exc=e)  
     
 
@@ -597,9 +531,9 @@ def delete_cloudinary_media_task(self, public_ids):
         }
 
     try:
-        return run_async(_run())
+        return async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Delete failed: {e}")
+        logger.exception(f"Delete failed: {e}")
         raise self.retry(exc=e)
 
 
@@ -621,7 +555,7 @@ def recalculate_severity_task(self, incident_id: int):
             await db.commit()
             return incident
 
-    incident = run_async(_run())
+    incident = async_to_sync(_run)()
 
     return {
         "incident_id": incident.id,
@@ -758,16 +692,21 @@ def cluster_complaint_task(self, complaint_data: dict):
 
             await db.commit()
 
-            await invalidate_cache(
+            try:
+                await invalidate_cache(
                 complaint_ids=[cluster_data.complaint_id],
                 user_ids=[cluster_data.user_id],
                 barangay_id=cluster_data.barangay_id,
                 incident_ids=[result.incident_id],
                 include_global=True,
             )
+            except Exception as e:
+                logger.exception(f"Cache invalidation failed after clustering: {e}")
+                
+                
             return result
 
-    result = run_async(_run())
+    result = async_to_sync(_run)()
 
     # CACHE CLEANUP
     async def _cleanup_cache():
@@ -779,7 +718,7 @@ def cluster_complaint_task(self, complaint_data: dict):
         for k in keys:
             await delete_cache(k)
 
-    run_async(_cleanup_cache())
+    async_to_sync(_cleanup_cache)()
 
     # TRIGGER SEVERITY RECALCULATION
     recalculate_severity_task.apply_async(
@@ -841,7 +780,7 @@ def send_notifications_task(
                 }
             )
             
-    run_async(_run())
+    async_to_sync(_run)()
 
     
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
@@ -868,7 +807,7 @@ def save_response_task(self, incident_id: int, responder_id: int, actions_taken:
         }
 
     try:
-        run_async(_run())
+        async_to_sync(_run)()
     except Exception as e:
-        logger.error(f"Response failed: {e}")
+        logger.exception(f"Response failed: {e}")
         raise self.retry(exc=e)

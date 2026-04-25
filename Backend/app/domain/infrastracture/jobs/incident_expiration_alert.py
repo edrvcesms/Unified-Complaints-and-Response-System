@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload
+from app.database.database import AsyncSessionLocal
 from app.dependencies.db_dependency import get_async_db
 from app.models.incident_model import IncidentModel
 from app.models.barangay import Barangay
-from app.tasks import send_notifications_task
 import logging
 
 logger = logging.getLogger(__name__)
@@ -122,6 +122,9 @@ def _should_notify(incident, target_user_id: int, current_checkpoint: int) -> bo
 
 
 async def run_expiry_warning_notifications():
+    
+    from app.tasks import send_notifications_task
+
     """
     Scheduler job — runs every 30 minutes via AsyncIOScheduler.
 
@@ -164,14 +167,13 @@ async def run_expiry_warning_notifications():
         - Early return if no qualifying incidents found
     """
     logger.info("Running expiry warning notification job...")
-    now = datetime.utcnow()
-
+    now = datetime.now(timezone.utc)
     # Fetch incidents that could possibly be in any checkpoint window
     # (anything expiring within the next 24.5hrs to cover the widest checkpoint)
     max_window = now + timedelta(hours=max(EXPIRY_CHECKPOINTS_HOURS) + 0.5)
 
     try:
-        async for db in get_async_db():
+        async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(IncidentModel)
                 .where(
@@ -227,7 +229,7 @@ async def run_expiry_warning_notifications():
 
                 hours_left = round(hours_until_expiry, 1)
                 urgency = "CRITICAL" if current_checkpoint == 3 else "Warning"
-
+                
                 send_notifications_task.delay(
                     user_id=target_user_id,
                     title=f"{urgency}: Incident Expiring in {current_checkpoint} Hours",
@@ -267,5 +269,5 @@ async def run_expiry_warning_notifications():
                 )
 
     except Exception as e:
-        logger.error(f"Error in run_expiry_warning_notifications: {str(e)}")
+        logger.exception(f"Error in run_expiry_warning_notifications: {str(e)}")
         raise

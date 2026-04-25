@@ -204,7 +204,7 @@ class PineconeVectorRepository(IVectorRepository):
             return vector_data["values"]
 
         except Exception as e:
-            logger.error(f"Error fetching vector for incident_id={incident_id}: {e}")
+            logger.exception(f"Error fetching vector for incident_id={incident_id}: {e}")
             return None
 
     async def fetch_incident_vectors_batch(
@@ -224,7 +224,7 @@ class PineconeVectorRepository(IVectorRepository):
                 if "values" in vec_data
             }
         except Exception as e:
-            logger.error(f"Batch fetch failed: {e}")
+            logger.exception(f"Batch fetch failed: {e}")
             return {}
 
     def compute_similarity(self, vec_a: list[float], vec_b: list[float]) -> float:

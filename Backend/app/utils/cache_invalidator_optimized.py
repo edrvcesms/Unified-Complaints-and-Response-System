@@ -129,7 +129,7 @@ class CacheInvalidator:
                 f"(pipeline took ~{len(keys)/100:.2f}ms)"
             )
         except Exception as e:
-            logger.error(f"Error during batch cache deletion: {e}")
+            logger.exception(f"Error during batch cache deletion: {e}")
             # Fallback: delete keys individually
             await CacheInvalidator._fallback_individual_delete(keys)
 
@@ -143,7 +143,7 @@ class CacheInvalidator:
             )
             logger.warning(f"Fallback: deleted {len(keys)} cache keys individually")
         except Exception as e:
-            logger.error(f"Fallback cache deletion also failed: {e}")
+            logger.exception(f"Fallback cache deletion also failed: {e}")
 
     @staticmethod
     async def clear_all_cache() -> None:
@@ -152,7 +152,7 @@ class CacheInvalidator:
             await redis_client.flushdb()
             logger.warning("CLEARED ALL REDIS CACHE - This should only be used in development!")
         except Exception as e:
-            logger.error(f"Error clearing all cache: {e}")
+            logger.exception(f"Error clearing all cache: {e}")
 
 
 # Backward compatibility: keep old function name

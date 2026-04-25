@@ -25,7 +25,7 @@ async def upload_attachments(files: List[UploadFile], uploader_id: int, complain
 
         urls = upload_attachments_task.delay(files_data, complaint_id=complaint_id, uploader_id=uploader_id)
         if not urls:
-            logger.error("Failed to enqueue attachment upload task")
+            logger.exception("Failed to enqueue attachment upload task")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to enqueue upload task"
@@ -36,7 +36,7 @@ async def upload_attachments(files: List[UploadFile], uploader_id: int, complain
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error preparing attachments for upload: {e}")
+        logger.exception(f"Error preparing attachments for upload: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process attachments"
@@ -78,7 +78,7 @@ async def enqueue_response_attachments(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error preparing response attachments for upload: {e}")
+        logger.exception(f"Error preparing response attachments for upload: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process response attachments"

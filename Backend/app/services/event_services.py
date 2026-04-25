@@ -40,7 +40,7 @@ async def get_events(db: AsyncSession):
         logger.info("Events stored in cache")
         return event_data
     except Exception as e:
-        logger.error(f"Error fetching events: {e}")
+        logger.exception(f"Error fetching events: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch events")
     
 async def get_event_by_id(event_id: int, db: AsyncSession):
@@ -67,7 +67,7 @@ async def get_event_by_id(event_id: int, db: AsyncSession):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching event {event_id}: {e}")
+        logger.exception(f"Error fetching event {event_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch event")
 
 async def create_new_event(event_data: EventCreate, event_files: Optional[List[UploadFile]], db: AsyncSession) -> Event:
@@ -113,7 +113,7 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
             
             except Exception as e:
                 await db.rollback()
-                logger.error(f"Error preparing event media for upload: {e}")
+                logger.exception(f"Error preparing event media for upload: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to prepare media for upload"
@@ -129,7 +129,7 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
         raise
       
     except Exception as e:
-        logger.error(f"Error creating event: {e}")
+        logger.exception(f"Error creating event: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create event")
     
 async def update_event(event_id: int, event_data: EventCreate, event_files: Optional[List[UploadFile]],keep_media_ids: Optional[List[int]], db: AsyncSession,):
@@ -216,7 +216,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error updating event {event_id}: {e}")
+        logger.exception(f"Error updating event {event_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update event",
@@ -245,7 +245,7 @@ async def delete_event(event_id: int, db: AsyncSession):
         raise
     except Exception as e:
         await db.rollback()
-        logger.error(f"Error deleting event {event_id}: {e}")
+        logger.exception(f"Error deleting event {event_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete event")
     
 

@@ -66,7 +66,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
             self._index.upsert(vectors=[payload], namespace=self._namespace)
             logger.info(f"Upserted chunk '{chunk_id}' from source '{source}'")
         except Exception as e:
-            logger.error(f"Pinecone upsert failed for chunk '{chunk_id}': {e}")
+            logger.exception(f"Pinecone upsert failed for chunk '{chunk_id}': {e}")
             raise
 
     # ── Read ────────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
                 filter=filters or {},
             )
         except Exception as e:
-            logger.error(f"Pinecone query failed: {e}")
+            logger.exception(f"Pinecone query failed: {e}")
             raise
 
         results: List[RAGRetrievalResult] = []
@@ -128,7 +128,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
             self._index.delete(ids=[chunk_id], namespace=self._namespace)
             logger.info(f"Deleted chunk '{chunk_id}'")
         except Exception as e:
-            logger.error(f"Pinecone delete failed for chunk '{chunk_id}': {e}")
+            logger.exception(f"Pinecone delete failed for chunk '{chunk_id}': {e}")
             raise
 
     async def fetch_chunk_by_id(self, chunk_id: str) -> Optional[RAGRetrievalResult]:
@@ -146,7 +146,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
                 metadata=meta,
             )
         except Exception as e:
-            logger.error(f"Pinecone fetch failed for chunk '{chunk_id}': {e}")
+            logger.exception(f"Pinecone fetch failed for chunk '{chunk_id}': {e}")
             raise
 
     async def fetch_chunks_by_source(self, source: str) -> List[RAGRetrievalResult]:
@@ -176,7 +176,7 @@ class PineconeRAGVectorRepository(IRAGVectorRepository):
                 )
             return results
         except Exception as e:
-            logger.error(f"Pinecone source fetch failed for '{source}': {e}")
+            logger.exception(f"Pinecone source fetch failed for '{source}': {e}")
             raise
 
     # ── Local math ──────────────────────────────────────────────────────────

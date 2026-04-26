@@ -9,6 +9,8 @@ export const useNotifications = () => {
     queryKey: ['notifications'],
     queryFn: getUserNotifications,
     refetchOnWindowFocus: false,
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
   });
 
   const markAsReadMutation = useMutation({

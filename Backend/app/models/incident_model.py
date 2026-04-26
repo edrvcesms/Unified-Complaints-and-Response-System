@@ -72,6 +72,7 @@ class IncidentModel(Base):
     category = relationship("Category", back_populates="incidents")
     department_account = relationship("DepartmentAccount", back_populates="incidents")
     post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="incident", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="incident", cascade="all, delete-orphan")
     __table_args__ = (
         # Composite index for the most common query pattern:
         # "Find active incidents in this barangay + category"

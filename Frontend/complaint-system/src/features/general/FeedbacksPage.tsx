@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { useResolvedPostIncidentFeedbacks } from "../../hooks/useAppFeedback";
 import { ErrorMessage } from "./ErrorMessage";
 import { PageHeader } from "./PageHeader";
 import type { PostIncidentFeedback } from "../../types/feedbacks/postIncidentFeedback";
+import { Pagination } from "../barangay/components/Pagination";
+
+const FEEDBACKS_PER_PAGE = 10;
 
 interface FeedbacksPageProps {
   title: string;
@@ -40,6 +43,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
   const navigate = useNavigate();
   const { feedbacks, isLoading, error } = useResolvedPostIncidentFeedbacks();
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredFeedbacks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -61,6 +65,24 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
       );
     });
   }, [feedbacks, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFeedbacks.length / FEEDBACKS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const paginatedFeedbacks = useMemo(() => {
+    const start = (currentPage - 1) * FEEDBACKS_PER_PAGE;
+    const end = start + FEEDBACKS_PER_PAGE;
+    return filteredFeedbacks.slice(start, end);
+  }, [filteredFeedbacks, currentPage]);
 
   const totalFeedbacks = feedbacks?.length || 0;
   const averageRating = totalFeedbacks > 0
@@ -98,9 +120,12 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+        <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+          Swipe horizontally to view all columns.
+        </div>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <table className="w-full min-w-[860px]">
+            <thead className="bg-gray-50 border-y border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Feedback ID</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">User</th>
@@ -126,7 +151,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredFeedbacks.map((feedback) => (
+                paginatedFeedbacks.map((feedback) => (
                   <tr key={feedback.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-mono text-gray-500">#{feedback.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
@@ -158,6 +183,12 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

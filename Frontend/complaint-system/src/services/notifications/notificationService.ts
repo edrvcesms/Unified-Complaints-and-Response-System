@@ -60,13 +60,31 @@ export class NotificationService {
 
   private async connectWithFetch(url: string, token: string) {
     try {
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'text/event-stream',
         },
         credentials: 'include',
       });
+
+      // SSE uses fetch directly, so it must refresh token explicitly on 401.
+      if (response.status === 401) {
+        await useAuthStore.getState().refreshAccessToken();
+        const refreshedToken = useAuthStore.getState().accessToken;
+
+        if (!refreshedToken) {
+          throw new Error('Unauthorized: token refresh failed');
+        }
+
+        response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${refreshedToken}`,
+            'Accept': 'text/event-stream',
+          },
+          credentials: 'include',
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

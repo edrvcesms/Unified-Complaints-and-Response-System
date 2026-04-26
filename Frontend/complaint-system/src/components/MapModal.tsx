@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import 'leaflet/dist/leaflet.css';
 
 interface MapModalProps {
@@ -24,8 +28,8 @@ const modalStyle: React.CSSProperties = {
 };
 
 const mapContainerStyle: React.CSSProperties = {
-  width: '80vw',
-  height: '80vh',
+  width: 'min(92vw, 1100px)',
+  height: 'min(84vh, 760px)',
   background: '#fff',
   borderRadius: 12,
   position: 'relative',
@@ -42,8 +46,8 @@ const closeButtonStyle: React.CSSProperties = {
   border: '2px solid #333',
   color: '#222',
   borderRadius: '50%',
-  width: 44,
-  height: 44,
+  width: 40,
+  height: 40,
   fontSize: 24,
   cursor: 'pointer',
   display: 'flex',
@@ -53,8 +57,8 @@ const closeButtonStyle: React.CSSProperties = {
 
 const toggleButtonStyle: React.CSSProperties = {
   position: 'absolute',
-  bottom: 16,
-  right: 16,
+  bottom: 14,
+  right: 14,
   zIndex: 1001,
   background: 'rgba(255,255,255,0.95)',
   border: '1px solid #ddd',
@@ -68,6 +72,12 @@ const toggleButtonStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 6,
 };
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 const MapModal: React.FC<MapModalProps> = ({
   open,

@@ -2,6 +2,7 @@ import { MessageSquare, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ErrorMessage } from "../ErrorMessage";
 import { useFeedbacks } from "../../../hooks/useFeedbacks";
+import { Pagination } from "../../barangay/components/Pagination";
 
 const FEEDBACKS_PER_PAGE = 6;
 
@@ -53,8 +54,6 @@ export const FeedbacksPage: React.FC = () => {
 
   const totalFeedbacks = feedbacks?.length || 0;
   const totalPages = Math.max(1, Math.ceil(totalFeedbacks / FEEDBACKS_PER_PAGE));
-  // Star of one feedback
-  console.log("First feedback rating:", feedbacks?.[0]?.ratings);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -72,21 +71,6 @@ export const FeedbacksPage: React.FC = () => {
     const end = start + FEEDBACKS_PER_PAGE;
     return feedbacks.slice(start, end);
   }, [feedbacks, currentPage]);
-
-  const visiblePages = useMemo(() => {
-    const start = Math.max(1, currentPage - 2);
-    const end = Math.min(totalPages, currentPage + 2);
-    const pages: number[] = [];
-
-    for (let page = start; page <= end; page += 1) {
-      pages.push(page);
-    }
-
-    return pages;
-  }, [currentPage, totalPages]);
-
-  const startItem = totalFeedbacks === 0 ? 0 : (currentPage - 1) * FEEDBACKS_PER_PAGE + 1;
-  const endItem = Math.min(currentPage * FEEDBACKS_PER_PAGE, totalFeedbacks);
 
   if (error) {
     return <ErrorMessage message="Failed to load post-incident feedbacks. Please refresh." />;
@@ -180,47 +164,12 @@ export const FeedbacksPage: React.FC = () => {
           )}
 
           {totalFeedbacks > 0 && (
-            <div className="mt-2 flex flex-col items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:flex-row">
-              <p className="text-xs text-slate-600">
-                Showing {startItem}-{endItem} of {totalFeedbacks}
-              </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Prev
-                </button>
-
-                <div className="flex items-center gap-1">
-                  {visiblePages.map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setCurrentPage(page)}
-                      className={`h-8 w-8 rounded-lg text-xs font-semibold transition-colors ${
-                        page === currentPage
-                          ? "bg-slate-900 text-white"
-                          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+            <div className="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>

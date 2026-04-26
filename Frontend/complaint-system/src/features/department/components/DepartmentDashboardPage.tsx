@@ -54,6 +54,7 @@ interface WeeklyDataPoint {
 
 export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = ({ incidents, isLoading }) => {
   const { t } = useTranslation();
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
   const stats = useMemo(() => ({
     forwardedToDepartment: incidents.filter(i =>
@@ -109,9 +110,14 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 86 : 110,
         labels: {
-          font: { size: 14 },
-          padding: 12,
+          font: { size: isMobile ? 10 : 14 },
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          padding: isMobile ? 8 : 12,
         },
       },
       tooltip: {
@@ -120,12 +126,12 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
     },
     scales: {
       x: {
-        ticks: { color: "#9ca3af", font: { size: 15 } },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 11 : 15 }, maxRotation: isMobile ? 0 : 45 },
         grid: { display: false },
       },
       y: {
         beginAtZero: true,
-        ticks: { color: "#9ca3af", font: { size: 15 }, precision: 0 },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 11 : 15 }, precision: 0 },
         grid: { color: "#f0f0f0" },
       },
     },
@@ -176,7 +182,7 @@ export const DepartmentDashboardPage: React.FC<DepartmentDashboardPageProps> = (
           <h2 className="text-base font-semibold text-gray-700">{t('dashboard.dept.weeklyTitle')}</h2>
           <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.dept.weeklyDescription')}</p>
         </div>
-        <div className="w-full h-[300px]">
+        <div className="w-full h-[22rem] sm:h-[300px]">
           <ChartJsBar data={weeklyChartData} options={weeklyChartOptions} />
         </div>
       </div>

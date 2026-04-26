@@ -18,15 +18,15 @@ export const NotificationsPage: React.FC = () => {
   const totalNotifications = notifications?.length ?? 0;
   const unreadNotifications = notifications?.filter((notification) => !notification.is_read).length ?? 0;
 
-  const getComplaintPath = (complaintId: number) => {
+  const getIncidentPath = (incidentId: number) => {
     if (userRole === "barangay_official") {
-      return `/dashboard/incidents/complaints/${complaintId}`;
+      return `/dashboard/incidents/${incidentId}`;
     }
     if (userRole === "lgu_official") {
-      return `/lgu/incidents/complaints/${complaintId}`;
+      return `/lgu/incidents/${incidentId}`;
     }
     if (userRole === "department_staff") {
-      return `/department/incidents/complaints/${complaintId}`;
+      return `/department/incidents/${incidentId}`;
     }
     return null;
   };
@@ -36,8 +36,8 @@ export const NotificationsPage: React.FC = () => {
       markAsRead(notification.id);
     }
 
-    if (notification.complaint_id) {
-      const targetPath = getComplaintPath(notification.complaint_id);
+    if (notification.incident_id) {
+      const targetPath = getIncidentPath(notification.incident_id);
       if (targetPath) {
         navigate(targetPath);
       }

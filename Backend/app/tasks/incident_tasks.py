@@ -285,6 +285,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                                 title="Hearing update",
                                 message=f"Hearing already happened on {incident_hearing_date}",
                                 complaint_id=cluster_data.complaint_id,
+                                incident_id=result.incident_id,
                                 notification_type="info",
                                 channel="in_app",
                             )

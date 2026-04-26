@@ -473,7 +473,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         
         cluster_data = ClusterComplaintSchema.model_validate(input_dto.__dict__)
         
-        cluster_complaint_task.delay(complaint_data=cluster_data.model_dump())
+        cluster = cluster_complaint_task.delay(complaint_data=cluster_data.model_dump())
 
         result = await db.execute(
             select(Complaint)
@@ -492,6 +492,7 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
                 title="New Complaint Submitted",
                 message=f"New complaint has been submitted: {updated_complaint.title}",
                 complaint_id=updated_complaint.id,
+                incident_id=cluster.result().incident_id if cluster else None,
                 notification_type="info",
                 event="new_complaint"
             )

@@ -10,6 +10,7 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     complaint_id = Column(Integer, ForeignKey("complaint.id"), nullable=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     notification_type = Column(String, nullable=False)
@@ -19,3 +20,4 @@ class Notification(Base):
 
     user = relationship("User", back_populates="notifications")
     complaint = relationship("Complaint", back_populates="notifications")
+    incident = relationship("Incident", back_populates="notifications")

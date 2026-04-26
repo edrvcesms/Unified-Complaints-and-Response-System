@@ -36,6 +36,7 @@ def send_notifications_task(
     title: str,
     message: str,
     complaint_id: int = None,
+    incident_id: int = None,
     notification_type: str = "info",
     channel: str = "in_app",
     event: str = None,
@@ -46,6 +47,7 @@ def send_notifications_task(
             notification = Notification(
                 user_id=user_id,
                 complaint_id=complaint_id,
+                incident_id=incident_id,
                 title=title,
                 message=message,
                 notification_type=notification_type,
@@ -68,6 +70,7 @@ def send_notifications_task(
                         "message": message,
                         "sent_at": datetime.now(timezone.utc).isoformat(),
                         "complaint_id": complaint_id,
+                        "incident_id": incident_id,
                         "notification_type": notification_type,
                         "channel": channel,
                     }

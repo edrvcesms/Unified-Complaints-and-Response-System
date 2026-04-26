@@ -326,6 +326,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 title="Complaint Forwarded to Department",
                 message="Your complaint has been forwarded to the department for further processing.",
                 complaint_id=complaint.id,
+                incident_id=incident_id,
                 notification_type="update"
             )
                 
@@ -355,6 +356,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 title="New Incident Assigned",
                 message=f"A new incident with ID {incident.id} has been forwarded to your department.",
                 complaint_id=None,
+                incident_id=incident_id,
                 notification_type="update"
             )
             

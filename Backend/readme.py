@@ -683,6 +683,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                         else:
                             send_notifications_task.delay(
                                 user_id=cluster_data.user_id,
+                                incident_id=result.incident_id,
                                 title="Hearing update",
                                 message=f"Hearing already happened on {incident_hearing_date}",
                                 complaint_id=cluster_data.complaint_id,

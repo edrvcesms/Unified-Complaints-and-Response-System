@@ -82,10 +82,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     return "/dashboard/notifications";
   };
 
-  const getComplaintPath = (complaintId: number) => {
-    if (userRole === "barangay_official") return `/dashboard/incidents/complaints/${complaintId}`;
-    if (userRole === "lgu_official") return `/lgu/incidents/complaints/${complaintId}`;
-    if (userRole === "department_staff") return `/department/incidents/complaints/${complaintId}`;
+  const getIncidentPath = (incidentId: number) => {
+    if (userRole === "barangay_official") return `/dashboard/incidents/${incidentId}`;
+    if (userRole === "lgu_official") return `/lgu/incidents/${incidentId}`;
+    if (userRole === "department_staff") return `/department/incidents/${incidentId}`;
     return null;
   };
 
@@ -93,11 +93,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
-    if (notification.complaint_id) {
-      const complaintPath = getComplaintPath(notification.complaint_id);
-      if (!complaintPath) return;
+    if (notification.incident_id) {
+      const incidentPath = getIncidentPath(notification.incident_id);
+      if (!incidentPath) return;
       setNotificationDropdownOpen(false);
-      navigate(complaintPath);
+      navigate(incidentPath);
     }
   };
 

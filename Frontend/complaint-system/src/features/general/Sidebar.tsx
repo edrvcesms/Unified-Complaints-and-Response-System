@@ -6,6 +6,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   end?: boolean;
+  group?: string;
 }
 
 interface SidebarProps {
@@ -70,40 +71,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="flex-1 px-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.end}
-              onClick={onClose}
-              className={({ isActive }) => `
-                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                text-sm font-medium transition-all duration-150 text-left group
-                ${isActive
-                  ? "bg-green-600 text-white shadow-sm shadow-green-200"
-                  : "text-gray-600 hover:bg-green-50 hover:text-green-800"
-                }
-              `}
-            >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={
-                      isActive
-                        ? "text-white"
-                        : "text-gray-400 group-hover:text-green-600"
+          {navItems.map((item, index) => {
+            const previousGroup = index > 0 ? navItems[index - 1].group : undefined;
+            const shouldShowGroupLabel = item.group && item.group !== previousGroup;
+
+            return (
+              <div key={item.path}>
+                {shouldShowGroupLabel && (
+                  <p className="px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    {item.group}
+                  </p>
+                )}
+                <NavLink
+                  to={item.path}
+                  end={item.end}
+                  onClick={onClose}
+                  className={({ isActive }) => `
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+                    text-sm font-medium transition-all duration-150 text-left group
+                    ${isActive
+                      ? "bg-green-600 text-white shadow-sm shadow-green-200"
+                      : "text-gray-600 hover:bg-green-50 hover:text-green-800"
                     }
-                  >
-                    {item.icon}
-                  </span>
-                  {item.label}
-                  {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500" />
+                  `}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={
+                          isActive
+                            ? "text-white"
+                            : "text-gray-400 group-hover:text-green-600"
+                        }
+                      >
+                        {item.icon}
+                      </span>
+                      {item.label}
+                      {isActive && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-500" />
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </NavLink>
-          ))}
+                </NavLink>
+              </div>
+            );
+          })}
         </nav>
 
         <div className="px-4 py-4 border-t border-gray-100">

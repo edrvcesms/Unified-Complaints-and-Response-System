@@ -272,6 +272,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
         for complaint in complaints:
             send_notifications_task.delay(
                 user_id=complaint.user_id,
+                incident_id=incident_id,
                 title="Complaint Forwarded to Department",
                 message="Your complaint has been forwarded to the department for further processing.",
                 complaint_id=complaint.id,
@@ -295,6 +296,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 user_id=incident.department_account.user.id,
                 title="New Incident Assigned",
                 message=f"A new incident with ID {incident.id} has been forwarded to your department.",
+                incident_id=incident_id,
                 complaint_id=None,
                 notification_type="update"
             )

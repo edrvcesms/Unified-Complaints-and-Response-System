@@ -29,9 +29,13 @@ export const SkeletonComplaintCard = () => (
   </div>
 );
 
-export const SkeletonRow = () => (
+interface SkeletonRowProps {
+  columns?: number;
+}
+
+export const SkeletonRow: React.FC<SkeletonRowProps> = ({ columns = 6 }) => (
   <tr>
-    {Array.from({ length: 6 }).map((_, i) => (
+    {Array.from({ length: columns }).map((_, i) => (
       <td key={i} className="px-4 py-3">
         <div className="h-4 bg-gray-200 rounded animate-pulse" />
       </td>

@@ -138,6 +138,8 @@ interface StatusChartProps {
 }
 
 function StatusChart({ data }: StatusChartProps) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
   const barData = {
     labels: data.map((row) => row.label),
     datasets: [
@@ -154,11 +156,16 @@ function StatusChart({ data }: StatusChartProps) {
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 86 : 110,
         labels: {
           font: {
-            size: 13,
+            size: isMobile ? 10 : 13,
           },
-          padding: 12,
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          padding: isMobile ? 8 : 12,
         },
       },
       tooltip: {
@@ -170,8 +177,9 @@ function StatusChart({ data }: StatusChartProps) {
         ticks: {
           color: "#9ca3af",
           font: {
-            size: 14,
+            size: isMobile ? 11 : 14,
           },
+          maxRotation: isMobile ? 0 : 45,
         },
         grid: {
           display: false,
@@ -182,7 +190,7 @@ function StatusChart({ data }: StatusChartProps) {
         ticks: {
           color: "#9ca3af",
           font: {
-            size: 14,
+            size: isMobile ? 11 : 14,
           },
           precision: 0,
         },
@@ -205,6 +213,8 @@ interface CategoryChartProps {
 }
 
 function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
   const pieEntries = Object.entries(totalByCategory)
     .filter(([, v]) => v > 0)
     .sort(([, a], [, b]) => b - a)
@@ -236,11 +246,16 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 96 : 120,
         labels: {
           font: {
-            size: 13,
+            size: isMobile ? 10 : 13,
           },
-          padding: 12,
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "circle",
+          padding: isMobile ? 8 : 12,
         },
       },
       tooltip: {
@@ -262,6 +277,8 @@ interface CategoryBarChartProps {
 }
 
 function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
   if (categoryNames.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-base text-gray-400">
@@ -294,11 +311,16 @@ function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 92 : 120,
         labels: {
           font: {
-            size: 13,
+            size: isMobile ? 10 : 13,
           },
-          padding: 12,
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          padding: isMobile ? 8 : 12,
         },
       },
       tooltip: {
@@ -310,8 +332,9 @@ function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
         ticks: {
           color: "#9ca3af",
           font: {
-            size: 14,
+            size: isMobile ? 11 : 14,
           },
+          maxRotation: isMobile ? 0 : 45,
         },
         grid: {
           display: false,
@@ -322,7 +345,7 @@ function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
         ticks: {
           color: "#9ca3af",
           font: {
-            size: 14,
+            size: isMobile ? 11 : 14,
           },
           precision: 0,
         },
@@ -499,7 +522,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
               Complaints by Status
             </h3>
-            <div className="w-full min-w-0 h-72 sm:h-80">
+            <div className="w-full min-w-0 h-[21rem] sm:h-80">
               <StatusChart data={chartData} />
             </div>
           </div>
@@ -515,7 +538,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 Total by Category
               </h3>
-              <div className="w-full min-w-0 h-60 sm:h-64">
+              <div className="w-full min-w-0 h-72 sm:h-64">
                 <CategoryPieChart
                   totalByCategory={data?.total_by_category ?? {}}
                 />
@@ -531,7 +554,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 Category Trend
               </h3>
-              <div className="w-full min-w-0 h-72 sm:h-80">
+              <div className="w-full min-w-0 h-[22rem] sm:h-80">
                 <CategoryLineChart
                   data={chartData}
                   categoryNames={categoryNames}

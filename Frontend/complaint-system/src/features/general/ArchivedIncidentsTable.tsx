@@ -97,11 +97,11 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <>
-                <SkeletonRow />
-                <SkeletonRow />
-                <SkeletonRow />
-                <SkeletonRow />
-                <SkeletonRow />
+                <SkeletonRow columns={8} />
+                <SkeletonRow columns={8} />
+                <SkeletonRow columns={8} />
+                <SkeletonRow columns={8} />
+                <SkeletonRow columns={8} />
               </>
             ) : incidents.length === 0 ? (
               <tr>

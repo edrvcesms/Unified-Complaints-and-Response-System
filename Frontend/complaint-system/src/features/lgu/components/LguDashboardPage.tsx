@@ -62,6 +62,7 @@ interface WeeklyCounts {
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
   const recent = [...incidents]
     .sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime())
@@ -190,9 +191,14 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 90 : 120,
         labels: {
-          font: { size: 14 },
-          padding: 12,
+          font: { size: isMobile ? 10 : 14 },
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          padding: isMobile ? 8 : 12,
         },
       },
       tooltip: {
@@ -201,12 +207,12 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     },
     scales: {
       x: {
-        ticks: { color: "#9ca3af", font: { size: 15 } },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 11 : 15 }, maxRotation: isMobile ? 0 : 45 },
         grid: { display: false },
       },
       y: {
         beginAtZero: true,
-        ticks: { color: "#9ca3af", font: { size: 15 }, precision: 0 },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 11 : 15 }, precision: 0 },
         grid: { color: "#f0f0f0" },
       },
     },
@@ -229,9 +235,14 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     plugins: {
       legend: {
         position: "bottom",
+        maxHeight: isMobile ? 96 : 120,
         labels: {
-          font: { size: 13 },
-          padding: 8,
+          font: { size: isMobile ? 10 : 13 },
+          boxWidth: isMobile ? 10 : 14,
+          boxHeight: isMobile ? 10 : 14,
+          usePointStyle: true,
+          pointStyle: "rectRounded",
+          padding: isMobile ? 8 : 10,
         },
       },
       tooltip: {
@@ -241,13 +252,13 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     scales: {
       x: {
         stacked: true,
-        ticks: { color: "#9ca3af", font: { size: 14 }, maxRotation: 25, minRotation: 25 },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 10 : 14 }, maxRotation: isMobile ? 0 : 25, minRotation: isMobile ? 0 : 25 },
         grid: { display: false },
       },
       y: {
         stacked: true,
         beginAtZero: true,
-        ticks: { color: "#9ca3af", font: { size: 15 }, precision: 0 },
+        ticks: { color: "#9ca3af", font: { size: isMobile ? 11 : 15 }, precision: 0 },
         grid: { color: "#f0f0f0" },
       },
     },
@@ -278,7 +289,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
           <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
         </div>
-        <div className="w-full h-[300px]">
+        <div className="w-full h-[22rem] sm:h-[300px]">
           <ChartJsBar data={weeklyChartData} options={weeklyChartOptions} />
         </div>
       </div>
@@ -308,7 +319,7 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
         {isCategoryLoading ? (
           <div className="h-60 bg-gray-100 rounded animate-pulse" />
         ) : (
-          <div className="w-full h-[340px]">
+          <div className="w-full h-[24rem] sm:h-[340px]">
             <ChartJsBar data={categoryChartData} options={categoryChartOptions} />
           </div>
         )}

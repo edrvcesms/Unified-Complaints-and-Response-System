@@ -238,6 +238,7 @@ async def run_expiry_warning_notifications():
                         f"and will expire in approximately {hours_left} hour(s). "
                         f"Please take action before it is automatically resolved."
                     ),
+                    incident_id=incident.id,
                     complaint_id=None,
                     notification_type="warning" if current_checkpoint > 3 else "critical",
                 )

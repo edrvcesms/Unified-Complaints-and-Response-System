@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "./Pagination";
@@ -125,9 +124,9 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="min-h-9 px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
         >
-          <Eye size={16} />
+          View
         </button>
       </td>
     </tr>
@@ -186,11 +185,11 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
               <tbody className="divide-y divide-gray-100">
                 {isLoading ? (
                   <>
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
-                    <SkeletonRow />
+                    <SkeletonRow columns={7} />
+                    <SkeletonRow columns={7} />
+                    <SkeletonRow columns={7} />
+                    <SkeletonRow columns={7} />
+                    <SkeletonRow columns={7} />
                   </>
                 ) : incidents.length === 0 ? (
                   <tr>

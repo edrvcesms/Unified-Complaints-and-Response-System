@@ -7,5 +7,6 @@ export interface Notification {
   notification_type: string;
   channel: string;
   user_id: number;
+  incident_id?: number;
   complaint_id?: number;
 }

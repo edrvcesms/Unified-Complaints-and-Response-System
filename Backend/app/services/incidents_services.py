@@ -204,6 +204,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title="Complaint Forwarded to LGU",
+                    incident_id=incident_id,
                     message="Your complaint has been forwarded to the LGU for further processing.",
                     complaint_id=complaint.id,
                     notification_type="update",
@@ -233,6 +234,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 title="New Incident Forwarded to LGU",
                 message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
                 complaint_id=None,
+                incident_id=incident_id,
                 notification_type="update",
                 event="info"
 

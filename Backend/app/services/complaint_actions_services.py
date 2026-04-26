@@ -92,6 +92,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
+                    incident_id=incident_id,
                     message=f"Your complaint about '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
                     notification_type="complaint_under_review"
@@ -201,6 +202,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
+                    incident_id=incident_id,
                     message=f"Your complaint '{complaint.title}' has been resolved",
                     complaint_id=complaint.id,
                     notification_type="success"
@@ -290,6 +292,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
                 title="The LGU has rejected the complaints under this incident",
                 message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
+                incident_id=incident_id,
                 complaint_id=complaints[0].id if complaints else None,
                 notification_type=notification_type,
                 event="reject"
@@ -319,6 +322,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 user_id=lgu.id if lgu else None,
                 title="The department has rejected the complaints under this incident",
                 message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
+                incident_id=incident_id,
                 complaint_id=complaints[0].id if complaints else None,
                 notification_type=notification_type,
                 event="reject"
@@ -367,6 +371,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                     title=complaint.title,
                     message=f"Your complaint regarding on '{complaint.title}' has been rejected by the {rejected_by} due to insufficient information or other reasons. Please review the details and consider resubmitting a new complaint.",
                     complaint_id=complaint.id,
+                    incident_id=incident_id,
                     notification_type=notification_type
                 )
                 send_push_notification_task.delay(

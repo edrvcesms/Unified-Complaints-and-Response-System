@@ -12,10 +12,10 @@ export const DepartmentSidebar: React.FC<DepartmentSidebarProps> = ({ isOpen, on
   const { t } = useTranslation();
   
   const NAV_ITEMS = [
-    { path: "/department/dashboard", label: t('sidebar.department.dashboard'), icon: <DashboardIcon />, end: true },
-    { path: "/department/incidents", label: t('sidebar.department.incidents'), icon: <ComplaintsIcon /> },
-    { path: "/department/archive", label: "Archive", icon: <Archive className="w-5 h-5" /> },
-    { path: "/department/feedbacks", label: "Feedbacks", icon: <MessageSquare className="w-5 h-5" /> },
+    { path: "/department/dashboard", label: t('sidebar.department.dashboard'), icon: <DashboardIcon />, end: true, group: "Dashboard" },
+    { path: "/department/incidents", label: t('sidebar.department.incidents'), icon: <ComplaintsIcon />, group: "Manage Incidents" },
+    { path: "/department/archive", label: "Archive", icon: <Archive className="w-5 h-5" />, group: "Manage Incidents" },
+    { path: "/department/feedbacks", label: "Feedbacks", icon: <MessageSquare className="w-5 h-5" />, group: "Manage Incidents" },
   ];
 
   return (

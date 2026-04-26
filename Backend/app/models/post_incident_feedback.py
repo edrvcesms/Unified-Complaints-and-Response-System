@@ -7,8 +7,8 @@ class PostIncidentFeedback(Base):
     __tablename__ = "post_incident_feedback"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
     ratings = Column(Float, nullable=False)
     message = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))

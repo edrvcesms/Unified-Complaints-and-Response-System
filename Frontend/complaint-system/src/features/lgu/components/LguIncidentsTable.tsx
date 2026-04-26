@@ -14,6 +14,8 @@ interface LguIncidentTableRowProps {
 const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) => {
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
+  const hasNewComplaints = incident.has_new_complaints || (incident.new_complaint_count ?? 0) > 0;
+  const newComplaintCount = Number(incident.new_complaint_count ?? 0);
 
   const handleView = () => {
     navigate(`/lgu/incidents/${incident.id}`);
@@ -53,9 +55,15 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="min-h-9 px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+          className="relative inline-flex min-h-9 items-center justify-center px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+          title={hasNewComplaints && newComplaintCount > 0 ? `${newComplaintCount} new complaint${newComplaintCount > 1 ? 's' : ''}` : undefined}
         >
           View
+          {hasNewComplaints && (
+            <span className="absolute -top-2 -right-2 flex min-w-5 h-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white">
+              {newComplaintCount > 0 ? newComplaintCount : ''}
+            </span>
+          )}
         </button>
       </td>
     </tr>

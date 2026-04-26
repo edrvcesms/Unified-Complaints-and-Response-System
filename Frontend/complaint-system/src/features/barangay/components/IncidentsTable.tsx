@@ -74,6 +74,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
   };
 
   const hasNewComplaints = incident.has_new_complaints || (incident.new_complaint_count ?? 0) > 0;
+  const newComplaintCount = Number(incident.new_complaint_count ?? 0);
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -82,18 +83,8 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       </td>
 
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <div className="truncate max-w-[11rem] sm:max-w-sm md:max-w-md" title={incident.title}>
-            {incident.title}
-          </div>
-    {hasNewComplaints && incident.new_complaint_count && incident.new_complaint_count > 0 && (
-  <div className="relative flex items-center justify-center shrink-0" title={`${incident.new_complaint_count} new complaint${incident.new_complaint_count > 1 ? 's' : ''}`}>
-    <span className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-orange-400 opacity-50" />
-    <span className="relative flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 text-white text-xs font-bold">
-      {incident.new_complaint_count}
-    </span>
-  </div>
-)}
+        <div className="truncate max-w-[11rem] sm:max-w-sm md:max-w-md mx-auto" title={incident.title}>
+          {incident.title}
         </div>
       </td>
 
@@ -124,9 +115,15 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="min-h-9 px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+          className="relative inline-flex min-h-9 items-center justify-center px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+          title={hasNewComplaints && newComplaintCount > 0 ? `${newComplaintCount} new complaint${newComplaintCount > 1 ? 's' : ''}` : undefined}
         >
           View
+          {hasNewComplaints && (
+            <span className="absolute -top-2 -right-2 flex min-w-5 h-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white">
+              {newComplaintCount > 0 ? newComplaintCount : ''}
+            </span>
+          )}
         </button>
       </td>
     </tr>

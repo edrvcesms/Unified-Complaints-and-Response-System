@@ -7,8 +7,8 @@ class Response(Base):
     __tablename__ = "response"
 
     id = Column(Integer, primary_key=True, index=True)
-    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
-    responder_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True, index=True)
+    responder_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     actions_taken = Column(String, nullable=False)
     response_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=True, default=datetime.now(timezone.utc))

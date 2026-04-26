@@ -6,6 +6,7 @@ Much faster than asyncio.gather for multiple deletes.
 
 import asyncio
 from typing import List, Optional, Set
+from datetime import datetime, timezone
 from app.utils.logger import logger
 from app.core.redis import redis_client
 
@@ -75,7 +76,25 @@ class CacheInvalidator:
                 f"barangay_profile:{barangay_id}",
                 f"archive_incidents:barangay:{barangay_id}",
             })
-            logger.info(f"Barangay caches added for barangay_id: {barangay_id}")
+            
+            now = datetime.now(timezone.utc)
+            current_year = now.year
+            current_month = now.month
+            
+            tasks.add(f"complaint_stats:weekly:{barangay_id}")
+            for month_offset in range(3):
+                month = current_month - month_offset
+                year = current_year
+                if month <= 0:
+                    month += 12
+                    year -= 1
+                tasks.add(f"complaint_stats:monthly:{barangay_id}:{year}:{month}")
+            
+            for year_offset in range(2):
+                year = current_year - year_offset
+                tasks.add(f"complaint_stats:yearly:{barangay_id}:{year}")
+            
+            logger.info(f"Barangay caches added for barangay_id: {barangay_id} (including stats)")
 
         if department_account_id:
             tasks.update({

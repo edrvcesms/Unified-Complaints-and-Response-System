@@ -8,9 +8,9 @@ class Notification(Base):
     __tablename__ = "notification"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    complaint_id = Column(Integer, ForeignKey("complaint.id"), nullable=True)
-    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
+    complaint_id = Column(Integer, ForeignKey("complaint.id"), nullable=True, index=True)
+    incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=True, index=True)
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     notification_type = Column(String, nullable=False)

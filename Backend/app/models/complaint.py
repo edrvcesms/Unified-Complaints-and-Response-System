@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
@@ -9,17 +9,17 @@ class Complaint(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False)
-    barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True)
-    department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True)
-    category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
+    barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
+    barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True, index=True)
+    department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True, index=True)
+    category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
 
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     location_details = Column(String, nullable=True)
 
-    status = Column(String, nullable=True)
+    status = Column(String, nullable=True, index=True)
 
     forwarded_at = Column(DateTime(timezone=True), nullable=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)

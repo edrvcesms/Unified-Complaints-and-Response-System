@@ -21,6 +21,7 @@ from fastapi.responses import JSONResponse
 from app.utils.logger import logger
 from app.constants.roles import UserRole
 from datetime import datetime, timezone
+from app.utils.query_optimization import BatchLoader
 
 async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
@@ -80,15 +81,13 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
         
-        for complaint_id in complaint_ids:
-            result = await db.execute(
-                select(Complaint, User)
-                .join(User, User.id == Complaint.user_id)
-                .where(Complaint.id == complaint_id)
-            )
-            row = result.first()
-            if row:
-                complaint, complaint_user = row
+        # Batch load all users to avoid N+1 queries
+        user_ids = [c.user_id for c in complaints]
+        users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        
+        for complaint in complaints:
+            complaint_user = users_dict.get(complaint.user_id)
+            if complaint_user:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -191,14 +190,13 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
         
-        for complaint_id in complaint_ids:
-            result = await db.execute(
-                select(Complaint)
-                .options(selectinload(Complaint.user))
-                .where(Complaint.id == complaint_id)
-            )
-            complaint = result.scalars().first()
-            if complaint and complaint.user:
+        # Batch load all users to avoid N+1 queries
+        user_ids = [c.user_id for c in complaints]
+        users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        
+        for complaint in complaints:
+            complaint_user = users_dict.get(complaint.user_id)
+            if complaint_user:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -208,8 +206,8 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                     notification_type="success"
                 )
                 send_push_notification_task.delay(
-                    token=complaint.user.push_token,
-                    enabled=complaint.user.push_notifications_enabled,
+                    token=complaint_user.push_token,
+                    enabled=complaint_user.push_notifications_enabled,
                     title="Complaint Resolved",
                     body=f"Your complaint regarding on '{complaint.title}' has been resolved.",
                     data={"complaint_id": complaint.id}
@@ -358,14 +356,13 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         barangay_id = first_complaint.barangay_id if first_complaint else None
         department_account_id = first_complaint.department_account_id if first_complaint else None
             
-        for complaint_id in complaint_ids:
-            result = await db.execute(
-                select(Complaint)
-                .options(selectinload(Complaint.user))
-                .where(Complaint.id == complaint_id)
-            )
-            complaint = result.scalars().first()
-            if complaint and complaint.user:
+        # Batch load all users to avoid N+1 queries
+        user_ids = [c.user_id for c in complaints]
+        users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        
+        for complaint in complaints:
+            complaint_user = users_dict.get(complaint.user_id)
+            if complaint_user:
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -375,8 +372,8 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                     notification_type=notification_type
                 )
                 send_push_notification_task.delay(
-                    token=complaint.user.push_token,
-                    enabled=complaint.user.push_notifications_enabled,
+                    token=complaint_user.push_token,
+                    enabled=complaint_user.push_notifications_enabled,
                     title="Complaint Rejected",
                     body=f"Your complaint regarding '{complaint.title}' has been rejected by the {rejected_by}.",
                     data={"complaint_id": complaint.id}

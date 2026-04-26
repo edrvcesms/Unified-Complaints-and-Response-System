@@ -56,7 +56,7 @@ def notify_user_for_hearing_task(
     notified_year: str
 ):
     try:
-        subject = "Notice of Hearing for Your Complaint - Unified Complaints and Response System (UCRS)"
+        subject = "Notice of Hearing for Your Complaint - CFMS Sta Maria"
         body = render_template(
             "hearing_notification_email.html",
             {

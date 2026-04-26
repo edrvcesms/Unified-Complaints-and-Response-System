@@ -7,6 +7,7 @@ from exponent_server_sdk import (
 )
 import requests
 from requests.exceptions import ConnectionError, HTTPError
+from app.utils.logger import logger
 
 
 def send_push_notification(
@@ -34,6 +35,7 @@ def send_push_notification(
         if expo_token:
             headers["Authorization"] = f"Bearer {expo_token}"
         session.headers.update(headers)
+        logger.info(f"Sending push notification with headers: {headers} and body: {{'to': {token}, 'title': {title}, 'body': {body}, 'data': {data}, 'sound': {sound}}}")
 
         client = PushClient(session=session)
         message = PushMessage(
@@ -43,15 +45,17 @@ def send_push_notification(
             data=data or {},
             sound=sound,
         )
+        logger.info(f"Constructed PushMessage: {message.__dict__}")
 
         response = client.publish(message)
         response.validate_response()
-
+        logger.info(f"Push notification response: {response.__dict__}")
         return {
             "success": True,
             "message": "Notification sent successfully",
             "data": response.__dict__,
         }
+        
 
     except DeviceNotRegisteredError:
         return {

@@ -9,6 +9,7 @@ from app.utils.caching import delete_cache
 from app.utils.redis_pub import publish_sse_event
 
 
+
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_push_notification_task(
     self,
@@ -30,6 +31,7 @@ def send_push_notification_task(
             sound=sound,
             expo_token=expo_token,
         )
+        logger.info(f"Push notification task result: {result}")
         if not result["success"]:
             logger.exception(f"Push notification failed: {result}")
         else:

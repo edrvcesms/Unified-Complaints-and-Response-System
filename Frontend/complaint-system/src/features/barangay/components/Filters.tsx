@@ -41,7 +41,7 @@ export const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
   <select
     value={current}
     onChange={(e) => onChange(e.target.value as StatusFilter)}
-    className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+    className="w-full sm:w-auto min-h-11 px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
@@ -73,7 +73,7 @@ export const SeverityScoreFilterDropdown: React.FC<SeverityScoreFilterDropdownPr
   <select
     value={current}
     onChange={(e) => onChange(e.target.value as SeverityScoreFilter)}
-    className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+    className="w-full sm:w-auto min-h-11 px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
@@ -104,7 +104,7 @@ export const ComplaintStatusFilterDropdown: React.FC<ComplaintStatusFilterDropdo
   <select
     value={current}
     onChange={(e) => onChange(e.target.value as ComplaintStatusFilter)}
-    className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+    className="w-full sm:w-auto min-h-11 px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
@@ -148,7 +148,7 @@ export const SortDropdown: React.FC<SortDropdownProps> = ({
   <select
     value={current}
     onChange={(e) => onChange(e.target.value as SortOption)}
-    className="px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+    className="w-full sm:w-auto min-h-11 px-4 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
       bg-white hover:border-gray-400 transition-colors cursor-pointer
       appearance-none bg-no-repeat bg-right pr-10
@@ -187,14 +187,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({
   onDateToChange,
   onClear,
 }) => (
-  <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+  <div className="w-full flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
     <input
       type="date"
       value={dateFrom}
       onChange={onDateFromChange}
       min={minDate}
       max={maxDate}
-      className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+      className="w-full sm:w-auto min-h-11 px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
         bg-white hover:border-gray-400 transition-colors cursor-pointer"
       placeholder="From"
@@ -206,7 +206,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       onChange={onDateToChange}
       min={minDate}
       max={maxDate}
-      className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
+      className="w-full sm:w-auto min-h-11 px-3 py-2.5 text-sm border border-gray-300 rounded-lg shadow-sm 
         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
         bg-white hover:border-gray-400 transition-colors cursor-pointer"
       placeholder="To"
@@ -214,7 +214,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({
     {(dateFrom || dateTo) && (
       <button
         onClick={onClear}
-        className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 
+        className="w-full sm:w-auto min-h-11 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 
           border border-red-300 rounded-lg hover:bg-red-50 transition-colors whitespace-nowrap cursor-pointer"
       >
         Clear

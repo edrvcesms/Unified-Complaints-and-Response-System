@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { useAllBarangays } from "../../../hooks/useBarangays";
 import { ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Pagination } from "../../barangay/components/Pagination";
 
 export const MonthlyBarangayReports: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
@@ -33,7 +34,7 @@ export const MonthlyBarangayReports: React.FC = () => {
   }, [filteredBarangays, currentPage, itemsPerPage]);
 
   // Reset to page 1 when search term changes
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
@@ -72,10 +73,13 @@ export const MonthlyBarangayReports: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+      <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+        <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+          Swipe horizontally to view all columns.
+        </div>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <table className="w-full min-w-[760px]">
+            <thead className="bg-gray-50 border-y border-gray-200">
               <tr>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   {t('table.headers.barangayName')}
@@ -94,10 +98,10 @@ export const MonthlyBarangayReports: React.FC = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100 bg-white">
               {paginatedBarangays && paginatedBarangays.length > 0 ? (
                 paginatedBarangays.map((barangay) => (
-                  <tr key={barangay.id} className="hover:bg-primary-50/50 transition-colors">
+                  <tr key={barangay.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">{barangay.barangay_name}</div>
                     </td>
@@ -113,7 +117,7 @@ export const MonthlyBarangayReports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => handleViewReport(barangay.id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all shadow-sm hover:shadow cursor-pointer"
+                        className="inline-flex items-center gap-2 min-h-9 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors cursor-pointer"
                       >
                         <FileText className="w-4 h-4" />
                         {t('monthlyReports.viewReport')}
@@ -131,40 +135,12 @@ export const MonthlyBarangayReports: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="text-sm text-gray-700">
-              {t('common.showing')} <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-              <span className="font-semibold text-gray-900">
-                {Math.min(currentPage * itemsPerPage, filteredBarangays.length)}
-              </span>{' '}
-              of <span className="font-semibold text-gray-900">{filteredBarangays.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
-                <span className="text-sm font-medium text-primary-900">
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
     value={value}
     onChange={onChange}
     maxLength={200}
-    className="w-full sm:w-80 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-400"
+    className="w-full sm:w-80 h-11 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 placeholder-gray-400"
   />
   );
 };

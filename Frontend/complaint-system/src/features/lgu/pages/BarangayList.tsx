@@ -5,7 +5,8 @@ import { useAllBarangays } from "../../../hooks/useBarangays";
 import { BarangayCard } from "../components/BarangayCard";
 import { StatCard, ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell } from "lucide-react";
+import { Pagination } from "../../barangay/components/Pagination";
 
 export const BarangayList: React.FC = () => {
   const { barangays, isLoading, error } = useAllBarangays();
@@ -103,39 +104,11 @@ export const BarangayList: React.FC = () => {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
-            {t('common.showing')} <span className="font-semibold text-gray-900">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-            <span className="font-semibold text-gray-900">
-              {Math.min(currentPage * itemsPerPage, filteredBarangays.length)}
-            </span>{' '}
-            of <span className="font-semibold text-gray-900">{filteredBarangays.length}</span> {t('stats.barangays')}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
-              <span className="text-sm font-medium text-primary-900">
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };

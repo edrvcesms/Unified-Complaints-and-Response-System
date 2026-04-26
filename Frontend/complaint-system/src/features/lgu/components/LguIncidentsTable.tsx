@@ -28,9 +28,11 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
         #{incident.id}
       </td>
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        {incident.title}
+        <span className="block truncate max-w-[11rem] sm:max-w-sm" title={incident.title}>
+          {incident.title}
+        </span>
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 text-center">
+      <td className="px-4 py-3 text-sm text-gray-600 text-center hidden sm:table-cell">
         {incident.barangay?.barangay_name || "N/A"}
       </td>
       <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">
@@ -52,7 +54,7 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <Eye size={16} />
         </button>
@@ -81,7 +83,7 @@ export const LguIncidentsTable: React.FC<LguIncidentsTableProps> = ({
   const TABLE_HEADERS = [
     { label: t('incidents.columns.incidentId'), className: "text-center" },
     { label: t('incidents.columns.title'), className: "text-center" },
-    { label: 'Barangay', className: "text-center" },
+    { label: 'Barangay', className: "hidden sm:table-cell text-center" },
     { label: t('incidents.columns.category'), className: "hidden md:table-cell text-center" },
     { label: t('incidents.columns.severity'), className: "text-center" },
     { label: t('incidents.columns.status'), className: "text-center" },
@@ -91,8 +93,11 @@ export const LguIncidentsTable: React.FC<LguIncidentsTableProps> = ({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+        Swipe horizontally to view all columns.
+      </div>
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <table className="w-full min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-center">
               {TABLE_HEADERS.map(({ label, className }) => (

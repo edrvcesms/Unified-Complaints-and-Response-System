@@ -3,8 +3,9 @@ import { useState, useMemo } from "react";
 import { useMonthlyIncidentReport } from "../../../hooks/useReports";
 import { ErrorMessage } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { ArrowLeft, FileText, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, FileText, AlertCircle } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { Pagination } from "../../barangay/components/Pagination";
 
 export const CategoryIncidents: React.FC = () => {
   const { barangayId, categoryName } = useParams<{ barangayId: string; categoryName: string }>();
@@ -82,12 +83,12 @@ export const CategoryIncidents: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
           <p className="text-xs text-gray-500 uppercase font-medium mb-2">Total Incidents</p>
           <p className="text-3xl font-bold text-primary-600">{categoryData.total_incidents}</p>
           <p className="text-xs text-gray-500 mt-1">In this category</p>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
           <p className="text-xs text-gray-500 uppercase font-medium mb-2">Total Complaints</p>
           <p className="text-3xl font-bold text-orange-600">{categoryData.total_complaint_count}</p>
           <p className="text-xs text-gray-500 mt-1">Filed for these incidents</p>
@@ -95,7 +96,7 @@ export const CategoryIncidents: React.FC = () => {
       </div>
 
       {/* Incidents Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+      <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -108,9 +109,12 @@ export const CategoryIncidents: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+        <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+          Swipe horizontally to view all columns.
+        </div>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <table className="w-full min-w-[680px]">
+            <thead className="bg-gray-50 border-y border-gray-200">
               <tr>
                 <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   #
@@ -129,10 +133,10 @@ export const CategoryIncidents: React.FC = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-100">
               {paginatedIncidents.length > 0 ? (
                 paginatedIncidents.map((incident, index) => (
-                  <tr key={incident.incident_id} className="hover:bg-primary-50/50 transition-colors">
+                  <tr key={incident.incident_id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-500">
                         {((currentPage - 1) * incidentsPerPage) + index + 1}
@@ -144,7 +148,7 @@ export const CategoryIncidents: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-to-r from-primary-100 to-primary-200 text-primary-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-semibold bg-primary-50 text-primary-700 border border-primary-100">
                         {incident.complaint_count}
                       </span>
                     </td>
@@ -184,39 +188,11 @@ export const CategoryIncidents: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="text-sm text-gray-700">
-              Showing <span className="font-semibold text-gray-900">{((currentPage - 1) * incidentsPerPage) + 1}</span> to{' '}
-              <span className="font-semibold text-gray-900">
-                {Math.min(currentPage * incidentsPerPage, categoryData.incidents.length)}
-              </span>{' '}
-              of <span className="font-semibold text-gray-900">{categoryData.incidents.length}</span> incidents
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
-                <span className="text-sm font-medium text-primary-900">
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

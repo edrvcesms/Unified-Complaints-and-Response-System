@@ -84,7 +84,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
 
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
         <div className="flex items-center justify-center gap-2">
-          <div className="truncate max-w-xs sm:max-w-sm md:max-w-md" title={incident.title}>
+          <div className="truncate max-w-[11rem] sm:max-w-sm md:max-w-md" title={incident.title}>
             {incident.title}
           </div>
     {hasNewComplaints && incident.new_complaint_count && incident.new_complaint_count > 0 && (
@@ -125,7 +125,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
       <td className="px-4 py-3 text-center">
         <button
           onClick={handleView}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <Eye size={16} />
         </button>
@@ -163,10 +163,13 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto -mx-4 sm:mx-0">
+      <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+        Swipe horizontally to view all columns.
+      </div>
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden">
-            <table className="w-full">
+            <table className="w-full min-w-[680px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-center">
                   {TABLE_HEADERS.map(({ label, className }) => (

@@ -24,7 +24,7 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
     <tr className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={handleView}>
       <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">#{incident.id}</td>
       <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">{incident.title}</td>
-      <td className="px-4 py-3 text-sm text-gray-600 text-center">{incident.barangay?.barangay_name || "N/A"}</td>
+      <td className="px-4 py-3 text-sm text-gray-600 text-center hidden sm:table-cell">{incident.barangay?.barangay_name || "N/A"}</td>
       <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">{formatCategoryName(incident.category?.category_name)}</td>
       <td className="px-4 py-3 text-center">
         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incidentStatus, userRole || undefined)}`}>
@@ -32,13 +32,13 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">{incident.complaint_count}</td>
-      <td className="px-4 py-3 text-sm text-gray-600 text-center">
+      <td className="px-4 py-3 text-sm text-gray-600 text-center hidden md:table-cell">
         {incident.first_reported_at ? new Date(incident.first_reported_at).toLocaleDateString() : "N/A"}
       </td>
       <td className="px-4 py-3 text-sm text-gray-600 text-center">
         <button
           onClick={handleView}
-          className="px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
+          className="min-h-9 px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
         >
           View
         </button>
@@ -69,18 +69,21 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
   const TABLE_HEADERS = [
     { label: "Incident ID", className: "text-center" },
     { label: "Title", className: "text-center" },
-    { label: "Barangay", className: "text-center" },
+    { label: "Barangay", className: "hidden sm:table-cell text-center" },
     { label: "Category", className: "hidden md:table-cell text-center" },
     { label: "Status", className: "text-center" },
     { label: "Complaints", className: "hidden sm:table-cell text-center" },
-    { label: "Date Reported", className: "text-center" },
+    { label: "Date Reported", className: "hidden md:table-cell text-center" },
     { label: "Actions", className: "text-center" },
   ];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
+        Swipe horizontally to view all columns.
+      </div>
+      <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <table className="w-full min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-center">
               {TABLE_HEADERS.map(({ label, className }) => (

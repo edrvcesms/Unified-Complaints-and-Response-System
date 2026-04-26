@@ -55,18 +55,18 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+          <div className="flex flex-col gap-1.5 min-w-0">
             <label className="text-sm font-medium text-gray-700">Complaint Status</label>
             <ComplaintStatusFilterDropdown current={filterComplaintStatus} onChange={handleComplaintStatusFilterChange} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1.5 min-w-0">
             <label className="text-sm font-medium text-gray-700">Sort By</label>
             <SortDropdown current={sortBy} onChange={handleSortChange} />
           </div>
         </div>
 
-        <div className="shrink-0 w-full lg:w-auto">
+        <div className="w-full lg:w-auto">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
           <DateFilter
             dateFrom={dateFrom}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { validateAttachments } from "../../utils/attachmentHelper";
 
 const MAX_UPLOAD_FILES = 3;
@@ -33,6 +34,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   description,
   externalError,
 }) => {
+  const { t } = useTranslation();
   const [actionsTaken, setActionsTaken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
@@ -96,7 +98,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           {description && (
             <p className="text-sm text-gray-600 mb-2">{description}</p>
           )}
-          <label className="block text-lg font-medium text-gray-700 mb-2">Actions Taken</label>
+          <label className="block text-lg font-medium text-gray-700 mb-2">{t('frontend.actionsTaken.label')}</label>
           <textarea
             className="w-full border text-sm border-gray-300 rounded-md p-2 mb-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
             rows={3}
@@ -104,7 +106,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
             onChange={e => setActionsTaken(e.target.value)}
             required
             disabled={isLoading}
-            placeholder="Describe the actions taken to address this complaint…"
+            placeholder={t('frontend.actionsTaken.placeholder')}
           />
           <div className="mt-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -116,8 +118,8 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
                 isLoading ? "pointer-events-none opacity-70" : "hover:border-primary-400 hover:bg-primary-50/30"
               }`}
             >
-              <p className="text-xs text-gray-600">Click to upload files</p>
-              <p className="text-[11px] text-gray-500 mt-1">Images, videos, PDFs, or documents</p>
+              <p className="text-xs text-gray-600">{t('frontend.actionsTaken.uploadCta')}</p>
+              <p className="text-[11px] text-gray-500 mt-1">{t('frontend.actionsTaken.uploadHint')}</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -147,7 +149,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
                       className="text-xs text-gray-400 hover:text-red-600"
                       disabled={isLoading}
                     >
-                      Remove
+                      {t('frontend.actionsTaken.remove')}
                     </button>
                   </div>
                 ))}
@@ -163,7 +165,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
               onClick={onCancel}
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('modal.cancel')}
             </button>
             <button
               type="submit"

@@ -35,18 +35,18 @@ export const LguIncidents: React.FC = () => {
   } = useComplaintsFilter(manageIncidents);
 
   if (isError) {
-    return <ErrorMessage message="Failed to load forwarded incidents. Please refresh." />;
+    return <ErrorMessage message={t('frontend.incidents.loadForwardedFailed')} />;
   }
 
   return (
     <div className="space-y-3">
       <PageHeader 
-        title="Forwarded Incidents"
-        description="Review and manage incidents forwarded from barangays"
+        title={t('frontend.incidents.forwardedTitle')}
+        description={t('frontend.incidents.forwardedDescription')}
       />
 
       <div className="text-sm text-gray-600">
-        Showing <span className="font-semibold">{filtered.length}</span> of <span className="font-semibold">{manageIncidents.length}</span> incidents
+        {t('frontend.incidents.showingCounts', { filtered: filtered.length, total: manageIncidents.length })}
       </div>
 
       <div>
@@ -61,13 +61,13 @@ export const LguIncidents: React.FC = () => {
             <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
           </div>
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">Sort By</label>
+            <label className="text-sm font-medium text-gray-700">{t('frontend.filters.sortBy')}</label>
             <SortDropdown current={sortBy} onChange={handleSortChange} />
           </div>
         </div>
 
         <div className="w-full lg:w-auto">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('frontend.filters.dateRange')}</label>
           <DateFilter
             dateFrom={dateFrom}
             dateTo={dateTo}

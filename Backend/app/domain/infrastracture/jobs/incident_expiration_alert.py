@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select, update
+from sqlalchemy import and_, exists, or_, select, update
 from sqlalchemy.orm import joinedload
 from app.database.database import AsyncSessionLocal
+from app.constants.complaint_status import ComplaintStatus
+from app.models.complaint import Complaint
 from app.dependencies.db_dependency import get_async_db
 from app.models.incident_model import IncidentModel
+from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay import Barangay
 import logging
 
@@ -24,7 +27,11 @@ logger = logging.getLogger(__name__)
 # To add/remove checkpoints, simply modify this list (descending order required).
 # ─────────────────────────────────────────────────────────────────────────────
 EXPIRY_CHECKPOINTS_HOURS = [24, 16, 10, 3]
-
+RESOLVED_STATUSES = {
+    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+    ComplaintStatus.RESOLVED_BY_LGU.value,
+    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
+}
 
 def _resolve_target_user_id(incident) -> int | None:
     """
@@ -128,7 +135,7 @@ async def run_expiry_warning_notifications():
     """
     Scheduler job — runs every 30 minutes via AsyncIOScheduler.
 
-    Scans all ACTIVE incidents and sends expiry warning notifications
+    Scans incidents with unresolved complaints and sends expiry warning notifications
     to the currently responsible user at defined checkpoints before expiry.
 
     ── Checkpoints ──────────────────────────────────────────────────────────
@@ -177,10 +184,24 @@ async def run_expiry_warning_notifications():
             result = await db.execute(
                 select(IncidentModel)
                 .where(
-                    IncidentModel.status == "ACTIVE",
                     IncidentModel.first_reported_at <= max_window,
+                    exists(
+                        select(1)
+                        .select_from(IncidentComplaintModel)
+                        .join(Complaint, Complaint.id == IncidentComplaintModel.complaint_id)
+                        .where(
+                            and_(
+                                IncidentComplaintModel.incident_id == IncidentModel.id,
+                                or_(
+                                    Complaint.status.is_(None),
+                                    Complaint.status.notin_(list(RESOLVED_STATUSES)),
+                                ),
+                            )
+                        )
+                    ),
                 )
                 .options(
+                    joinedload(IncidentModel.complaint_clusters).joinedload(IncidentComplaintModel.complaint),
                     joinedload(IncidentModel.barangay).joinedload(Barangay.barangay_account),
                     joinedload(IncidentModel.department_account),
                 )
@@ -195,6 +216,16 @@ async def run_expiry_warning_notifications():
             to_update: dict[int, tuple[int, int]] = {}
 
             for incident in incidents:
+                unresolved_links = [
+                    link for link in incident.complaint_clusters
+                    if link.complaint and link.complaint.status not in RESOLVED_STATUSES
+                ]
+                if not unresolved_links:
+                    logger.debug(
+                        f"Skipping incident_id={incident.id} - all linked complaints are resolved."
+                    )
+                    continue
+
                 expiry_time = incident.first_reported_at + timedelta(hours=incident.time_window_hours)
                 hours_until_expiry = (expiry_time - now).total_seconds() / 3600
 

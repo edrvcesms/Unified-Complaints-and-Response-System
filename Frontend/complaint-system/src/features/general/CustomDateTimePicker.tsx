@@ -15,6 +15,7 @@ import {
   startOfDay,
 } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const CustomDateTimePicker = ({
   value,
@@ -23,6 +24,7 @@ export const CustomDateTimePicker = ({
   value: Date | null;
   onChange: (date: Date) => void;
 }) => {
+  const { t } = useTranslation();
   const [viewDate, setViewDate] = useState(value ?? new Date());
   const [time, setTime] = useState({ hour: "09", minute: "00", period: "AM" });
 
@@ -130,7 +132,7 @@ export const CustomDateTimePicker = ({
 
       {/* Time picker */}
       <div className="flex items-center justify-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-widest text-primary-700">Time</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-primary-700">{t('events.form.date')}</span>
         <div className="flex items-center gap-1 ml-2">
           {/* Hour */}
           <select

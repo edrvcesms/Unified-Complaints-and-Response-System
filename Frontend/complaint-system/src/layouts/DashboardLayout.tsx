@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Outlet } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { HamburgerIcon } from "../features/barangay/components/Icons";
 import { useNotifications } from "../hooks/useNotifications";
 import { useToast } from "../hooks/useToast";
@@ -12,6 +13,7 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarComponent }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { t } = useTranslation();
   const { toasts, showToast } = useToast();
 
   const handleNotification = useCallback((notification: any) => {
@@ -89,7 +91,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
             <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 sticky top-0 z-10">
               <button
                 onClick={() => setSidebarOpen(true)}
-                aria-label="Open sidebar"
+                aria-label={t('frontend.a11y.openSidebar')}
                 className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition"
               >
                 <HamburgerIcon />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, CheckCircle, Info, AlertCircle, AlertTriangle } from 'lucide-react';
 
 export interface ToastProps {
@@ -18,6 +19,7 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 5000,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export const Toast: React.FC<ToastProps> = ({
         <button
           onClick={handleClose}
           className={`${config.iconColor} hover:opacity-70 transition shrink-0`}
-          aria-label="Close notification"
+          aria-label={t('frontend.a11y.closeNotification')}
         >
           <X className="w-4 h-4" />
         </button>

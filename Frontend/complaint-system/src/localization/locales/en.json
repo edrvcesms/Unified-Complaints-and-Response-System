@@ -462,5 +462,98 @@
   },
   "footer": {
     "copyright": "© 2026 Municipality of Sta. Maria, Laguna. All rights reserved."
+  },
+  "frontend": {
+    "auth": {
+      "signingIn": "Signing in..."
+    },
+    "a11y": {
+      "closeNotification": "Close notification",
+      "closeMenu": "Close menu",
+      "openSidebar": "Open sidebar",
+      "mainNavigation": "Main navigation",
+      "notificationsMenu": "Notifications menu",
+      "openProfileMenu": "Open profile menu",
+      "profileMenu": "Profile menu",
+      "closeNotifications": "Close notifications"
+    },
+    "filters": {
+      "complaintStatus": "Complaint Status",
+      "sortBy": "Sort By",
+      "dateRange": "Date Range",
+      "severityLevel": "Severity Level"
+    },
+    "notifications": {
+      "latest5Updates": "Latest 5 updates",
+      "new": "New",
+      "reject": "Reject",
+      "sentAt": "Sent at",
+      "inbox": "Inbox",
+      "total": "Total",
+      "unread": "Unread"
+    },
+    "incidents": {
+      "assignedTitle": "Assigned Incidents",
+      "assignedDescription": "Review and manage incidents assigned to your department",
+      "forwardedTitle": "Forwarded Incidents",
+      "forwardedDescription": "Review and manage incidents forwarded from barangays",
+      "showingCounts": "Showing {{filtered}} of {{total}} incidents",
+      "backToBarangayList": "Back to Barangay List",
+      "forwardedFromBarangay": "Incidents forwarded from this barangay",
+      "loadAssignedFailed": "Failed to load assigned incidents. Please refresh.",
+      "loadForwardedFailed": "Failed to load forwarded incidents. Please refresh.",
+      "loadIncidentsFailed": "Failed to load incidents. Please refresh.",
+      "viewIncidentLocation": "View Incident Location",
+      "category": "Category",
+      "barangay": "Barangay",
+      "totalComplaints": "Total Complaints",
+      "firstReported": "First Reported",
+      "lastReported": "Last Reported",
+      "hearing": "Hearing",
+      "hearingFinished": "Hearing Finished",
+      "reschedule": "Reschedule",
+      "noResponses": "No responses yet.",
+      "viewAllRelated": "View all the related complaints in this incident."
+    },
+    "complaints": {
+      "description": "Description",
+      "additionalInfo": "Additional Information",
+      "submitted": "Submitted",
+      "status": "Status",
+      "reporterEmail": "Reporter Email",
+      "reporterPhone": "Reporter Phone",
+      "noData": "N/A"
+    },
+    "actionsTaken": {
+      "label": "Actions Taken",
+      "placeholder": "Describe the actions taken to address this complaint...",
+      "uploadCta": "Click to upload files",
+      "uploadHint": "Images, videos, PDFs, or documents",
+      "remove": "Remove"
+    },
+    "feedbacks": {
+      "totalFeedbacks": "Total Feedbacks",
+      "averageRating": "Average Rating",
+      "searchFeedbacks": "Search feedbacks",
+      "searchPlaceholder": "Search by user, incident, message, or ID",
+      "headers": {
+        "feedbackId": "Feedback ID",
+        "user": "User",
+        "incident": "Incident",
+        "rating": "Rating",
+        "message": "Message",
+        "date": "Date"
+      },
+      "noEmailProvided": "No email provided",
+      "noMessageProvided": "No message provided",
+      "anonymousUser": "Anonymous User",
+      "unknownDate": "Unknown date",
+      "noPostIncident": "No post-incident feedbacks yet",
+      "emptyHint": "Feedbacks will appear here once users submit them.",
+      "headerTitle": "Feedbacks",
+      "headerDescription": "Post-incident feedback submitted after incident resolution.",
+      "totalCount": "{{count}} total",
+      "incidentPrefix": "Incident"
+    }
   }
 }

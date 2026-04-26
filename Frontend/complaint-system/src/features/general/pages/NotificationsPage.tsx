@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import {  Bell, Clock3, MailOpen } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useNotifications } from "../../../hooks/useNotification";
 import { useUserRole } from "../../../hooks/useUserRole";
 import type { Notification } from "../../../types/notifications/notification";
@@ -10,6 +10,7 @@ import LoadingIndicator from "../LoadingIndicator";
 export const NotificationsPage: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userRole } = useUserRole();
   const { notifications, isLoading, markAsRead, markAllAsRead } = useNotifications();
   const rejectedStatus = ["rejected_by_barangay", "rejected_by_department", "rejected_by_lgu"];
@@ -17,6 +18,13 @@ export const NotificationsPage: React.FC = () => {
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);
   const totalNotifications = notifications?.length ?? 0;
   const unreadNotifications = notifications?.filter((notification) => !notification.is_read).length ?? 0;
+
+  const getRoutePrefix = () => {
+    if (location.pathname.startsWith("/lgu")) return "/lgu";
+    if (location.pathname.startsWith("/department")) return "/department";
+    if (location.pathname.startsWith("/superadmin")) return "/superadmin";
+    return "/dashboard";
+  };
 
   const getIncidentPath = (incidentId: number) => {
     if (userRole === "barangay_official") {
@@ -28,6 +36,12 @@ export const NotificationsPage: React.FC = () => {
     if (userRole === "department_staff") {
       return `/department/incidents/${incidentId}`;
     }
+
+    // Fallback to current route context while auth role is still resolving.
+    const prefix = getRoutePrefix();
+    if (prefix === "/superadmin") return null;
+    return `${prefix}/incidents/${incidentId}`;
+
     return null;
   };
 
@@ -56,7 +70,7 @@ export const NotificationsPage: React.FC = () => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-green-50">
               <Bell className="h-3.5 w-3.5" />
-              Inbox
+              {t('frontend.notifications.inbox')}
             </div>
             <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{t("nav.notifications")}</h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-green-50/90 sm:text-base">
@@ -80,7 +94,7 @@ export const NotificationsPage: React.FC = () => {
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-center gap-6 text-center">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('frontend.notifications.total')}</p>
               <p className="mt-2 text-2xl font-bold text-gray-900">{totalNotifications}</p>
             </div>
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-50 text-green-700">
@@ -91,7 +105,7 @@ export const NotificationsPage: React.FC = () => {
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-center gap-6 text-center">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Unread</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{t('frontend.notifications.unread')}</p>
               <p className="mt-2 text-2xl font-bold text-gray-900">{unreadNotifications}</p>
             </div>
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
@@ -138,11 +152,11 @@ export const NotificationsPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${isRejectNotification(notification) ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
-                        {isRejectNotification(notification) ? "Reject" : notification.notification_type.replace(/_/g, " ")}
+                        {isRejectNotification(notification) ? t('frontend.notifications.reject') : notification.notification_type.replace(/_/g, " ")}
                       </span>
                       {!notification.is_read && (
                         <span className="inline-flex rounded-full bg-green-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-700">
-                          New
+                          {t('frontend.notifications.new')}
                         </span>
                       )}
                     </div>
@@ -161,7 +175,7 @@ export const NotificationsPage: React.FC = () => {
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                       <p className={`font-medium ${isRejectNotification(notification) ? "text-red-600" : "text-gray-500"}`}>
-                        Sent at: {formatDateTime(notification.sent_at)}
+                        {t('frontend.notifications.sentAt')}: {formatDateTime(notification.sent_at)}
                       </p>
                       <p className={`${isRejectNotification(notification) ? "text-red-500" : "text-gray-400"}`}>
                         {formatTimeAgo(notification.sent_at)}

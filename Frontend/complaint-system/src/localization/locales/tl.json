@@ -410,7 +410,7 @@
   "appInfo": {
     "country": "Republika ng Pilipinas",
     "municipality": "Sta. Maria, Laguna",
-    "systemName": "Complaints and Feedbacks Management System ng Sta. Maria",
+    "systemName": "Complaints and Feedback Management System",
     "systemDescription": "Isang digital platform para sa mga government officials na madaling mag-monitor, mag-track, at lutasin ang mga complaints."
   },
   "auth": {
@@ -449,5 +449,98 @@
   },
   "footer": {
     "copyright": "© 2026 Munisipalidad ng Sta. Maria, Laguna. Lahat ng karapatan nakalaan."
+  },
+  "frontend": {
+    "auth": {
+      "signingIn": "Nagla-login..."
+    },
+    "a11y": {
+      "closeNotification": "Isara ang notification",
+      "closeMenu": "Isara ang menu",
+      "openSidebar": "Buksan ang sidebar",
+      "mainNavigation": "Pangunahing navigation",
+      "notificationsMenu": "Menu ng notifications",
+      "openProfileMenu": "Buksan ang profile menu",
+      "profileMenu": "Profile menu",
+      "closeNotifications": "Isara ang notifications"
+    },
+    "filters": {
+      "complaintStatus": "Status ng Complaint",
+      "sortBy": "Ayusin Ayon Sa",
+      "dateRange": "Saklaw ng Petsa",
+      "severityLevel": "Antas ng Bigat"
+    },
+    "notifications": {
+      "latest5Updates": "Huling 5 updates",
+      "new": "Bago",
+      "reject": "Rejected",
+      "sentAt": "Naipadala noong",
+      "inbox": "Inbox",
+      "total": "Kabuuan",
+      "unread": "Hindi pa nababasa"
+    },
+    "incidents": {
+      "assignedTitle": "Mga Assigned na Insidente",
+      "assignedDescription": "Suriin at i-manage ang mga incident na naka-assign sa department ninyo",
+      "forwardedTitle": "Mga Forwarded na Insidente",
+      "forwardedDescription": "Suriin at i-manage ang mga incident na galing sa mga barangay",
+      "showingCounts": "Ipinapakita ang {{filtered}} sa {{total}} incidents",
+      "backToBarangayList": "Bumalik sa Barangay List",
+      "forwardedFromBarangay": "Mga incident na ipinasa mula sa barangay na ito",
+      "loadAssignedFailed": "Hindi ma-load ang assigned incidents. Paki-refresh.",
+      "loadForwardedFailed": "Hindi ma-load ang forwarded incidents. Paki-refresh.",
+      "loadIncidentsFailed": "Hindi ma-load ang incidents. Paki-refresh.",
+      "viewIncidentLocation": "Tingnan ang Lokasyon ng Incident",
+      "category": "Category",
+      "barangay": "Barangay",
+      "totalComplaints": "Kabuuang Complaints",
+      "firstReported": "Unang Nai-report",
+      "lastReported": "Huling Nai-report",
+      "hearing": "Hearing",
+      "hearingFinished": "Tapos na ang Hearing",
+      "reschedule": "I-reschedule",
+      "noResponses": "Wala pang responses.",
+      "viewAllRelated": "Tingnan ang lahat ng kaugnay na complaints sa incident na ito."
+    },
+    "complaints": {
+      "description": "Deskripsyon",
+      "additionalInfo": "Karagdagang Impormasyon",
+      "submitted": "Isinumite",
+      "status": "Status",
+      "reporterEmail": "Email ng Reporter",
+      "reporterPhone": "Phone ng Reporter",
+      "noData": "N/A"
+    },
+    "actionsTaken": {
+      "label": "Mga Aksyong Ginawa",
+      "placeholder": "Ilarawan ang mga aksyong ginawa para tugunan ang complaint...",
+      "uploadCta": "I-click para mag-upload ng files",
+      "uploadHint": "Mga larawan, video, PDF, o dokumento",
+      "remove": "Alisin"
+    },
+    "feedbacks": {
+      "totalFeedbacks": "Kabuuang Feedbacks",
+      "averageRating": "Average na Rating",
+      "searchFeedbacks": "Maghanap ng feedbacks",
+      "searchPlaceholder": "Maghanap gamit ang user, incident, message, o ID",
+      "headers": {
+        "feedbackId": "Feedback ID",
+        "user": "User",
+        "incident": "Incident",
+        "rating": "Rating",
+        "message": "Mensahe",
+        "date": "Petsa"
+      },
+      "noEmailProvided": "Walang ibinigay na email",
+      "noMessageProvided": "Walang ibinigay na mensahe",
+      "anonymousUser": "Hindi kilalang User",
+      "unknownDate": "Hindi kilalang petsa",
+      "noPostIncident": "Wala pang post-incident feedbacks",
+      "emptyHint": "Lalabas dito ang feedbacks kapag may nagsumite na ang users.",
+      "headerTitle": "Feedbacks",
+      "headerDescription": "Mga feedback matapos ma-resolve ang incident.",
+      "totalCount": "{{count}} kabuuan",
+      "incidentPrefix": "Incident"
+    }
   }
 }

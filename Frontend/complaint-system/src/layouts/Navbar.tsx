@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, X } from "lucide-react";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
@@ -29,6 +29,7 @@ const ROLES = {
 export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { userRole, getDisplayName } = useUserRole();
 
   const displayName = getDisplayName();
@@ -74,18 +75,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const previewNotifications = (notifications ?? []).slice(0, 5);
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);
 
+  const getRoutePrefix = () => {
+    if (location.pathname.startsWith("/lgu")) return "/lgu";
+    if (location.pathname.startsWith("/department")) return "/department";
+    if (location.pathname.startsWith("/superadmin")) return "/superadmin";
+    return "/dashboard";
+  };
+
   const getNotificationsPagePath = () => {
     if (userRole === "barangay_official") return "/dashboard/notifications";
     if (userRole === "lgu_official") return "/lgu/notifications";
     if (userRole === "department_staff") return "/department/notifications";
     if (userRole === "superadmin") return "/superadmin/notifications";
-    return "/dashboard/notifications";
+    return `${getRoutePrefix()}/notifications`;
   };
 
   const getIncidentPath = (incidentId: number) => {
     if (userRole === "barangay_official") return `/dashboard/incidents/${incidentId}`;
     if (userRole === "lgu_official") return `/lgu/incidents/${incidentId}`;
     if (userRole === "department_staff") return `/department/incidents/${incidentId}`;
+
+    // Fallback to current route context while auth role is still resolving.
+    const prefix = getRoutePrefix();
+    if (prefix === "/superadmin") return null;
+    return `${prefix}/incidents/${incidentId}`;
+
     return null;
   };
 
@@ -193,11 +207,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 <div className="flex-1 min-w-0">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${isRejectNotification(notification) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {isRejectNotification(notification) ? 'Reject' : notification.notification_type.replace(/_/g, ' ')}
+                      {isRejectNotification(notification) ? t('frontend.notifications.reject') : notification.notification_type.replace(/_/g, ' ')}
                     </span>
                     {!notification.is_read && (
                       <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
-                        New
+                        {t('frontend.notifications.new')}
                       </span>
                     )}
                   </div>
@@ -209,7 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                     <p className={`${isRejectNotification(notification) ? 'text-red-600' : 'text-gray-500'}`}>
-                      Sent at: {formatDateTime(notification.sent_at)}
+                      {t('frontend.notifications.sentAt')}: {formatDateTime(notification.sent_at)}
                     </p>
                     <p className={`${isRejectNotification(notification) ? 'text-red-500' : 'text-gray-400'}`}>
                       {formatTimeAgo(notification.sent_at)}
@@ -258,7 +272,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
         <nav
           className="px-4 sm:px-6 lg:pr-8 h-16 sm:h-20 lg:h-24 flex items-center justify-between"
           role="navigation"
-          aria-label="Main navigation"
+          aria-label={t('frontend.a11y.mainNavigation')}
         >
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-13 sm:h-13 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-white/30 shrink-0 shadow-lg">
@@ -302,14 +316,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               {!isMobile && notificationDropdownOpen && (
                 <div
                   role="menu"
-                  aria-label="Notifications menu"
+                  aria-label={t('frontend.a11y.notificationsMenu')}
                   className="absolute right-0 mt-2 w-96 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-black/10 z-50"
                   style={{ animation: "fadeSlideDown 0.15s ease-out" }}
                 >
                   <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-5 py-4">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{t('nav.notifications')}</p>
-                      <p className="text-[11px] text-gray-500">Latest 5 updates</p>
+                      <p className="text-[11px] text-gray-500">{t('frontend.notifications.latest5Updates')}</p>
                     </div>
                     {unreadCount > 0 && (
                       <button
@@ -332,7 +346,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 onClick={() => setDropdownOpen((prev) => !prev)}
                 aria-haspopup="true"
                 aria-expanded={dropdownOpen}
-                aria-label="Open profile menu"
+                aria-label={t('frontend.a11y.openProfileMenu')}
                 className="flex items-center gap-3 pl-1.5 pr-4 py-1.5 cursor-pointer transition duration-200"
               >
                 <div
@@ -358,7 +372,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
               {dropdownOpen && (
                 <div
                   role="menu"
-                  aria-label="Profile menu"
+                  aria-label={t('frontend.a11y.profileMenu')}
                   className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
                   style={{ animation: "fadeSlideDown 0.15s ease-out" }}
                 >
@@ -415,7 +429,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
             <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-5 py-3">
               <div>
                 <p className="text-base font-semibold text-gray-900">{t('nav.notifications')}</p>
-                <p className="text-xs text-gray-500">Latest 5 updates</p>
+                <p className="text-xs text-gray-500">{t('frontend.notifications.latest5Updates')}</p>
               </div>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
@@ -428,7 +442,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                 )}
                 <button
                   onClick={() => setNotificationDropdownOpen(false)}
-                  aria-label="Close notifications"
+                  aria-label={t('frontend.a11y.closeNotifications')}
                   className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
                 >
                   <X className="w-5 h-5" />

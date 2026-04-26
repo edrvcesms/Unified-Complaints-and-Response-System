@@ -26,7 +26,7 @@ export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => {
       }`}
   >
     {isLoading && <Spinner />}
-    {isLoading ? "Signing in…" : t('auth.login')}
+    {isLoading ? t('frontend.auth.signingIn') : t('auth.login')}
   </button>
   );
 };

@@ -310,7 +310,7 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
                 except Exception:
                     pass
             try:
-                await invalidate_cache(response_ids=[response_id])
+                await invalidate_cache(response_id=response_id)
             except Exception as e:
                 logger.exception(f"Cache invalidation failed after remarks attachment upload: {e}")
             logger.info(

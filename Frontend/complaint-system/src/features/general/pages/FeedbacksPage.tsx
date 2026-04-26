@@ -1,5 +1,6 @@
 import { MessageSquare, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ErrorMessage } from "../ErrorMessage";
 import { useFeedbacks } from "../../../hooks/useFeedbacks";
 import { Pagination } from "../../barangay/components/Pagination";
@@ -8,13 +9,13 @@ const FEEDBACKS_PER_PAGE = 6;
 
 const getDisplayName = (firstName?: string | null, lastName?: string | null) => {
   const fullName = `${firstName || ""} ${lastName || ""}`.trim();
-  return fullName || "Anonymous User";
+  return fullName;
 };
 
 const getFormattedDate = (rawDate: string) => {
   const parsed = new Date(rawDate);
   if (Number.isNaN(parsed.getTime())) {
-    return "Unknown date";
+    return "";
   }
 
   return new Intl.DateTimeFormat("en-US", {
@@ -49,6 +50,7 @@ const renderStars = (rating: number) => {
 };
 
 export const FeedbacksPage: React.FC = () => {
+  const { t } = useTranslation();
   const { feedbacks, isLoading, error } = useFeedbacks();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -73,7 +75,7 @@ export const FeedbacksPage: React.FC = () => {
   }, [feedbacks, currentPage]);
 
   if (error) {
-    return <ErrorMessage message="Failed to load post-incident feedbacks. Please refresh." />;
+    return <ErrorMessage message={t('errors.failedToLoadMessage')} />;
   }
 
   return (
@@ -81,15 +83,15 @@ export const FeedbacksPage: React.FC = () => {
       <header className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 px-5 py-5 sm:px-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Feedbacks</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{t('frontend.feedbacks.headerTitle')}</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Post-incident feedback submitted after incident resolution.
+              {t('frontend.feedbacks.headerDescription')}
             </p>
           </div>
 
           {!isLoading && (
             <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
-              {totalFeedbacks} total
+              {t('frontend.feedbacks.totalCount', { count: totalFeedbacks })}
             </div>
           )}
         </div>
@@ -116,8 +118,8 @@ export const FeedbacksPage: React.FC = () => {
               <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
                 <MessageSquare className="h-5 w-5 text-slate-500" />
               </div>
-              <p className="text-sm font-medium text-slate-700">No post-incident feedbacks yet</p>
-              <p className="mt-1 text-sm text-slate-500">Feedbacks will appear here once users submit them.</p>
+              <p className="text-sm font-medium text-slate-700">{t('frontend.feedbacks.noPostIncident')}</p>
+              <p className="mt-1 text-sm text-slate-500">{t('frontend.feedbacks.emptyHint')}</p>
             </div>
           ) : (
             paginatedFeedbacks.map((feedback) => (
@@ -134,11 +136,11 @@ export const FeedbacksPage: React.FC = () => {
 
                       <div>
                         <p className="text-sm font-semibold text-slate-900">
-                          {getDisplayName(feedback.user?.first_name, feedback.user?.last_name)}
+                          {getDisplayName(feedback.user?.first_name, feedback.user?.last_name) || t('frontend.feedbacks.anonymousUser')}
                         </p>
-                        <p className="text-xs text-slate-500">{feedback.user?.email || "No email"}</p>
+                        <p className="text-xs text-slate-500">{feedback.user?.email || t('frontend.feedbacks.noEmailProvided')}</p>
                         <p className="mt-2 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700">
-                          Incident: {feedback.incident?.title?.trim() || `#${feedback.incident_id}`}
+                          {t('frontend.feedbacks.incidentPrefix')}: {feedback.incident?.title?.trim() || `#${feedback.incident_id}`}
                         </p>
                       </div>
                     </div>
@@ -149,13 +151,13 @@ export const FeedbacksPage: React.FC = () => {
                         {feedback.ratings?.toFixed(1)} / 5
                       </div>
                       {renderStars(feedback.ratings)}
-                      <p className="text-xs text-slate-500">{getFormattedDate(feedback.created_at)}</p>
+                      <p className="text-xs text-slate-500">{getFormattedDate(feedback.created_at) || t('frontend.feedbacks.unknownDate')}</p>
                     </div>
                   </div>
 
                   <div className="rounded-xl bg-slate-50 px-4 py-3">
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                      {feedback.message?.trim() || "No message provided."}
+                      {feedback.message?.trim() || t('frontend.feedbacks.noMessageProvided')}
                     </p>
                   </div>
                 </div>

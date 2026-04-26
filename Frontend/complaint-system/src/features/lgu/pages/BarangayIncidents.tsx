@@ -45,14 +45,14 @@ export const BarangayIncidents: React.FC = () => {
     setCurrentPage,
   } = useComplaintsFilter(incidents || []);
   if (incidentsError) {
-    return <ErrorMessage message="Failed to load incidents. Please refresh." />;
+    return <ErrorMessage message={t('frontend.incidents.loadIncidentsFailed')} />;
   }
 
   return (
     <div className="space-y-6">
       <div>
         <BackButton 
-          label="Back to Barangay List"
+          label={t('frontend.incidents.backToBarangayList')}
           onClick={() => navigate("/lgu/barangay-incidents")}
         />
 
@@ -65,7 +65,7 @@ export const BarangayIncidents: React.FC = () => {
             <span>{barangay?.barangay_address || "Loading address..."}</span>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            Incidents forwarded from this barangay
+            {t('frontend.incidents.forwardedFromBarangay')}
           </p>
         </div>
       </div>
@@ -78,13 +78,13 @@ export const BarangayIncidents: React.FC = () => {
             <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
           </div>
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">Sort By</label>
+            <label className="text-sm font-medium text-gray-700">{t('frontend.filters.sortBy')}</label>
             <SortDropdown current={sortBy} onChange={handleSortChange} />
           </div>
         </div>
 
         <div className="w-full lg:w-auto">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Date Range</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('frontend.filters.dateRange')}</label>
           <DateFilter
             dateFrom={dateFrom}
             dateTo={dateTo}

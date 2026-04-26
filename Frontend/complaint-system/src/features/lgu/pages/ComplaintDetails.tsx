@@ -55,7 +55,7 @@ export const LguComplaintDetails: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{complaint.title}</h1>
-                <p className="text-sm text-gray-500 mt-1">Complaint #{complaint.id}</p>
+                <p className="text-sm text-gray-500 mt-1">{t('complaint.id', { id: complaint.id })}</p>
               </div>
               <div className="shrink-0">
                 <StatusBadge status={complaint.status} userRole={userRole || undefined} />
@@ -66,7 +66,7 @@ export const LguComplaintDetails: React.FC = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Description</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('frontend.complaints.description')}</h2>
             <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
               {complaint.description}
             </p>
@@ -76,10 +76,10 @@ export const LguComplaintDetails: React.FC = () => {
 
         <div className="space-y-4 sm:space-y-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('frontend.complaints.additionalInfo')}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Submitted</p>
+                <p className="text-xs text-gray-500 mb-1">{t('frontend.complaints.submitted')}</p>
                 <p className="text-sm font-medium text-gray-900">
                   {new Date(complaint.created_at).toLocaleDateString("en-PH", {
                     year: "numeric",
@@ -91,7 +91,7 @@ export const LguComplaintDetails: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <p className="text-xs text-gray-500 mb-1">{t('frontend.complaints.status')}</p>
                 <p className="text-sm font-medium text-gray-900 capitalize">
                   {formatStatus(complaint.status, userRole || undefined)}
                 </p>
@@ -99,15 +99,15 @@ export const LguComplaintDetails: React.FC = () => {
               {complaint.user && (
                 <>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Reporter Email</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('frontend.complaints.reporterEmail')}</p>
                     <p className="text-sm font-medium text-gray-900">
                       {complaint.user.email}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Reporter Phone</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('frontend.complaints.reporterPhone')}</p>
                     <p className="text-sm font-medium text-gray-900">
-                      {complaint.user.phone_number || "N/A"}
+                      {complaint.user.phone_number || t('frontend.complaints.noData')}
                     </p>
                   </div>
                 </>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useResolvedPostIncidentFeedbacks } from "../../hooks/useAppFeedback";
 import { ErrorMessage } from "./ErrorMessage";
 import { PageHeader } from "./PageHeader";
@@ -40,6 +41,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
   detailPathBase,
   emptyMessage = "No feedbacks found.",
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { feedbacks, isLoading, error } = useResolvedPostIncidentFeedbacks();
   const [search, setSearch] = useState("");
@@ -99,22 +101,22 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-sm font-medium text-gray-500">Total Feedbacks</p>
+          <p className="text-sm font-medium text-gray-500">{t('frontend.feedbacks.totalFeedbacks')}</p>
           <p className="mt-2 text-3xl font-bold text-gray-900">{totalFeedbacks}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-sm font-medium text-gray-500">Average Rating</p>
+          <p className="text-sm font-medium text-gray-500">{t('frontend.feedbacks.averageRating')}</p>
           <p className="mt-2 text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Search feedbacks</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">{t('frontend.feedbacks.searchFeedbacks')}</label>
         <input
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by user, incident, message, or ID"
+          placeholder={t('frontend.feedbacks.searchPlaceholder')}
           className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
         />
       </div>
@@ -127,12 +129,12 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
           <table className="w-full min-w-[860px]">
             <thead className="bg-gray-50 border-y border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Feedback ID</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">User</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Incident</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Rating</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Message</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.feedbackId')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.user')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.incident')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.rating')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.message')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{t('frontend.feedbacks.headers.date')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -156,7 +158,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
                     <td className="px-4 py-3 text-sm font-mono text-gray-500">#{feedback.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <div className="font-medium">{formatName(feedback)}</div>
-                      <div className="text-xs text-gray-500">{feedback.user.email || "No email provided"}</div>
+                      <div className="text-xs text-gray-500">{feedback.user.email || t('frontend.feedbacks.noEmailProvided')}</div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <button
@@ -172,7 +174,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
                       <RatingBadge rating={feedback.ratings} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600 max-w-[320px]">
-                      <p>{feedback.message || "No message provided"}</p>
+                      <p>{feedback.message || t('frontend.feedbacks.noMessageProvided')}</p>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {new Date(feedback.created_at).toLocaleString()}

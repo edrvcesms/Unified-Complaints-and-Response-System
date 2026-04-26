@@ -8,6 +8,7 @@ class NotificationCreateData(BaseModel):
     message: str
     user_id: int
     complaint_id: Optional[int] = None
+    incident_id: Optional[int] = None
     channel: str
     notification_type: str
     is_read: bool = False
@@ -18,6 +19,7 @@ class NotificationData(BaseModel):
     message: str
     user_id: int
     complaint_id: Optional[int] = None
+    incident_id: Optional[int] = None
     channel: str
     notification_type: str
     sent_at: datetime

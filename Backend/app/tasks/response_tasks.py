@@ -2,7 +2,7 @@ from app.celery_worker import celery_worker
 from app.database.database import AsyncSessionLocal
 from app.models.response import Response
 from app.utils.logger import logger
-from asgiref.sync import async_to_sync
+from app.tasks.worker_loop import run_async
 from datetime import datetime, timezone
 
 
@@ -11,7 +11,6 @@ def save_response_task(self, incident_id: int, responder_id: int, actions_taken:
 
     async def _run():
         async with AsyncSessionLocal() as db:
-
             response = Response(
                 incident_id=incident_id,
                 responder_id=responder_id,
@@ -20,7 +19,7 @@ def save_response_task(self, incident_id: int, responder_id: int, actions_taken:
             )
             db.add(response)
             await db.commit()
-            
+
         return {
             "response_id": response.id,
             "incident_id": incident_id,
@@ -30,7 +29,7 @@ def save_response_task(self, incident_id: int, responder_id: int, actions_taken:
         }
 
     try:
-        async_to_sync(_run)()
+        return run_async(_run())
     except Exception as e:
         logger.exception(f"Response failed: {e}")
         raise self.retry(exc=e)

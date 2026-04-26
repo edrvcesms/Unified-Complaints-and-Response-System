@@ -1,15 +1,25 @@
 from app.utils.push_notifications import send_push_notification
 from app.utils.logger import logger
 from app.celery_worker import celery_worker
-from asgiref.sync import async_to_sync
+from app.tasks.worker_loop import run_async
 from app.models.notification import Notification
 from app.database.database import AsyncSessionLocal
 from datetime import datetime, timezone
 from app.utils.caching import delete_cache
 from app.utils.redis_pub import publish_sse_event
 
+
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def send_push_notification_task(self, token: str, enabled: bool, title: str = None, body: str = "", data: dict = None, sound: str = "default", expo_token: str = None):
+def send_push_notification_task(
+    self,
+    token: str,
+    enabled: bool,
+    title: str = None,
+    body: str = "",
+    data: dict = None,
+    sound: str = "default",
+    expo_token: str = None,
+):
     try:
         result = send_push_notification(
             token=token,
@@ -27,8 +37,8 @@ def send_push_notification_task(self, token: str, enabled: bool, title: str = No
     except Exception as e:
         logger.exception(f"Push notification task failed: {e}")
         raise self.retry(exc=e)
-      
-      
+
+
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_notifications_task(
     self,
@@ -73,8 +83,12 @@ def send_notifications_task(
                         "incident_id": incident_id,
                         "notification_type": notification_type,
                         "channel": channel,
-                    }
-                }
+                    },
+                },
             )
-            
-    async_to_sync(_run)()
+
+    try:
+        run_async(_run())
+    except Exception as e:
+        logger.exception(f"Send notification task failed: {e}")
+        raise self.retry(exc=e)

@@ -485,18 +485,6 @@ async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db
         logger.info(f"All steps complete — complaint id={new_complaint.id} fully processed")
             
         logger.info(f"barangay_account_id: {updated_complaint.barangay_account.id if updated_complaint.barangay_account else None}")
-        
-        if updated_complaint.barangay_account and updated_complaint.barangay_account.user_id:
-            send_notifications_task.delay(
-                user_id=updated_complaint.barangay_account.user_id,
-                title="New Complaint Submitted",
-                message=f"New complaint has been submitted: {updated_complaint.title}",
-                complaint_id=updated_complaint.id,
-                incident_id=cluster.result().incident_id if cluster else None,
-                notification_type="info",
-                event="new_complaint"
-            )
-            logger.info(f"Notification created for barangay account user ID {updated_complaint.barangay_account.user_id} about new complaint ID: {updated_complaint.id}")
             
         await CacheInvalidator.invalidate_cache(
             complaint_ids=[updated_complaint.id],

@@ -20,4 +20,4 @@ class Notification(Base):
 
     user = relationship("User", back_populates="notifications")
     complaint = relationship("Complaint", back_populates="notifications")
-    incident = relationship("Incident", back_populates="notifications")
+    incident = relationship("IncidentModel", back_populates="notifications")

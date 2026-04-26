@@ -8,7 +8,8 @@ from app.models.event import Event
 from app.utils.logger import logger
 from typing import List, Optional
 from app.schemas.event_schema import EventCreate, EventData
-from app.tasks import upload_event_media_task, delete_event_media_task
+from app.utils.cache_invalidator_optimized import invalidate_cache
+from app.tasks.upload_tasks import upload_event_media_task, delete_event_media_task
 from app.utils.caching import set_cache, get_cache, delete_cache
 
 from app.utils.cache_invalidator_optimized import invalidate_cache

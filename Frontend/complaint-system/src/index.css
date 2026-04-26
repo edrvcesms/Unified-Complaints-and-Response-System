@@ -2,46 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: "Inter", sans-serif;
-  font-size: clamp(18px, 1.5rem, 20px); /* increased font size */
-  line-height: 1.5;
-}
-
+/*
+  ROOT FONT SIZE: Scales smoothly from small mobile to large desktop.
+  clamp(min, preferred, max) — no breakpoint overrides needed.
+*/
 html {
-  font-size: 125%; /* 16px → 20px — scales all rem units */
+  font-size: clamp(15px, 1.1vw + 0.5rem, 20px);
   -webkit-text-size-adjust: 100%; /* prevent iOS font inflation */
 }
 
-/* Scale back down at smaller breakpoints to prevent overflow */
-@media (max-width: 1024px) {
-  html {
-    font-size: 115%; /* ~18.4px on tablet */
-  }
+body {
+  font-family: "Inter", sans-serif;
+  line-height: 1.5;
+  /* font-size inherits from html — scales automatically */
 }
 
-@media (max-width: 640px) {
-  html {
-    font-size: 106.25%; /* ~17px on mobile — gentle bump, avoids overflow */
-  }
-}
-
+/*
+  NAVBAR HEIGHT: Smoothly scales from ~76px (mobile) to ~128px (desktop).
+  Replaces all previous @media breakpoint overrides.
+*/
 :root {
-  /* These match your responsive navbar: h-16/h-20/h-24 + 6px gold bar,
-     multiplied by the zoom factor at each breakpoint */
-  --navbar-h: 87.5px;   /* 70px × 1.25 */
-}
-
-@media (min-width: 640px) {
-  :root { --navbar-h: 107.5px; } /* 86px × 1.25 */
-}
-
-@media (min-width: 1024px) {
-  :root { --navbar-h: 127.5px; } /* 102px × 1.25 */
+  --navbar-h: clamp(76px, 6vw + 40px, 128px);
 }
 
 .container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 clamp(1rem, 4vw, 2rem);
 }

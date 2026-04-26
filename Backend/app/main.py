@@ -9,40 +9,16 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select
 from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
-from app.domain.infrastracture.jobs.incident_jobs import run_resolve_expired_incidents
 from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, department_routes, announcement_routes, report_routes, app_feedback_routes, event_routes, sms_routes
 from app.admin import _super_admin_routes as _super_admin
-from app.domain.infrastracture.jobs.incident_expiration_alert import run_expiry_warning_notifications
 from app.database.database import AsyncSessionLocal
 from app.core.redis import redis_client
 scheduler = AsyncIOScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
-    # ── Scheduler ──
-    scheduler.add_job(
-        run_resolve_expired_incidents,
-        trigger="interval",
-        minutes=30,
-        id="resolve_expired_incidents",
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        run_expiry_warning_notifications,
-        trigger="interval",
-        minutes=30,
-        id="expiry_warning_notifications",
-        replace_existing=True,
-    )
-    scheduler.start()
-    logger.info("Scheduler started.")
-
     logger.info("Application startup complete.")
     yield
-
-    scheduler.shutdown()
-    logger.info("Scheduler shut down.")
     logger.info("Application shutdown complete.")
 
 app = FastAPI(lifespan=lifespan)

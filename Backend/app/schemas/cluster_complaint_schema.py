@@ -8,8 +8,6 @@ class ClusterComplaintSchema(BaseModel):
     description: str
     barangay_id: int
     category_id: int
-    sector_id: int | None = None
-    priority_level_id: int | None = None
     category_time_window_hours: int
     category_base_severity_weight: float
     similarity_threshold: float

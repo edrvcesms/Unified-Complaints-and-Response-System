@@ -7,7 +7,7 @@ from app.models.user import User
 from sqlalchemy import select, update
 from app.core.security import hash_password, decrypt_password
 from fastapi.responses import JSONResponse
-from app.tasks import send_otp_email_task
+from app.tasks.email_tasks import send_otp_email_task
 from app.utils.logger import logger
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.core.config import settings

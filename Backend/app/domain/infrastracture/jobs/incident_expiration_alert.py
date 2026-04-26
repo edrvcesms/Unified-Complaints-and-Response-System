@@ -123,7 +123,7 @@ def _should_notify(incident, target_user_id: int, current_checkpoint: int) -> bo
 
 async def run_expiry_warning_notifications():
     
-    from app.tasks import send_notifications_task
+    from app.tasks.notification_tasks import send_notifications_task
 
     """
     Scheduler job — runs every 30 minutes via AsyncIOScheduler.

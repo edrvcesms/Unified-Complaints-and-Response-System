@@ -13,7 +13,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.utils.cache_invalidator_optimized import invalidate_cache
-from app.tasks import send_notifications_task, send_push_notification_task
+from app.tasks.notification_tasks import send_notifications_task, send_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
 from app.services.complaint_services import log_status_change

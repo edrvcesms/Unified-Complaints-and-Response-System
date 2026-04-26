@@ -43,6 +43,26 @@ services:
       - 1.1.1.1
     restart: always
 
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_beat
+    command: celery -A app.celery_worker.celery_worker beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      TMPDIR: /shared_tmp
+    volumes:
+      - upload_tmp:/shared_tmp
+    depends_on:
+      - redis
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: always
+
   redis:
     image: redis:7
     container_name: redis

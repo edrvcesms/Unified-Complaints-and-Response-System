@@ -11,7 +11,7 @@ from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
 from app.utils.cache_invalidator_optimized import invalidate_cache
 from app.utils.cache_invalidator_optimized import CacheInvalidator
-from app.tasks import send_notifications_task
+from app.tasks.notification_tasks import send_notifications_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
 from fastapi.responses import JSONResponse

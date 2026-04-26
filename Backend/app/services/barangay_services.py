@@ -5,7 +5,8 @@ from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
 from app.schemas.response_schema import ResponseCreateSchema
 from app.utils.cache_invalidator_optimized import invalidate_cache
-from app.tasks import send_notifications_task, save_response_task
+from app.tasks.notification_tasks import send_notifications_task
+from app.tasks.response_tasks import save_response_task
 from fastapi.responses import JSONResponse
 from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount

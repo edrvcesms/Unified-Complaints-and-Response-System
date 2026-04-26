@@ -21,7 +21,9 @@ from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
-from app.tasks import cluster_complaint_task, send_notifications_task, notify_user_for_hearing_task, save_response_task
+from app.tasks.incident_tasks import cluster_complaint_task
+from app.tasks.notification_tasks import send_notifications_task
+from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
 from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
 from app.utils.cache_invalidator_optimized import CacheInvalidator

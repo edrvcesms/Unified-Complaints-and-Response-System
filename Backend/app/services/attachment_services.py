@@ -1,7 +1,7 @@
 from fastapi import UploadFile, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.logger import logger
-from app.tasks import upload_attachments_task, upload_remarks_attachment
+from app.tasks.upload_tasks import upload_attachments_task, upload_remarks_attachment
 from app.utils.attachments import validate_upload_files
 import base64
 from typing import List

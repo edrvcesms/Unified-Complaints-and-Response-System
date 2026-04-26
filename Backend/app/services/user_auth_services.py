@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
-from app.tasks import send_otp_email_task
+from app.tasks.email_tasks import send_otp_email_task
 from fastapi.responses import JSONResponse
 from app.core.security import create_access_token, create_refresh_token
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary

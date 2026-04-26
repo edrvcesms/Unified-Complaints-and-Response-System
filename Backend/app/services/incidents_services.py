@@ -15,7 +15,7 @@ from app.schemas.incident_schema import IncidentData
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.tasks import send_notifications_task
+from app.tasks.notification_tasks import send_notifications_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
 from app.utils.caching import set_cache, get_cache

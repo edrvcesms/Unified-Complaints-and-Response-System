@@ -16,6 +16,15 @@ export const NotificationsPage: React.FC = () => {
   const rejectedStatus = ["rejected_by_barangay", "rejected_by_department", "rejected_by_lgu"];
 
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);
+  const isWarningNotification = (notification: Notification) => notification.notification_type === "warning";
+  const isCriticalNotification = (notification: Notification) => notification.notification_type === "critical";
+
+  const getNotificationColorClass = (notification: Notification) => {
+    if (isCriticalNotification(notification)) return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-50', badgeUnread: 'bg-red-50/70', dot: 'bg-red-500', icon: 'text-red-600' };
+    if (isWarningNotification(notification)) return { bg: 'bg-amber-100', text: 'text-amber-700', badge: 'bg-amber-50', badgeUnread: 'bg-amber-50/70', dot: 'bg-amber-500', icon: 'text-amber-600' };
+    if (isRejectNotification(notification)) return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-50', badgeUnread: 'bg-red-50/70', dot: 'bg-red-500', icon: 'text-red-600' };
+    return { bg: 'bg-green-100', text: 'text-green-700', badge: 'bg-green-50', badgeUnread: 'bg-green-50/70', dot: 'bg-green-500', icon: 'text-green-700' };
+  };
   const totalNotifications = notifications?.length ?? 0;
   const unreadNotifications = notifications?.filter((notification) => !notification.is_read).length ?? 0;
 
@@ -131,27 +140,22 @@ export const NotificationsPage: React.FC = () => {
                 key={notification.id}
                 type="button"
                 onClick={() => handleNotificationClick(notification)}
-                className={`w-full px-5 py-4 text-left transition hover:bg-gray-50 sm:px-6 ${isRejectNotification(notification)
-                  ? notification.is_read
-                    ? "bg-red-50/60"
-                    : "bg-red-50"
-                  : notification.is_read
-                    ? "bg-white"
-                    : "bg-green-50/70"
+                className={`w-full px-5 py-4 text-left transition hover:bg-gray-50 sm:px-6 ${
+                  notification.is_read ? getNotificationColorClass(notification).badge : getNotificationColorClass(notification).badgeUnread
                 }`}
               >
                 <div className="flex gap-3 sm:gap-4">
                   {!notification.is_read && (
                     <div
-                      className={`shrink-0 mt-2 h-2.5 w-2.5 rounded-full ${isRejectNotification(notification) ? "bg-red-500" : "bg-green-500"}`}
+                      className={`shrink-0 mt-2 h-2.5 w-2.5 rounded-full ${getNotificationColorClass(notification).dot}`}
                     />
                   )}
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${isRejectNotification(notification) ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"}`}>
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${getNotificationColorClass(notification).bg} ${getNotificationColorClass(notification).icon}`}>
                     <Bell className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${isRejectNotification(notification) ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"}`}>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${getNotificationColorClass(notification).bg} ${getNotificationColorClass(notification).text}`}>
                         {isRejectNotification(notification) ? t('frontend.notifications.reject') : notification.notification_type.replace(/_/g, " ")}
                       </span>
                       {!notification.is_read && (
@@ -161,23 +165,52 @@ export const NotificationsPage: React.FC = () => {
                       )}
                     </div>
                     <p
-                      className={`text-sm font-medium ${isRejectNotification(notification)
-                        ? "text-red-900"
-                        : notification.is_read
-                          ? "text-gray-700"
-                          : "text-gray-900"
+                      className={`text-sm font-medium ${
+                        isCriticalNotification(notification)
+                          ? "text-red-900"
+                          : isWarningNotification(notification)
+                            ? "text-amber-900"
+                            : isRejectNotification(notification)
+                              ? "text-red-900"
+                              : notification.is_read
+                                ? "text-gray-700"
+                                : "text-gray-900"
                       }`}
                     >
                       {notification.title}
                     </p>
-                    <p className={`text-xs mt-1 line-clamp-2 leading-5 ${isRejectNotification(notification) ? "text-red-700" : "text-gray-600"}`}>
+                    <p className={`text-xs mt-1 line-clamp-2 leading-5 ${
+                      isCriticalNotification(notification)
+                        ? "text-red-700"
+                        : isWarningNotification(notification)
+                          ? "text-amber-700"
+                          : isRejectNotification(notification)
+                            ? "text-red-700"
+                            : "text-gray-600"
+                    }`}>
                       {notification.message}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                      <p className={`font-medium ${isRejectNotification(notification) ? "text-red-600" : "text-gray-500"}`}>
+                      <p className={`font-medium ${
+                        isCriticalNotification(notification)
+                          ? "text-red-600"
+                          : isWarningNotification(notification)
+                            ? "text-amber-600"
+                            : isRejectNotification(notification)
+                              ? "text-red-600"
+                              : "text-gray-500"
+                      }`}>
                         {t('frontend.notifications.sentAt')}: {formatDateTime(notification.sent_at)}
                       </p>
-                      <p className={`${isRejectNotification(notification) ? "text-red-500" : "text-gray-400"}`}>
+                      <p className={`${
+                        isCriticalNotification(notification)
+                          ? "text-red-500"
+                          : isWarningNotification(notification)
+                            ? "text-amber-500"
+                            : isRejectNotification(notification)
+                              ? "text-red-500"
+                              : "text-gray-400"
+                      }`}>
                         {formatTimeAgo(notification.sent_at)}
                       </p>
                     </div>

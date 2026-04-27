@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { validateAttachments } from "../../utils/attachmentHelper";
+import { validateActionsTaken } from "../../utils/validators";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -38,6 +39,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   const [actionsTaken, setActionsTaken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
+  const [actionsTakenError, setActionsTakenError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
       setActionsTaken("");
       setSelectedFiles([]);
       setFileError("");
+      setActionsTakenError("");
     }
   }, [isOpen]);
 
@@ -76,6 +79,20 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
     setFileError("");
   };
 
+  const handleActionsTakenChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setActionsTaken(e.target.value);
+    setActionsTakenError("");
+  };
+
+  const validateForm = (): boolean => {
+    const error = validateActionsTaken(actionsTaken);
+    if (error) {
+      setActionsTakenError(error);
+      return false;
+    }
+    return true;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -85,7 +102,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (fileError || externalError) {
+            if (!validateForm() || fileError || externalError) {
               return;
             }
             try {
@@ -100,14 +117,20 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           )}
           <label className="block text-lg font-medium text-gray-700 mb-2">{t('frontend.actionsTaken.label')}</label>
           <textarea
-            className="w-full border text-sm border-gray-300 rounded-md p-2 mb-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={`w-full border text-sm rounded-md p-2 mb-2 resize-none focus:outline-none focus:ring-2 transition
+              ${actionsTakenError
+                ? "border-red-400 bg-red-50 focus:ring-red-300"
+                : "border-gray-300 bg-white focus:ring-primary-500"
+              }`}
             rows={3}
             value={actionsTaken}
-            onChange={e => setActionsTaken(e.target.value)}
-            required
+            onChange={handleActionsTakenChange}
             disabled={isLoading}
             placeholder={t('frontend.actionsTaken.placeholder')}
           />
+          {actionsTakenError && (
+            <p className="mt-1 text-sm text-red-600 mb-2">{actionsTakenError}</p>
+          )}
           <div className="mt-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Attachments (optional)

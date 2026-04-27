@@ -15,6 +15,58 @@ const hasExcessiveRepeatedChars = (str: string, threshold = 10): boolean => {
   return matches.some(match => match.length >= threshold);
 };
 
+// Helper function to detect repeated symbols (e.g., "!!!!!!" or "??????")
+const hasExcessiveRepeatedSymbols = (str: string, threshold = 3): boolean => {
+  const symbolMatches = str.match(/[!@#$%^&*()_+=\-\[\]{};:'",.<>?/\\|`~]+/g);
+  if (!symbolMatches) return false;
+  return symbolMatches.some(match => {
+    const singleSymbol = match.length > 0 && match.every(char => match[0] === char);
+    return singleSymbol && match.length >= threshold;
+  });
+};
+
+// Helper function to detect repeated words (e.g., "the the the")
+const hasExcessiveRepeatedWords = (str: string, threshold = 3): boolean => {
+  const words = str.toLowerCase().trim().split(/\s+/);
+  if (words.length < threshold) return false;
+  
+  for (let i = 0; i <= words.length - threshold; i++) {
+    const subsequence = words.slice(i, i + threshold);
+    if (subsequence.length === threshold && subsequence.every(w => w === subsequence[0])) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Helper function to detect gibberish (random character sequences without vowels)
+const hasGibberishSequences = (str: string): boolean => {
+  // Split into words and check for gibberish patterns
+  const words = str.split(/[\s\-_]+/);
+  let gibberishCount = 0;
+  
+  for (const word of words) {
+    // Skip very short words
+    if (word.length <= 2) continue;
+    
+    // Skip numbers and symbols only
+    if (!/[a-zA-Z]/.test(word)) continue;
+    
+    // Check if word has too few vowels (likely gibberish)
+    const vowels = (word.match(/[aeiouAEIOU]/g) || []).length;
+    const consonants = (word.match(/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]/g) || []).length;
+    
+    // If word is mostly consonants with very few vowels, it's likely gibberish
+    if (consonants > 0 && vowels / (consonants + vowels) < 0.15) {
+      gibberishCount++;
+    }
+  }
+  
+  // If more than 30% of words are gibberish, reject
+  return words.filter(w => w.length > 2 && /[a-zA-Z]/.test(w)).length > 0 && 
+         gibberishCount / Math.max(words.filter(w => w.length > 2 && /[a-zA-Z]/.test(w)).length, 1) > 0.3;
+};
+
 // Helper function to check for suspicious patterns
 const hasSuspiciousPattern = (str: string): boolean => {
   // Check for only repeated characters
@@ -117,6 +169,20 @@ export const validateTitle = (title: string, fieldName = "Title"): string | null
   if (hasSuspiciousPattern(trimmedTitle)) {
     return `${fieldName} contains invalid characters or patterns.`;
   }
+
+  // For titles, be stricter with symbol repetition
+  if (hasExcessiveRepeatedSymbols(trimmedTitle, 2)) {
+    return `${fieldName} contains too many repeated symbols.`;
+  }
+
+  // For titles, be less strict with word repetition (1 repeat allowed)
+  if (hasExcessiveRepeatedWords(trimmedTitle, 4)) {
+    return `${fieldName} contains too many repeated words.`;
+  }
+
+  if (hasGibberishSequences(trimmedTitle)) {
+    return `${fieldName} contains invalid or gibberish text.`;
+  }
   
   return null;
 };
@@ -142,6 +208,53 @@ export const validateDescription = (description: string, fieldName = "Descriptio
   
   if (hasSuspiciousPattern(trimmedDesc)) {
     return `${fieldName} contains invalid characters or patterns.`;
+  }
+
+  if (hasExcessiveRepeatedSymbols(trimmedDesc, 3)) {
+    return `${fieldName} contains too many repeated symbols.`;
+  }
+
+  if (hasExcessiveRepeatedWords(trimmedDesc, 3)) {
+    return `${fieldName} contains too many repeated words.`;
+  }
+
+  if (hasGibberishSequences(trimmedDesc)) {
+    return `${fieldName} contains invalid or gibberish text. Please use valid words.`;
+  }
+  
+  return null;
+};
+
+// ===== ACTIONS TAKEN VALIDATOR =====
+export const validateActionsTaken = (actionsTaken: string, fieldName = "Actions Taken"): string | null => {
+  if (!actionsTaken || !actionsTaken.trim()) {
+    return `${fieldName} is required.`;
+  }
+  
+  const trimmedActions = actionsTaken.trim();
+  
+  if (trimmedActions.length > MAX_DESCRIPTION_LENGTH) {
+    return `${fieldName} must not exceed ${MAX_DESCRIPTION_LENGTH} characters.`;
+  }
+  
+  if (trimmedActions.length < 5) {
+    return `${fieldName} must be at least 5 characters.`;
+  }
+  
+  if (hasSuspiciousPattern(trimmedActions)) {
+    return `${fieldName} contains invalid characters or patterns.`;
+  }
+
+  if (hasExcessiveRepeatedSymbols(trimmedActions, 3)) {
+    return `${fieldName} contains too many repeated symbols.`;
+  }
+
+  if (hasExcessiveRepeatedWords(trimmedActions, 3)) {
+    return `${fieldName} contains too many repeated words.`;
+  }
+
+  if (hasGibberishSequences(trimmedActions)) {
+    return `${fieldName} contains invalid or gibberish text. Please use valid words.`;
   }
   
   return null;

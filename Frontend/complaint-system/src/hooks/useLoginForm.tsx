@@ -42,9 +42,7 @@ export const useLoginForm = () => {
       setErrors({
         general: error.message || "Login failed. Please try again.",
       });
-    },
-    onSettled: () => {
-      // Turnstile tokens are single-use, so force a fresh challenge after each login attempt.
+      // Force a fresh Turnstile challenge on error so user can retry with a new token
       setFormData((prev) => ({ ...prev, turnstile_token: "" }));
       setTurnstileRenderKey((prev) => prev + 1);
     },

@@ -20,7 +20,7 @@ const hasExcessiveRepeatedSymbols = (str: string, threshold = 3): boolean => {
   const symbolMatches = str.match(/[!@#$%^&*()_+=\-\[\]{};:'",.<>?/\\|`~]+/g);
   if (!symbolMatches) return false;
   return symbolMatches.some(match => {
-    const singleSymbol = match.length > 0 && match.every(char => match[0] === char);
+    const singleSymbol = match.length > 0 && new Set(match).size === 1;
     return singleSymbol && match.length >= threshold;
   });
 };

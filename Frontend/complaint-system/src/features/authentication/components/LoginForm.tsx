@@ -30,6 +30,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   turnstileRenderKey,
   title,
   subtitle,
+  turnstileToken,
   onTurnstileToken,
   onChange,
   onSubmit,
@@ -101,7 +102,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </button>
       </div>
 
-      <SubmitButton isLoading={isLoading} />
+      <SubmitButton isLoading={isLoading} isTurnstileVerified={!!formData.turnstile_token} />
 
       
       {siteKey && (

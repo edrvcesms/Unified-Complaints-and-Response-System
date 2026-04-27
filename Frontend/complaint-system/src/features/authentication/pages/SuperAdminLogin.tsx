@@ -44,6 +44,7 @@ export const SuperAdminLoginPage: React.FC = () => {
           subtitle={t('auth.superAdminLoginInstruction')}
           onTurnstileToken={handleTurnstileToken}
           turnstileRenderKey={turnstileRenderKey}
+          turnstileToken={formData.turnstile_token}
         />
 
         <p className="mt-6 text-xs text-gray-400 text-center">

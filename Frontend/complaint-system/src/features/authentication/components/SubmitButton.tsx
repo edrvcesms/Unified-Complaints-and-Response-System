@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 interface SubmitButtonProps {
   isLoading: boolean;
+  isTurnstileVerified?: boolean;
 }
 
 const Spinner = () => (
@@ -11,16 +12,17 @@ const Spinner = () => (
   </svg>
 );
 
-export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading }) => {
+export const SubmitButton: React.FC<SubmitButtonProps> = ({ isLoading, isTurnstileVerified = false }) => {
   const { t } = useTranslation();
+  const isDisabled = isLoading || !isTurnstileVerified;
   
   return (
   <button
     type="submit"
-    disabled={isLoading}
+    disabled={isDisabled}
     className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg
       text-white font-semibold text-base tracking-wide shadow-md transition duration-200 cursor-pointer
-      ${isLoading
+      ${isDisabled
         ? "bg-primary-400 cursor-not-allowed"
         : "bg-primary-700 hover:bg-primary-800 active:scale-[0.98]"
       }`}

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { useTranslation } from 'react-i18next';
-import { useIncidentDetails, useIncidentComplaints } from "../../../hooks/useIncidents";
+import { useIncidentDetails, useIncidentComplaints, useMarkIncidentAsViewed } from "../../../hooks/useIncidents";
 import { ArrowLeft } from "lucide-react";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { SkeletonComplaintCard } from "../../barangay/components/Skeletons";
@@ -19,10 +20,19 @@ export const LguIncidentComplaints: React.FC = () => {
     isLoading: complaintsLoading,
     error: complaintsError,
   } = useIncidentComplaints(Number(incidentId), true);
+  const markAsViewed = useMarkIncidentAsViewed();
+  const hasMarkedAsViewed = useRef(false);
 
   const handleComplaintClick = (complaintId: number) => {
     navigate(`/lgu/incidents/complaints/${complaintId}`);
   };
+
+  useEffect(() => {
+    if (!hasMarkedAsViewed.current && incident && (incident.has_new_complaints || (incident.new_complaint_count && incident.new_complaint_count > 0))) {
+      markAsViewed.mutate(Number(incidentId));
+      hasMarkedAsViewed.current = true;
+    }
+  }, [incident, incidentId, markAsViewed]);
 
   if (incidentLoading) {
     return <LoadingIndicator />;

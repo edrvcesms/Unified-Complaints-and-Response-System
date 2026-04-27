@@ -55,6 +55,7 @@ class CacheInvalidator:
                 "all_complaints",
                 "all_barangays",
                 "all_announcements",
+                "all_forwarded_incidents",
                 "events_cache",
                 "all_departments",
                 "lgu:complaint_counts_by_barangay_category",
@@ -71,6 +72,7 @@ class CacheInvalidator:
 
         if barangay_id:
             tasks.update({
+                f"forwarded_barangay_incidents:{barangay_id}",
                 f"barangay_incidents:{barangay_id}",
                 f"all_incidents:barangay_id:{barangay_id}",
                 f"barangay_profile:{barangay_id}",
@@ -98,8 +100,8 @@ class CacheInvalidator:
 
         if department_account_id:
             tasks.update({
+                f"department_incidents:{department_account_id}",
                 f"archive_incidents:department:{department_account_id}",
-                f"forwarded_incidents:department:{department_account_id}",
             })
             logger.info(f"Department caches added for department_account_id: {department_account_id}")
 
@@ -174,7 +176,6 @@ class CacheInvalidator:
             logger.exception(f"Error clearing all cache: {e}")
 
 
-# Backward compatibility: keep old function name
 async def invalidate_cache(
     complaint_ids: Optional[List[int]] = None,
     user_ids: Optional[List[int]] = None,

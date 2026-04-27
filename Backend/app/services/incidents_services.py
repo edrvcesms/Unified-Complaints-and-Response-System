@@ -239,6 +239,8 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 event="info"
 
             )
+            incident.lgu_account_id = official.id
+            await db.commit()
             
         # OPTIMIZED: Use new CacheInvalidator with pipeline
         await CacheInvalidator.invalidate_cache(

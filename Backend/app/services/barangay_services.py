@@ -309,6 +309,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
             department_account_id=department_account_id,
             include_global=True
         )
+        logger.info(f"Cache invalidated for complaints: {complaint_ids}, users: {[complaint.user_id for complaint in complaints]}, barangay: {barangay_id}, incident: {incident_id}, department_account: {department_account_id}")
             
         return JSONResponse(
             status_code=status.HTTP_200_OK,

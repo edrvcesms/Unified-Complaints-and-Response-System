@@ -167,6 +167,9 @@ export const useMarkIncidentAsViewed = () => {
     mutationFn: (incidentId: number) => markIncidentAsViewed(incidentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", "complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
+      queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
   });

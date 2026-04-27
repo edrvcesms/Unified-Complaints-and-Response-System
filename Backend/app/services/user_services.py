@@ -187,6 +187,8 @@ async def change_password(password_data: ChangePasswordData, db: AsyncSession):
         user.hashed_password = hash_password(password_data.new_password)
 
         await db.commit()
+        await delete_cache(f"user_profile:{user.id}")
+        await delete_cache(f"auth_user:{user.id}")
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,

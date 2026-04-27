@@ -125,7 +125,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             suffix=user_data.suffix,
             age=user_data.age,
             birthdate=user_data.birthdate,
-            #phone_number=user_data.phone_number,
+            phone_number=user_data.phone_number,
             gender=user_data.gender,
             barangay=user_data.barangay,
             zip_code=user_data.zip_code,

@@ -41,6 +41,7 @@ export default function KnowledgeBase() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [alreadyDeletedMsg, setAlreadyDeletedMsg] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (f: File): string | null => {
@@ -91,6 +92,9 @@ export default function KnowledgeBase() {
     },
     onSuccess: () => {
       setFile(null);
+      // Clear the "already deleted" notice when a new upload succeeds
+      setAlreadyDeletedMsg(null);
+      clearDataMutation.reset(); // Clear any clear-data error when upload succeeds
     },
   });
 
@@ -105,11 +109,27 @@ export default function KnowledgeBase() {
     },
     onSuccess: (data) => {
       setShowConfirmDialog(false);
-      // Optional: Show a success toast or notification
+      uploadMutation.reset(); // Clear upload success state when data is deleted
+      setAlreadyDeletedMsg(null);
       console.log("Data cleared:", data.detail);
     },
-    onError: (error) => {
-      console.error("Failed to clear data:", getErrorMessage(error));
+    onError: (err) => {
+      setShowConfirmDialog(false);
+      const error = err as ApiError;
+      const status = error?.response?.status;
+      const body = error?.response?.data?.detail ?? "";
+
+      // Treat 404 / "Namespace not found" as a friendly already-deleted notice
+      if (status === 404 || body.toLowerCase().includes("namespace not found")) {
+        clearDataMutation.reset();
+        uploadMutation.reset(); // Also clear any stale upload success
+        setAlreadyDeletedMsg(
+          "Index is already empty — it has been reset and is ready to use."
+        );
+        return;
+      }
+
+      console.error("Failed to clear data:", getErrorMessage(err));
     },
   });
 
@@ -117,6 +137,8 @@ export default function KnowledgeBase() {
     if (!file) return;
     const err = validateFile(file);
     if (err) { setValidationError(err); return; }
+    // Clear the already-deleted notice when a new upload is attempted
+    setAlreadyDeletedMsg(null);
     uploadMutation.mutate(file);
   };
 
@@ -195,7 +217,6 @@ export default function KnowledgeBase() {
         </button>
       </div>
 
-      {/* Rest of your component remains the same */}
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -315,7 +336,7 @@ export default function KnowledgeBase() {
             </div>
           )}
 
-          {/* Clear data error */}
+          {/* Clear data error (real errors only — 404 is handled as alreadyDeletedMsg) */}
           {clearDataMutation.isError && (
             <div className="flex items-start gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
               <svg className="h-4 w-4 text-red-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -325,7 +346,17 @@ export default function KnowledgeBase() {
             </div>
           )}
 
-          {/* Success result */}
+          {/* Already-deleted / namespace-not-found notice */}
+          {alreadyDeletedMsg && (
+            <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
+              <svg className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+              </svg>
+              <p className="text-xs text-blue-700 font-medium">{alreadyDeletedMsg}</p>
+            </div>
+          )}
+
+          {/* Upload success result */}
           {isSuccess && uploadMutation.data && (
             <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 space-y-3">
               <div className="flex items-center gap-2">

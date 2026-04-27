@@ -30,7 +30,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   turnstileRenderKey,
   title,
   subtitle,
-  turnstileToken,
   onTurnstileToken,
   onChange,
   onSubmit,

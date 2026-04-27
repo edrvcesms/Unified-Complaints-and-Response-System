@@ -16,6 +16,9 @@ class SSEManager:
         self._pubsub = None
         self._lock = asyncio.Lock()
 
+    # Queue sentinel used to force-close a single user's active streams.
+    _CLOSE_STREAM = None
+
     async def connect_redis(self):
         if not self._redis:
             self._redis = await aioredis.from_url(self.redis_url)
@@ -81,11 +84,23 @@ class SSEManager:
         for queue in all_queues:
             await self._safe_put(queue, message)
 
-    async def _safe_put(self, queue: asyncio.Queue, message: str):
+    async def _safe_put(self, queue: asyncio.Queue, message: str | None):
         try:
             queue.put_nowait(message)
         except asyncio.QueueFull:
             pass
+
+    async def disconnect_user(self, user_id: str | int):
+        user_id = str(user_id)
+        async with self._lock:
+            queues = list(self._connections.get(user_id, set()))
+
+        for queue in queues:
+            await self._safe_put(queue, self._CLOSE_STREAM)
+
+        logger.info(
+            f"SSE disconnect requested for user. user_id={user_id} subscribers={len(queues)}"
+        )
 
     async def send(self, user_id: str | int, data: Any, event: str = "message"):
         await self.connect_redis()
@@ -121,6 +136,9 @@ class SSEManager:
                 while True:
                     try:
                         message = await asyncio.wait_for(queue.get(), timeout=30)
+                        if message is self._CLOSE_STREAM:
+                            logger.info(f"SSE stream forced close for user. user_id={user_id}")
+                            break
                         yield message
                     except asyncio.TimeoutError:
                         yield ": keepalive\n\n"
@@ -128,9 +146,11 @@ class SSEManager:
                 logger.info(f"SSE stream cancelled by client disconnect. user_id={user_id}")
             finally:
                 async with self._lock:
-                    self._connections[user_id].remove(queue)
-                    if not self._connections[user_id]:
-                        del self._connections[user_id]
+                    user_queues = self._connections.get(user_id)
+                    if user_queues is not None:
+                        user_queues.discard(queue)
+                        if not user_queues:
+                            del self._connections[user_id]
                     remaining_user_subscribers = len(self._connections.get(user_id, set()))
                     remaining_total_subscribers = sum(len(queues) for queues in self._connections.values())
                 logger.info(

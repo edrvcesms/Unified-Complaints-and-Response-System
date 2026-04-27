@@ -17,3 +17,8 @@ export const CATEGORY = {
   vandalism: "Vandalism",
   other: "Other",
 }
+
+export interface RejectionCategory {
+  id: number;
+  name: string;
+}

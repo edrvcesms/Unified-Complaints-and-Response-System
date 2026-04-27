@@ -53,6 +53,7 @@ class CacheInvalidator:
         if include_global:
             tasks.update({
                 "all_complaints",
+                "all_rejection_categories",
                 "all_barangays",
                 "all_announcements",
                 "all_forwarded_incidents",
@@ -118,6 +119,7 @@ class CacheInvalidator:
         if user_ids:
             for user_id in user_ids:
                 tasks.add(f"user:{user_id}")
+                tasks.add(f"user_profile:{user_id}")
                 tasks.add(f"user_notifications:{user_id}")
             logger.info(f"User caches added for user_ids: {user_ids}")
 

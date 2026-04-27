@@ -8,7 +8,7 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, get_user_rejected_complaints, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs, get_submission_restricted_users, get_suspended_users, lift_suspension, remove_submission_restriction
 from fastapi import status
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate, CategoryConfigsUpdate
 from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
@@ -189,3 +189,76 @@ async def delete_pinecone_data_route(request: Request, index_name: str, db: Asyn
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting Pinecone data: {str(e)}"
         )
+        
+@router.get("/submission-restricted-users", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_submission_restricted_users_route(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_submission_restricted_users(current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+    
+@router.get("/suspended-users", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_suspended_users_route(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_suspended_users(current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+
+@router.post("/lift-suspension/{user_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def lift_suspension_route(
+    request: Request,
+    user_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await lift_suspension(user_id, current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+    
+@router.post("/remove-submission-restriction/{user_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def remove_submission_restriction_route(
+    request: Request,
+    user_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await remove_submission_restriction(user_id, current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+    
+@router.get("/rejected-complaints/{user_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def get_user_rejected_complaints_route(
+    request: Request,
+    user_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await get_user_rejected_complaints(user_id, current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e

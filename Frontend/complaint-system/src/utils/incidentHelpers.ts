@@ -25,6 +25,7 @@ export const getStatusColor = (status: string, _userRole?: string): string => {
     pending: "bg-gray-100 text-gray-800",
     forwarded_to_lgu: "bg-orange-100 text-orange-800",
     forwarded_to_department: "bg-orange-100 text-orange-800",
+    rejected: "bg-red-100 text-red-800",
   };
   return statusMap[lowerStatus] || "bg-gray-100 text-gray-800";
 };

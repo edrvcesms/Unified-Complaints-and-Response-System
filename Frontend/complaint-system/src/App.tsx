@@ -35,7 +35,7 @@ import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
 import { DepartmentArchiveIncidents } from "./features/department/pages/ArchiveIncidents"
-import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminVerifyUsers } from "./features/superadmin/pages"
+import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminResidentAccountManagement, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
@@ -135,6 +135,8 @@ function App() {
             <Route path="/superadmin/*" element={<SuperAdminDashboardLayout />}>
               <Route index element={<SuperAdminAccounts />} />
               <Route path="accounts" element={<SuperAdminAccounts />} />
+              <Route path="resident-account-management" element={<SuperAdminResidentAccountManagement />} />
+              <Route path="resident-account-management/rejected-complaints/:userId" element={<SuperAdminUserRejectedComplaints />} />
               <Route path="categories" element={<SuperAdminCategories />} />
               <Route path="emergency-hotlines" element={<SuperAdminEmergencyHotlines />} />
               <Route path="verify-users" element={<SuperAdminVerifyUsers />} />

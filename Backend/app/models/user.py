@@ -35,6 +35,10 @@ class User(Base):
     last_login = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), nullable=True)
+    is_suspended = Column(Boolean, default=False)
+    can_submit_complaints = Column(Boolean, default=True)
+    reject_counter = Column(Integer, default=0)
+    is_restricted_until = Column(DateTime(timezone=True), nullable=True)
 
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
     department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)

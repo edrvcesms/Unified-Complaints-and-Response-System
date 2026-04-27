@@ -47,7 +47,9 @@ class UserData(UserBase):
     front_id: Optional[str] = None
     back_id: Optional[str] = None
     selfie_with_id: Optional[str] = None
-
+    is_suspended: Optional[bool] = None
+    can_submit_complaints: Optional[bool] = None
+    reject_counter: Optional[int] = None
     model_config = {
         "from_attributes": True,  
         "populate_by_name": True,

@@ -3,6 +3,7 @@ from pinecone import Pinecone
 from sqlalchemy.ext import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.department import Department
+from app.models.complaint import Complaint
 from app.models.user import User
 from app.models.category import Category
 from app.models.category_config import CategoryConfigModel
@@ -20,6 +21,7 @@ from app.constants.roles import UserRole
 from app.core.config import settings
 from app.utils.caching import delete_cache
 from typing import Optional
+from app.constants.complaint_status import ComplaintStatus
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -348,3 +350,135 @@ async def update_category_configs(category_id: int, config_data: CategoryConfigs
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+async def get_submission_restricted_users(current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(
+            select(User).where(User.role == UserRole.USER.value, User.can_submit_complaints == False)
+        )
+        users = result.scalars().all()
+        return users
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def remove_submission_restriction(user_id: int, current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(
+            select(User).where(User.id == user_id, User.role == UserRole.USER.value)
+        )
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if user.can_submit_complaints:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not currently restricted from submitting complaints")
+
+        user.can_submit_complaints = True
+        user.reject_counter = 0
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
+        await delete_cache(f"user_profile:{user_id}")
+        return {"message": f"Submission restriction removed for user ID {user_id}"}
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+    
+async def get_suspended_users(current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(
+            select(User).where(User.role == UserRole.USER.value, User.is_suspended == True)
+        )
+        users = result.scalars().all()
+        return users
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def lift_suspension(user_id: int, current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(
+            select(User).where(User.id == user_id, User.role == UserRole.USER.value)
+        )
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if not user.is_suspended:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not currently suspended")
+
+        user.is_suspended = False
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
+        await delete_cache(f"user_profile:{user_id}")
+        return {"message": f"Suspension lifted for user ID {user_id}"}
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_user_rejected_complaints(user_id: int, current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        user_result = await db.execute(
+            select(User).where(User.id == user_id, User.role == UserRole.USER.value)
+        )
+        user = user_result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        result = await db.execute(
+            select(Complaint).where(Complaint.user_id == user_id, Complaint.status == ComplaintStatus.REJECTED.value)
+        )
+        complaints = result.scalars().all()
+        return complaints
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

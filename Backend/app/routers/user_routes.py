@@ -10,7 +10,6 @@ from app.schemas.push_token_schema import PushNotificationRequest, SavePushToken
 router = APIRouter()
 
 @router.get("/profile", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def get_profile(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_user_by_id(current_user.id, db)
 

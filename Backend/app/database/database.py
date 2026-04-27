@@ -12,6 +12,7 @@ def get_engine():
         _engine = create_async_engine(
             settings.DATABASE_URL_ASYNC,
             pool_pre_ping=True,
+            connect_args={"server_settings": {"timezone": "Asia/Manila"}},
         )
     return _engine
 

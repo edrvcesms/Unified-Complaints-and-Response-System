@@ -8,35 +8,47 @@ from app.services.incidents_services import get_incidents_by_barangay, get_incid
 from app.dependencies.auth_dependency import get_current_user
 from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing
 from app.services.incidents_services import forward_incident_to_lgu
-from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident
+from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident, reject_incident
 from app.services.lgu_services import assign_incident_to_department
 from app.services.department_services import get_incidents_forwarded_to_department
 from app.dependencies.db_dependency import get_async_db
 from app.constants.roles import UserRole
-from app.schemas.response_schema import ResponseCreateSchema
+from app.schemas.response_schema import ResponseCreateSchema, RejectComplaintSchema
 from app.models.user import User
 from app.utils.logger import logger
 
 router = APIRouter()
 
 
-def parse_response_data(response_data: Optional[str], actions_taken: Optional[str]) -> ResponseCreateSchema:
+def parse_response_data(
+    response_data: Optional[str],
+    actions_taken: Optional[str],
+    is_marked_as_spam: bool = False,
+) -> ResponseCreateSchema:
     response_text = response_data.strip() if response_data else ""
     if response_text:
         try:
-            return ResponseCreateSchema.model_validate_json(response_text)
+            payload = ResponseCreateSchema.model_validate_json(response_text)
+            return payload.model_copy(update={"is_marked_as_spam": is_marked_as_spam})
         except Exception:
             try:
-                return ResponseCreateSchema.model_validate(json.loads(response_text))
+                payload = ResponseCreateSchema.model_validate(json.loads(response_text))
+                return payload.model_copy(update={"is_marked_as_spam": is_marked_as_spam})
             except Exception:
-                return ResponseCreateSchema(actions_taken=response_text)
+                return ResponseCreateSchema(
+                    actions_taken=response_text,
+                    is_marked_as_spam=is_marked_as_spam,
+                )
 
     actions_text = actions_taken.strip() if actions_taken else ""
     if actions_text:
-        return ResponseCreateSchema(actions_taken=actions_text)
+        return ResponseCreateSchema(
+            actions_taken=actions_text,
+            is_marked_as_spam=is_marked_as_spam,
+        )
 
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail="Missing response data.",
     )
     
@@ -125,8 +137,8 @@ async def review_incident_complaints(
 @router.patch("/{incident_id}/reject", status_code=status.HTTP_200_OK)
 async def reject_incident_complaints(
     incident_id: int,
-    response_data: Optional[str] = Form(None),
     actions_taken: Optional[str] = Form(None),
+    rejection_category_id: int = Form(...),
     attachments: List[UploadFile] = File([]),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
@@ -136,8 +148,28 @@ async def reject_incident_complaints(
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    response_payload = parse_response_data(response_data, actions_taken)
+    response_payload = RejectComplaintSchema(
+        actions_taken=actions_taken.strip() if actions_taken else "",
+        rejection_category_id=rejection_category_id,
+    )
     return await reject_complaints_by_incident(incident_id, current_user.id, response_payload, attachments=attachments, db=db)
+
+@router.patch("/{incident_id}/reject-incident", status_code=status.HTTP_200_OK)
+async def reject_entire_incident(
+    incident_id: int,
+    actions_taken: Optional[str] = Form(None),
+    attachments: List[UploadFile] = File([]),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+    
+    response_payload = ResponseCreateSchema(
+        actions_taken=actions_taken.strip() if actions_taken else "",
+    )
+    return await reject_incident(incident_id, current_user.id, response_payload, attachments=attachments, db=db)
 
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
 async def forward_incident_lgu(

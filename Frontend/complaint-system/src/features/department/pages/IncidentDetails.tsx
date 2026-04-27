@@ -457,13 +457,13 @@ export const DepartmentIncidentDetails: React.FC = () => {
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
-        <button
+        {/* <button
           onClick={handleReject}
           disabled={rejectIncidentMutation.isPending || isResolved || isSubmitted || isForwardedToLgu || isUnderReviewByDepartment || isUnderReviewByLgu}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
-        </button>
+        </button> */}
         <button
           onClick={handleResolve}
           disabled={resolveIncidentMutation.isPending || isSubmitted || isForwardedToDepartment || isForwardedToLgu || isResolved }

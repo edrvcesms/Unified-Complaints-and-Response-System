@@ -1,10 +1,12 @@
 import { getIncidents, getAllIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
 import { endorseIncidentToLgu } from "../services/endorsement/incidentEndorsement";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
+import { fetchRejectionCategories } from "../services/category/rejectionCategory";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
 import type { Complaint } from "../types/complaints/complaint";
+import type { RejectionCategory } from "../types/general/category";
 
 type ReviewIncidentPayload = {
   actions_taken: string;
@@ -121,7 +123,7 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
 export const useRejectIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["rejectIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string; attachments?: File[] }) =>
+    mutationFn: (payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[] }) =>
       rejectIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
@@ -134,6 +136,19 @@ export const useRejectIncident = (incidentId: number) => {
   });
   return mutation;
 }
+
+export const useRejectionCategories = () => {
+  const { data, isLoading, error } = useQuery<RejectionCategory[]>({
+    queryKey: ["rejectionCategories"],
+    queryFn: fetchRejectionCategories,
+  });
+
+  return {
+    rejectionCategories: data,
+    isLoading,
+    error,
+  };
+};
 
 export const useForwardedIncidents = (barangayId: number) => {
   const { data, isLoading, error } = useQuery<Incident[]>({

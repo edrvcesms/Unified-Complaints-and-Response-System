@@ -29,3 +29,7 @@ class ResponseSchema(BaseModel):
         
 class ResponseCreateSchema(BaseModel):
     actions_taken: str
+
+class RejectComplaintSchema(BaseModel):
+    actions_taken: str
+    rejection_category_id: int

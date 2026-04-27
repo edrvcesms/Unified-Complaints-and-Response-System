@@ -1,6 +1,7 @@
 import calendar
 from typing import List
 from datetime import datetime, timedelta, timezone
+from app.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 from app.models.response import Response
@@ -25,7 +26,7 @@ from app.tasks.incident_tasks import cluster_complaint_task
 from app.tasks.notification_tasks import send_notifications_task
 from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
-from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
+from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
 from app.utils.cache_invalidator_optimized import CacheInvalidator
 
 
@@ -399,6 +400,20 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
 async def submit_complaint(complaint_data: ComplaintCreateData, user_id: int, db: AsyncSession):
 
     try:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        if user.can_submit_complaints == False:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account is currently restricted from submitting complaints. Please contact support for more information.")
+        
+        if user.is_suspended and (
+            not user.is_restricted_until
+            or user.is_restricted_until > RestrictSubmissionHelper.now_local_naive()
+        ):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account is currently suspended. Please contact support for more information.")
+        
         resolved_barangay_account_id = complaint_data.barangay_account_id
         if not resolved_barangay_account_id:
             fallback_account_result = await db.execute(

@@ -25,6 +25,10 @@ celery_worker.conf.beat_schedule = {
         "task": "app.tasks.incident_tasks.expiry_warning_notifications_task",
         "schedule": timedelta(minutes=30),
     },
+    "unrestrict-users-every-10-mins": {
+        "task": "app.tasks.restriction_tasks.unrestrict_users_task",
+        "schedule": timedelta(minutes=10),
+    },
 }
 
 celery_worker.autodiscover_tasks([

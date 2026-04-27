@@ -4,9 +4,12 @@ Provides optimized selectinload chains and pagination helpers
 to prevent N+1 queries and ensure efficient data loading.
 """
 
+from collections import Counter
 from typing import Any, List, Tuple
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy import func, select, cast, Date
+from sqlalchemy import func, select, cast, Date, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.incident_model import IncidentModel
@@ -253,8 +256,111 @@ class BatchLoader:
         
         categories = result.scalars().all()
         return {c.id: c for c in categories}
+    
+class AccountSuspensionHelper:
+    """Helper for managing account suspensions."""
+
+    @staticmethod
+    async def suspend_user_account(db: AsyncSession, user_id: int) -> None:
+        """Suspend a user account."""
+        await db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(is_suspended=True)
+        )
+        await db.commit()
+
+    @staticmethod
+    async def suspend_user_accounts(db: AsyncSession, user_ids: List[int]) -> None:
+        """Suspend multiple user accounts in one query."""
+        if not user_ids:
+            return
+
+        await db.execute(
+            update(User)
+            .where(User.id.in_(user_ids))
+            .values(is_suspended=True)
+        )
+        await db.commit()
+
+class RestrictSubmissionHelper:
+    """Helper for managing complaint submission restrictions."""
+
+    _APP_TZ = ZoneInfo("Asia/Manila")
+
+    @staticmethod
+    def now_local_naive() -> datetime:
+        # Keep restriction values as local wall-clock timestamps (without tz offset).
+        return datetime.now(RestrictSubmissionHelper._APP_TZ).replace(tzinfo=None)
+
+    @staticmethod
+    def _restriction_deadline(minutes: int = 1) -> datetime:
+        return RestrictSubmissionHelper.now_local_naive() + timedelta(minutes=minutes)
+
+    @staticmethod
+    async def restrict_user_submission(db: AsyncSession, user_id: int) -> None:
+        """Restrict a user from submitting complaints."""
+        await db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                can_submit_complaints=False,
+                is_restricted_until=RestrictSubmissionHelper._restriction_deadline(minutes=1440), ## 1 day
+            )
+        )
+        await db.commit()
+
+    @staticmethod
+    async def restrict_user_submissions(db: AsyncSession, user_ids: List[int]) -> None:
+        """Restrict multiple users from submitting complaints in one query."""
+        if not user_ids:
+            return
+
+        await db.execute(
+            update(User)
+            .where(User.id.in_(user_ids))
+            .values(
+                can_submit_complaints=False,
+                is_restricted_until=RestrictSubmissionHelper._restriction_deadline(minutes=1440), ## 1 day
+            )
+        )  # Example: restrict for 1 day for testing
+        await db.commit()
 
 
+class RejectCounterHelper:
+    """Helper for managing complaint rejection counts."""
+
+    @staticmethod
+    async def increment_reject_counter(db: AsyncSession, user_ids: List[int]) -> None:
+        """Increment reject counters by occurrence count in user_ids."""
+        if not user_ids:
+            return
+
+        # Count occurrences so repeated complaints from the same user
+        # increment that user's counter multiple times in one batch.
+        user_counts = Counter(user_ids)
+        for user_id, increment_by in user_counts.items():
+            await db.execute(
+                update(User)
+                .where(User.id == user_id)
+                .values(reject_counter=func.coalesce(User.reject_counter, 0) + increment_by)
+            )
+        await db.commit()
+
+    @staticmethod
+    async def get_reject_counters(db: AsyncSession, user_ids: List[int]) -> dict[int, int]:
+        """Fetch latest reject counters for users."""
+        if not user_ids:
+            return {}
+
+        result = await db.execute(
+            select(
+                User.id,
+                func.coalesce(User.reject_counter, 0),
+            ).where(User.id.in_(user_ids))
+        )
+        return {user_id: counter for user_id, counter in result.all()}
+        
 class StatisticsHelper:
     """Helper for computing complaint statistics efficiently using database aggregation."""
 

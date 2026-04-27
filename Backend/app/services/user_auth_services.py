@@ -486,8 +486,9 @@ async def logout_user(request: Request):
                 "message": "Logout successful"
             }
         )
-        await sse_manager.disconnect()
-        logger.info("SSE connection closed for user during logout.")
+        if user_id:
+            await sse_manager.disconnect_user(user_id)
+            logger.info("SSE connection closed for user during logout.")
         await clear_cookies(response, "refresh_token")
         return response
     

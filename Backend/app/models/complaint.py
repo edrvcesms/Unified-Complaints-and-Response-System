@@ -14,6 +14,7 @@ class Complaint(Base):
     barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True, index=True)
     department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
+    rejection_category_id = Column(Integer, ForeignKey("rejection_categories.id"), nullable=True, index=True)
 
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
@@ -42,6 +43,7 @@ class Complaint(Base):
     feedback = relationship("Feedback", back_populates="complaint")
     notifications = relationship("Notification", back_populates="complaint")
     logs = relationship("ComplaintLogs", back_populates="complaint", cascade="all, delete-orphan")
+    rejection_category = relationship("RejectionCategory", back_populates="complaint")
 
    
     incident_links = relationship(

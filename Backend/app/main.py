@@ -41,7 +41,8 @@ origins = list(dict.fromkeys([*default_origins, *configured_origins]))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    # allow_origins=origins,
+    allow_origins=["*"],# Allow all origins for development; replace with specific origins in production
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Request-ID"],
@@ -71,7 +72,7 @@ async def readyz():
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
         status_code=429,
-        content={"detail": "Rate limit exceeded. Please try again later."},
+        content={"detail": "Rate limit exceeded. Please Atry again later."},
 )
 
 logger.info("FastAPI application initialized.")

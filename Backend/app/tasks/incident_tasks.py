@@ -48,6 +48,7 @@ from app.domain.infrastracture.jobs.incident_jobs import (
 from app.domain.infrastracture.jobs.incident_expiration_alert import (
     run_expiry_warning_notifications,
 )
+from app.utils.query_optimization import RejectCounterHelper, RestrictSubmissionHelper
 
 import resend
 
@@ -175,6 +176,7 @@ def cluster_complaint_task(self, complaint_data: dict):
             barangay_notification_payload = None
             hearing_email_payload = None
             hearing_notification_payload = None
+            rejection_warning_notification_payload = None
 
             if result.is_new_incident:
                 complaint_for_barangay_notification = (
@@ -227,6 +229,43 @@ def cluster_complaint_task(self, complaint_data: dict):
                     }
 
                 if complaint:
+                    
+                    if result.existing_incident_status == "rejected":
+                        await RejectCounterHelper.increment_reject_counter(db, [complaint.user_id])
+                        reject_counters = await RejectCounterHelper.get_reject_counters(db, [complaint.user_id])
+                        current_reject_counter = reject_counters.get(complaint.user_id, 0)
+
+                        if current_reject_counter >= 3:
+                            await RestrictSubmissionHelper.restrict_user_submissions(db, [complaint.user_id])
+
+                        warning_message = None
+                        if current_reject_counter == 1:
+                            warning_message = (
+                                f"Your complaint '{complaint.title}' was merged into a rejected incident and "
+                                "has been marked as invalid or inappropriate. Please follow complaint guidelines "
+                                "to avoid further rejections."
+                            )
+                        elif current_reject_counter == 2:
+                            warning_message = (
+                                f"Your complaint '{complaint.title}' was again merged into a rejected incident and "
+                                "marked as invalid or inappropriate. This is your last warning before restriction."
+                            )
+                        elif current_reject_counter >= 3:
+                            warning_message = (
+                                f"Your complaint '{complaint.title}' was merged into a rejected incident. "
+                                "Your account can no longer submit complaints due to repeated invalid reports."
+                            )
+
+                        if warning_message:
+                            rejection_warning_notification_payload = {
+                                "user_id": complaint.user_id,
+                                "title": "Complaint Rejected",
+                                "message": warning_message,
+                                "complaint_id": complaint.id,
+                                "incident_id": result.incident_id,
+                                "notification_type": "rejected_by_merging",
+                                "event": "reject",
+                            }
 
                     if result.existing_incident_status != "submitted":
                         complaint.status = result.existing_incident_status
@@ -241,67 +280,69 @@ def cluster_complaint_task(self, complaint_data: dict):
                         if result.existing_incident_status == "resolved" and not complaint.resolved_at:
                             complaint.resolved_at = datetime.now(timezone.utc)
 
-                    db.add(Notification(
-                        user_id=cluster_data.user_id,
-                        complaint_id=cluster_data.complaint_id,
-                        title="Update on your complaint",
-                        message=result.message or f"Status: {result.existing_incident_status}",
-                        notification_type="info",
-                        channel="in_app",
-                        is_read=False,
-                        sent_at=datetime.now(timezone.utc),
+                    if result.existing_incident_status != "rejected":
+                        db.add(Notification(
+                            user_id=cluster_data.user_id,
+                            complaint_id=cluster_data.complaint_id,
+                            title="Update on your complaint",
+                            message=result.message or f"Status: {result.existing_incident_status}",
+                            notification_type="info",
+                            channel="in_app",
+                            is_read=False,
+                            sent_at=datetime.now(timezone.utc),
                     ))
 
-                    hearing_date_result = await db.execute(
-                        select(func.max(Complaint.hearing_date))
-                        .join(
-                            IncidentComplaintModel,
-                            IncidentComplaintModel.complaint_id == Complaint.id
-                        )
-                        .where(
-                            IncidentComplaintModel.incident_id == result.incident_id,
-                            Complaint.hearing_date.isnot(None)
-                        )
-                    )
-
-                    incident_hearing_date = hearing_date_result.scalar_one_or_none()
-
-                    if incident_hearing_date:
-                        complaint.hearing_date = incident_hearing_date
-
-                        if incident_hearing_date > datetime.now(timezone.utc):
-
-                            user_name = (
-                                f"{complaint.user.first_name} {complaint.user.last_name}".strip()
-                                if complaint.user else "User"
+                    if result.existing_incident_status != "rejected":
+                        hearing_date_result = await db.execute(
+                            select(func.max(Complaint.hearing_date))
+                            .join(
+                                IncidentComplaintModel,
+                                IncidentComplaintModel.complaint_id == Complaint.id
                             )
+                            .where(
+                                IncidentComplaintModel.incident_id == result.incident_id,
+                                Complaint.hearing_date.isnot(None)
+                            )
+                        )
 
-                            hearing_email_payload = {
-                                "recipient": complaint.user.email,
-                                "barangay_name": complaint.barangay.barangay_name if complaint.barangay else "N/A",
-                                "compliant_name": user_name,
-                                "hearing_day": incident_hearing_date.strftime("%d"),
-                                "hearing_month": incident_hearing_date.strftime("%B"),
-                                "hearing_year": incident_hearing_date.strftime("%Y"),
-                                "issued_day": datetime.now(timezone.utc).strftime("%d"),
-                                "issued_month": datetime.now(timezone.utc).strftime("%B"),
-                                "issued_year": datetime.now(timezone.utc).strftime("%Y"),
-                                "notified_day": datetime.now(timezone.utc).strftime("%d"),
-                                "notified_month": datetime.now(timezone.utc).strftime("%B"),
-                                "notified_year": datetime.now(timezone.utc).strftime("%Y"),
-                                "hearing_time": incident_hearing_date.strftime("%I:%M %p"),
-                            }
+                        incident_hearing_date = hearing_date_result.scalar_one_or_none()
 
-                        else:
-                            hearing_notification_payload = {
-                                "user_id": cluster_data.user_id,
-                                "title": "Hearing update",
-                                "message": f"Hearing already happened on {incident_hearing_date}",
-                                "complaint_id": cluster_data.complaint_id,
-                                "incident_id": result.incident_id,
-                                "notification_type": "info",
-                                "channel": "in_app",
-                            }
+                        if incident_hearing_date:
+                            complaint.hearing_date = incident_hearing_date
+
+                            if incident_hearing_date > datetime.now(timezone.utc):
+
+                                user_name = (
+                                    f"{complaint.user.first_name} {complaint.user.last_name}".strip()
+                                    if complaint.user else "User"
+                                )
+
+                                hearing_email_payload = {
+                                    "recipient": complaint.user.email,
+                                    "barangay_name": complaint.barangay.barangay_name if complaint.barangay else "N/A",
+                                    "compliant_name": user_name,
+                                    "hearing_day": incident_hearing_date.strftime("%d"),
+                                    "hearing_month": incident_hearing_date.strftime("%B"),
+                                    "hearing_year": incident_hearing_date.strftime("%Y"),
+                                    "issued_day": datetime.now(timezone.utc).strftime("%d"),
+                                    "issued_month": datetime.now(timezone.utc).strftime("%B"),
+                                    "issued_year": datetime.now(timezone.utc).strftime("%Y"),
+                                    "notified_day": datetime.now(timezone.utc).strftime("%d"),
+                                    "notified_month": datetime.now(timezone.utc).strftime("%B"),
+                                    "notified_year": datetime.now(timezone.utc).strftime("%Y"),
+                                    "hearing_time": incident_hearing_date.strftime("%I:%M %p"),
+                                }
+
+                            else:
+                                hearing_notification_payload = {
+                                    "user_id": cluster_data.user_id,
+                                    "title": "Hearing update",
+                                    "message": f"Hearing already happened on {incident_hearing_date}",
+                                    "complaint_id": cluster_data.complaint_id,
+                                    "incident_id": result.incident_id,
+                                    "notification_type": "info",
+                                    "channel": "in_app",
+                                }
 
             try:
                 await db.commit()
@@ -336,6 +377,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                 "barangay_notification_payload": barangay_notification_payload,
                 "hearing_email_payload": hearing_email_payload,
                 "hearing_notification_payload": hearing_notification_payload,
+                "rejection_warning_notification_payload": rejection_warning_notification_payload,
             }
 
     output = run_async(_run())
@@ -350,6 +392,9 @@ def cluster_complaint_task(self, complaint_data: dict):
 
     if output["hearing_notification_payload"]:
         send_notifications_task.delay(**output["hearing_notification_payload"])
+
+    if output["rejection_warning_notification_payload"]:
+        send_notifications_task.delay(**output["rejection_warning_notification_payload"])
 
     recalculate_severity_task.apply_async(
         args=[result.incident_id],

@@ -306,7 +306,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
         await db.execute(
             update(IncidentModel)
             .where(IncidentModel.id == incident_id)
-            .values(department_account_id=department_account_id)
+            .values(department_account_id=department_account_id, hearing_date=None)
         )
         
         await log_status_change(
@@ -327,7 +327,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 message="Your complaint has been forwarded to the department for further processing.",
                 complaint_id=complaint.id,
                 incident_id=incident_id,
-                notification_type="update"
+                notification_type="info",
             )
                 
         response = Response(
@@ -357,7 +357,7 @@ async def assign_incident_to_department(response_data: ResponseCreateSchema, inc
                 message=f"A new incident with ID {incident.id} has been forwarded to your department.",
                 complaint_id=None,
                 incident_id=incident_id,
-                notification_type="update"
+                notification_type="info",
             )
             
         await invalidate_cache(

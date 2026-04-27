@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
-import { useIncidentDetails } from "../../../hooks/useIncidents";
+import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, CalendarIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
@@ -18,6 +18,7 @@ import { isAbortError } from "../../../utils/axiosException";
 import { CustomDateTimePicker } from '../../general/CustomDateTimePicker';
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { validateAttachments } from '../../../utils/attachmentHelper';
+import { RejectIncidentModal } from "../components/RejectIncidentModal";
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -30,9 +31,11 @@ export const IncidentDetails: React.FC = () => {
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const forwardToLguMutation = useForwardIncidentToLgu(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
+  const { rejectionCategories, isLoading: isLoadingRejectionCategories, error: rejectionCategoriesError } = useRejectionCategories();
   const notifyHearingMutation = useNotifyHearing();
   const [hearingDate, setHearingDate] = useState('');
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [attachmentError, setAttachmentError] = useState('');
 
   const confirmationModal = useConfirmationModal();
@@ -54,6 +57,12 @@ export const IncidentDetails: React.FC = () => {
       setAttachmentError('');
     }
   }, [actionsTakenModal.isOpen]);
+
+  useEffect(() => {
+    if (!isRejectModalOpen) {
+      setAttachmentError('');
+    }
+  }, [isRejectModalOpen]);
 
   // Map modal state
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -103,14 +112,14 @@ export const IncidentDetails: React.FC = () => {
   // Handle successful reject
   useEffect(() => {
     if (rejectIncidentMutation.isSuccess) {
-      confirmationModal.closeModal();
-      actionsTakenModal.closeModal();
+      setIsRejectModalOpen(false);
       setErrorModal({ isOpen: false, title: '', message: '' });
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
         message: 'The incident has been rejected successfully.',
       });
+      rejectIncidentMutation.reset();
     }
   }, [rejectIncidentMutation.isSuccess]);
 
@@ -184,8 +193,7 @@ export const IncidentDetails: React.FC = () => {
   // Handle reject error
   useEffect(() => {
     if (rejectIncidentMutation.isError) {
-      confirmationModal.closeModal();
-      actionsTakenModal.closeModal();
+      setIsRejectModalOpen(false);
       setSuccessModal({ isOpen: false, title: '', message: '' });
       const error = rejectIncidentMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to reject incident. Please try again.';
@@ -194,6 +202,7 @@ export const IncidentDetails: React.FC = () => {
         title: 'Error',
         message: errorMessage,
       });
+      rejectIncidentMutation.reset();
     }
   }, [rejectIncidentMutation.isError]);
 
@@ -297,22 +306,7 @@ export const IncidentDetails: React.FC = () => {
   };
 
   const handleReject = () => {
-    actionsTakenModal.openModal({
-      title: "Reject Incident",
-      description: "Please provide the reason for rejecting this incident. This will be recorded and visible to complainants.",
-      confirmText: "Reject",
-      confirmColor: "red",
-      onConfirm: async (actionsTaken: string, attachments: File[]) => {
-        const validationError = validateAttachments(attachments);
-        if (validationError) {
-          setAttachmentError(validationError);
-          return;
-        }
-        actionsTakenModal.setIsLoading(true);
-        await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
-        actionsTakenModal.setIsLoading(false);
-      },
-    });
+    setIsRejectModalOpen(true);
   };
 
   const handleOpenHearingModal = () => {
@@ -377,6 +371,7 @@ export const IncidentDetails: React.FC = () => {
   const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
   const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
   const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
+  const isRejectedByLgu = incident.complaint_clusters[0]?.complaint?.is_rejected_by_lgu === true;
 
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
@@ -603,7 +598,7 @@ export const IncidentDetails: React.FC = () => {
         </button>
         <button
           onClick={handleForwardToLgu}
-          disabled={forwardToLguMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu}
+          disabled={forwardToLguMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejectedByLgu}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
@@ -634,6 +629,29 @@ export const IncidentDetails: React.FC = () => {
         onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
         externalError={attachmentError}
+      />
+
+      <RejectIncidentModal
+        isOpen={isRejectModalOpen}
+        title="Reject Incident"
+        description="Please choose a rejection reason and explain why this incident is being rejected. This will be recorded and visible to complainants."
+        confirmText="Reject"
+        confirmColor="red"
+        onCancel={() => {
+          setIsRejectModalOpen(false);
+          rejectIncidentMutation.reset();
+        }}
+        isLoading={rejectIncidentMutation.isPending}
+        rejectionCategories={rejectionCategories ?? []}
+        isLoadingCategories={isLoadingRejectionCategories}
+        categoryError={rejectionCategoriesError ? 'Failed to load rejection reasons. Please try again.' : undefined}
+        onConfirm={async (actionsTaken: string, rejectionCategoryId: number, attachments: File[]) => {
+          await rejectIncidentMutation.mutateAsync({
+            actions_taken: actionsTaken,
+            rejection_category_id: rejectionCategoryId,
+            attachments,
+          });
+        }}
       />
 
       {/* Toolbar */}

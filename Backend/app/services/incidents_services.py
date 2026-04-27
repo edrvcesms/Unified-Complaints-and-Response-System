@@ -162,6 +162,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
         if not incident:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
         
+        
         barangay_id = incident.barangay_id
         
         result = await db.execute(select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id))
@@ -171,7 +172,12 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
         if not complaint_ids:
             return {"message": "No complaints found for this incident"}
         
-        # Set the forwarded_at timestamp when forwarding to LGU
+        result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
+        complaints = result.scalars().all()
+        
+        if complaints[0].is_rejected_by_lgu:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot forward incident. You cannot forward an incident that has been rejected by the LGU.")
+        
         await db.execute(
             update(Complaint)   
             .where(Complaint.id.in_(complaint_ids))
@@ -188,10 +194,12 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
             changed_by_user_id=responder_id,
             db=db
         )
-        
-        incident.complaint_count = len(complaint_ids)
+        logger.info(f"Updated {len(complaint_ids)} complaints to FORWARDED_TO_LGU status for incident ID: {incident_id}")
+        incident.new_complaint_count = len(complaint_ids)
         incident.has_new_complaints = True
         incident.updated_at = datetime.now(timezone.utc)
+        if incident.hearing_date:
+            incident.hearing_date = None
         await db.commit()
         
         # OPTIMIZED: Batch fetch all complaints at once instead of in loop
@@ -235,7 +243,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 message=f"A new incident with ID {incident.id} has been forwarded to the LGU.",
                 complaint_id=None,
                 incident_id=incident_id,
-                notification_type="update",
+                notification_type="info",
                 event="info"
 
             )

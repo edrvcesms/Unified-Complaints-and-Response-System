@@ -22,6 +22,8 @@ export interface Complaint {
   attachment: Attachment[];
   longitude?: number;
   latitude?: number;
+  is_rejected_by_lgu?: boolean;
+  is_rejected_by_department?: boolean;
 }
 
 export type ComplaintStatus = "submitted" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";

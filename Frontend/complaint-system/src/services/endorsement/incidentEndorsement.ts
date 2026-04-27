@@ -7,7 +7,7 @@ export const endorseIncidentToDepartment = async (
   payload: { actions_taken: string; attachments?: File[] }
 ): Promise<void> => {
   try {
-    const formData = buildIncidentActionFormData(payload.actions_taken, payload.attachments);
+    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments);
     await incidentsApi.patch(`/assign/${incidentId}/department/${departmentAccountId}`, formData);
   } catch (error) {
     console.error("Error endorsing incident to department:", error);
@@ -20,7 +20,7 @@ export const endorseIncidentToLgu = async (
   payload: { actions_taken: string; attachments?: File[] }
 ): Promise<void> => {
   try {
-    const formData = buildIncidentActionFormData(payload.actions_taken, payload.attachments);
+    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments);
     await incidentsApi.patch(`/${incidentId}/forward/lgu`, formData);
   } catch (error) {
     console.error("Error endorsing incident to LGU:", error);

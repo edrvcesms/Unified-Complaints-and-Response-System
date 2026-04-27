@@ -191,28 +191,7 @@ export const DepartmentIncidentDetails: React.FC = () => {
     });
   };
 
-  const handleReject = () => {
-    actionsTakenModal.openModal({
-      title: "Reject Incident",
-      confirmText: "Reject",
-      confirmColor: "red",
-      onConfirm: async (actionsTaken: string, attachments: File[]) => {
-        const validationError = validateAttachments(attachments);
-          if (validationError) {
-            return;
-          }
-
-        try {
-          actionsTakenModal.setIsLoading(true);
-          await rejectIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
-        } catch (err) {
-          console.error(err);
-        } finally {
-          actionsTakenModal.setIsLoading(false);
-        }
-      },
-    });
-  };
+  // `handleReject` removed: reject action button is currently commented out
 
   if (isLoading) {
     return <LoadingIndicator />;

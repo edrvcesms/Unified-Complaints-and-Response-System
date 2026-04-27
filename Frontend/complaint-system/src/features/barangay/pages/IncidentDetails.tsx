@@ -372,6 +372,7 @@ export const IncidentDetails: React.FC = () => {
   const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
   const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
   const isRejectedByLgu = incident.complaint_clusters[0]?.complaint?.is_rejected_by_lgu === true;
+  const isRejected = incident.complaint_clusters[0]?.complaint?.status === "rejected"
 
   const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
   const incidentHearingDate =
@@ -591,28 +592,28 @@ export const IncidentDetails: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
         <button
           onClick={handleReview}
-          disabled={isUnderReviewByBarangay || isUnderReviewByDepartment || isUnderReviewByLgu || reviewIncidentMutation.isPending || isForwardedToDepartment || isForwardedToLgu || isResolved}
+          disabled={isUnderReviewByBarangay || isUnderReviewByDepartment || isUnderReviewByLgu || reviewIncidentMutation.isPending || isForwardedToDepartment || isForwardedToLgu || isResolved || isRejectedByLgu}
           className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
         </button>
         <button
           onClick={handleForwardToLgu}
-          disabled={forwardToLguMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejectedByLgu}
+          disabled={forwardToLguMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejectedByLgu || isRejected}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
         </button>
         <button
           onClick={handleReject}
-          disabled={isForwardedToDepartment || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved}
+          disabled={isForwardedToDepartment || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved || isRejected}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
         </button>
         <button
           onClick={handleResolve}
-          disabled={isUnderReviewByDepartment || isUnderReviewByLgu || resolveIncidentMutation.isPending || isSubmitted || isResolved || isForwardedToDepartment || isForwardedToLgu}
+          disabled={isUnderReviewByDepartment || isUnderReviewByLgu || resolveIncidentMutation.isPending || isSubmitted || isResolved || isForwardedToDepartment || isForwardedToLgu || isRejected}
           className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
@@ -665,7 +666,7 @@ export const IncidentDetails: React.FC = () => {
 
         <button
           onClick={handleOpenHearingModal}
-          disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu}
+          disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejected}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <CalendarIcon className="w-4 h-4 text-primary-200" />

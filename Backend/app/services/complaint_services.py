@@ -91,7 +91,9 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             logger.info(f"Cache hit for complaints (barangay_id: {barangay_id or 'all'})")
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         
-        query = select(Complaint).options(*QueryOptions.complaints())
+        # Load full complaint relationships (attachments, incident links) so
+        # Pydantic can access attributes without triggering lazy loads
+        query = select(Complaint).options(*QueryOptions.complaint_full())
         
         if barangay_id is not None:
             query = query.where(Complaint.barangay_id == barangay_id)

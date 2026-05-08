@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { HamburgerIcon } from "../features/barangay/components/Icons";
@@ -15,6 +15,32 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { t } = useTranslation();
   const { toasts, showToast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Emergency sound file (keeps original filename with space)
+  const emergencySoundUrl = new URL('../assets/Emergency sound.mp3', import.meta.url).href;
+
+  useEffect(() => {
+    audioRef.current = new Audio(emergencySoundUrl);
+    audioRef.current.preload = 'auto';
+
+    if (import.meta.env.DEV) {
+      // expose test helpers in dev for quick verification
+      (window as any).playEmergencySound = () => audioRef.current?.play().catch((e: any) => console.warn('Play prevented:', e));
+      (window as any).triggerEmergencyNotification = (msg: any) => handleNotification({ event: 'emergency', data: { type: 'emergency', message: msg || 'Dev test emergency' } });
+    }
+
+    return () => {
+      if (audioRef.current) {
+        try { audioRef.current.pause(); } catch (e) {}
+        audioRef.current = null;
+      }
+      if (import.meta.env.DEV) {
+        delete (window as any).playEmergencySound;
+        delete (window as any).triggerEmergencyNotification;
+      }
+    };
+  }, []);
 
   const handleNotification = useCallback((notification: any) => {
     console.log('Received notification:', notification);
@@ -24,6 +50,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
     
     // Show toast based on notification type
     switch (notification.event) {
+      case 'emergency':
+        console.log('Emergency notification received:', notification.data);
+        // Only treat as emergency when both event and data.type are 'emergency'
+        if (notification.data && notification.data.type === 'emergency') {
+          try {
+            audioRef.current?.play().catch((e: any) => {
+              console.warn('Emergency sound play prevented:', e);
+            });
+          } catch (e) {
+            console.error('Failed to play emergency sound:', e);
+          }
+
+          showToast({
+            type: 'error',
+            title: 'Emergency',
+            message: notification.data.message || 'Emergency notification received',
+            duration: 8000,
+          });
+        }
+        break;
       case 'new_complaint':
         console.log('New complaint received:', notification.data);
         queryClient.invalidateQueries({ queryKey: ['incidents'] });

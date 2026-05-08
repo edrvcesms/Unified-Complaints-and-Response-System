@@ -520,8 +520,14 @@ class StatisticsHelper:
         """
         from sqlalchemy import and_
 
+        # Compare by DATE only to avoid timezone-related mismatches between
+        # stored timestamps and the provided datetime range. Casting the
+        # complaint created_at to Date and comparing with start/end dates
+        # ensures rows from the intended calendar days are included.
         complaint_date = cast(Complaint.created_at, Date)
-        
+        start_date_only = start_date.date() if hasattr(start_date, 'date') else start_date
+        end_date_only = end_date.date() if hasattr(end_date, 'date') else end_date
+
         result = await db.execute(
             select(
                 complaint_date,
@@ -531,8 +537,8 @@ class StatisticsHelper:
             .where(
                 and_(
                     Complaint.barangay_id == barangay_id,
-                    Complaint.created_at >= start_date,
-                    Complaint.created_at <= end_date
+                    complaint_date >= start_date_only,
+                    complaint_date <= end_date_only
                 )
             )
             .group_by(complaint_date, Complaint.status)
@@ -569,6 +575,12 @@ class StatisticsHelper:
         """Get complaint counts by category using database aggregation."""
         from sqlalchemy import func, and_
         
+        # Count categories by casting created_at to DATE to avoid timezone
+        # mismatch issues and make the aggregation align with calendar days.
+        complaint_date = cast(Complaint.created_at, Date)
+        start_date_only = start_date.date() if hasattr(start_date, 'date') else start_date
+        end_date_only = end_date.date() if hasattr(end_date, 'date') else end_date
+
         result = await db.execute(
             select(
                 Category.category_name,
@@ -578,8 +590,8 @@ class StatisticsHelper:
             .where(
                 and_(
                     Complaint.barangay_id == barangay_id,
-                    Complaint.created_at >= start_date,
-                    Complaint.created_at <= end_date
+                    complaint_date >= start_date_only,
+                    complaint_date <= end_date_only
                 )
             )
             .group_by(Category.category_name)

@@ -460,6 +460,7 @@ export const IncidentDetails: React.FC = () => {
                       View Incident Location
                     </button>
                   )}
+                  {/* Directions are shown inside the map modal when available */}
                 </div>
               </div>
               {/* Map Modal */}
@@ -469,6 +470,8 @@ export const IncidentDetails: React.FC = () => {
                   onClose={() => setIsMapOpen(false)}
                   latitude={incident.latitude}
                   longitude={incident.longitude}
+                  originLatitude={incident.barangay?.latitude ?? null}
+                  originLongitude={incident.barangay?.longitude ?? null}
                   incidentTitle={incident.title}
                 />
               )}
@@ -606,7 +609,7 @@ export const IncidentDetails: React.FC = () => {
         </button>
         <button
           onClick={handleReject}
-          disabled={isForwardedToDepartment || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved || isRejected}
+          disabled={!isUnderReviewByBarangay || isForwardedToDepartment || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved || isRejected}
           className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}

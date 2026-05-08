@@ -8,10 +8,11 @@ from collections import Counter
 from typing import Any, List, Tuple
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, load_only
 from sqlalchemy import func, select, cast, Date, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.department_account import DepartmentAccount
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.complaint import Complaint
@@ -25,13 +26,68 @@ from app.models.attachment import Attachment
 class QueryOptions:
     """Pre-built SQLAlchemy selectinload/joinedload option chains."""
 
+    @staticmethod
+    def _user_summary_load(loader):
+        return loader.load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number, User.role)
+
+    @staticmethod
+    def _barangay_summary_load(loader):
+        return loader.load_only(
+            Barangay.id,
+            Barangay.barangay_name,
+            Barangay.barangay_address,
+            Barangay.barangay_contact_number,
+            Barangay.barangay_email,
+            Barangay.latitude,
+            Barangay.longitude,
+        )
+
+    @staticmethod
+    def _category_summary_load(loader):
+        return loader.load_only(Category.id, Category.category_name)
+
+    @staticmethod
+    def _attachment_summary_load(loader):
+        return loader.load_only(
+            Attachment.id,
+            Attachment.file_name,
+            Attachment.file_path,
+            Attachment.file_type,
+            Attachment.file_size,
+            Attachment.uploaded_at,
+            Attachment.complaint_id,
+            Attachment.uploaded_by,
+        )
+
+    @staticmethod
+    def _response_summary_load(loader):
+        return loader.load_only(
+            Response.id,
+            Response.incident_id,
+            Response.responder_id,
+            Response.actions_taken,
+            Response.response_date,
+        )
+
     # Incident minimal loading (for list views)
     @staticmethod
     def incident_minimal():
         """Minimal incident data: category, barangay only."""
         return (
-            selectinload(IncidentModel.category),
-            selectinload(IncidentModel.barangay),
+            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .load_only(
+                Complaint.id,
+                Complaint.title,
+                Complaint.description,
+                Complaint.location_details,
+                Complaint.status,
+                Complaint.is_rejected_by_lgu,
+                Complaint.is_rejected_by_department,
+                Complaint.created_at,
+            )
         )
 
     # Incident with responses (for detail views showing officer responses)
@@ -39,10 +95,74 @@ class QueryOptions:
     def incident_with_responses():
         """Incident with responses and responder info."""
         return (
-            selectinload(IncidentModel.category),
-            selectinload(IncidentModel.barangay),
-            selectinload(IncidentModel.responses).selectinload(Response.user),
-            selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
+            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+            QueryOptions._response_summary_load(
+                selectinload(IncidentModel.responses)
+            ).selectinload(Response.user),
+        )
+
+    # Incident list (for list views - minimal complaint data)
+    @staticmethod
+    def incident_list():
+        """Incident for list views: category, barangay, minimal complaint clusters."""
+        return (
+            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .load_only(
+                Complaint.id,
+                Complaint.title,
+                Complaint.status,
+                Complaint.created_at,
+            )
+        )
+
+    # Incident detail (optimized for single incident view - only first complaint)
+    @staticmethod
+    def incident_detail():
+        """Incident detail view: category, barangay, responses, and first complaint cluster only."""
+        return (
+            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+            QueryOptions._response_summary_load(
+                selectinload(IncidentModel.responses)
+            ).selectinload(Response.user),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .load_only(
+                Complaint.id,
+                Complaint.title,
+                Complaint.description,
+                Complaint.location_details,
+                Complaint.status,
+                Complaint.is_rejected_by_lgu,
+                Complaint.is_rejected_by_department,
+                Complaint.created_at,
+                Complaint.user_id,
+                Complaint.barangay_id,
+                Complaint.category_id,
+                Complaint.latitude,
+                Complaint.longitude,
+            ),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .selectinload(Complaint.user)
+            .load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .selectinload(Complaint.attachment)
+            .load_only(
+                Attachment.id,
+                Attachment.file_name,
+                Attachment.file_path,
+                Attachment.file_type,
+                Attachment.file_size,
+                Attachment.uploaded_at,
+                Attachment.complaint_id,
+                Attachment.uploaded_by,
+            ),
         )
 
     # Incident full (for complete details with all complaints)
@@ -50,19 +170,43 @@ class QueryOptions:
     def incident_full():
         """Complete incident data including all complaint relationships."""
         return (
-            selectinload(IncidentModel.category),
-            selectinload(IncidentModel.barangay),
-            selectinload(IncidentModel.responses).selectinload(Response.user),
-            selectinload(IncidentModel.responses).selectinload(Response.response_attachments),
+            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+            QueryOptions._response_summary_load(selectinload(IncidentModel.responses)).selectinload(Response.user),
             selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.user),
+            .selectinload(IncidentComplaintModel.complaint)
+            .load_only(
+                Complaint.id,
+                Complaint.title,
+                Complaint.description,
+                Complaint.location_details,
+                Complaint.status,
+                Complaint.is_rejected_by_lgu,
+                Complaint.is_rejected_by_department,
+                Complaint.created_at,
+                Complaint.user_id,
+                Complaint.barangay_id,
+                Complaint.category_id,
+                Complaint.latitude,
+                Complaint.longitude,
+            ),
             selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.attachment),
+            .selectinload(IncidentComplaintModel.complaint)
+            .selectinload(Complaint.user)
+            .load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number),
             selectinload(IncidentModel.complaint_clusters)
-                .selectinload(IncidentComplaintModel.complaint)
-                .selectinload(Complaint.incident_links),
+            .selectinload(IncidentComplaintModel.complaint)
+            .selectinload(Complaint.attachment)
+            .load_only(
+                Attachment.id,
+                Attachment.file_name,
+                Attachment.file_path,
+                Attachment.file_type,
+                Attachment.file_size,
+                Attachment.uploaded_at,
+                Attachment.complaint_id,
+                Attachment.uploaded_by,
+            ),
         )
 
     # Complaint minimal (for list views)
@@ -70,31 +214,29 @@ class QueryOptions:
     def complaint_minimal():
         """Minimal complaint data: user, barangay, category."""
         return (
-            selectinload(Complaint.user),
-            selectinload(Complaint.barangay),
-            selectinload(Complaint.category),
+            QueryOptions._user_summary_load(selectinload(Complaint.user)),
+            QueryOptions._barangay_summary_load(selectinload(Complaint.barangay)),
+            QueryOptions._category_summary_load(selectinload(Complaint.category)),
         )
 
-    # Complaint with attachments (for detail views)
+    # Complaint list (for list views with basic info)
+    @staticmethod
+    def complaints():
+        """Complaint list view data: user, barangay, category."""
+        return (
+            QueryOptions._user_summary_load(selectinload(Complaint.user)),
+            QueryOptions._barangay_summary_load(selectinload(Complaint.barangay)),
+            QueryOptions._category_summary_load(selectinload(Complaint.category)),
+        )
+    
     @staticmethod
     def complaint_full():
-        """Complete complaint with all relationships."""
-        from app.models.barangay_account import BarangayAccount
-
         return (
-            selectinload(Complaint.user),
-            selectinload(Complaint.barangay),
-            selectinload(Complaint.category),
-            selectinload(Complaint.attachment),
-            selectinload(Complaint.barangay_account).selectinload(BarangayAccount.user),
-            selectinload(Complaint.incident_links)
-                .selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses)
-                .selectinload(Response.user),
-            selectinload(Complaint.incident_links)
-                .selectinload(IncidentComplaintModel.incident)
-                .selectinload(IncidentModel.responses)
-                .selectinload(Response.response_attachments),
+            QueryOptions._user_summary_load(selectinload(Complaint.user)),
+            QueryOptions._barangay_summary_load(selectinload(Complaint.barangay)),
+            QueryOptions._category_summary_load(selectinload(Complaint.category)),
+            QueryOptions._attachment_summary_load(selectinload(Complaint.attachment)),
+            selectinload(Complaint.incident_links),
         )
 
     # Complaint for statistics (only load category for grouping)
@@ -102,7 +244,7 @@ class QueryOptions:
     def complaint_for_stats():
         """Minimal complaint data for statistics: only category needed."""
         return (
-            selectinload(Complaint.category),
+            QueryOptions._category_summary_load(selectinload(Complaint.category)),
         )
 
     # User with related accounts

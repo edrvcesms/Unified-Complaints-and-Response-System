@@ -14,7 +14,7 @@ from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
 from sqlalchemy import select, update, func
-from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData
+from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData, ComplaintOut
 from datetime import datetime
 from app.utils.logger import logger
 from app.constants.complaint_status import ComplaintStatus
@@ -91,7 +91,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
             logger.info(f"Cache hit for complaints (barangay_id: {barangay_id or 'all'})")
             return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
         
-        query = select(Complaint).options(*QueryOptions.complaint_full())
+        query = select(Complaint).options(*QueryOptions.complaints())
         
         if barangay_id is not None:
             query = query.where(Complaint.barangay_id == barangay_id)
@@ -104,7 +104,7 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         logger.info(f"Fetched complaints: {len(complaints)} complaints found (barangay_id: {barangay_id or 'all'})")
         
         complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        
+
         await set_cache(cache_key, [c.model_dump_json() for c in complaints_list], expiration=3600)
         return complaints_list
     
@@ -532,11 +532,11 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
         cached = await get_cache(f"user_complaints:{user_id}")
         if cached:
             logger.info(f"My complaints for user {user_id} retrieved from cache")
-            return [MyComplaintData.model_validate_json(c) for c in cached]
+            return [ComplaintOut.model_validate_json(c) for c in cached]
 
         result = await db.execute(
             select(Complaint)
-            .options(*QueryOptions.complaint_full())
+            .options(*QueryOptions.complaints())
             .where(Complaint.user_id == user_id)
             .order_by(Complaint.created_at.asc())
         )
@@ -546,7 +546,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             return []
 
         user_complaints = [
-            MyComplaintData.model_validate(c, from_attributes=True)
+            ComplaintOut.model_validate(c, from_attributes=True)
             for c in complaints
         ]
 

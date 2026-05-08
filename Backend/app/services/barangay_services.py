@@ -106,7 +106,6 @@ async def get_all_barangays(
                 select(Barangay)
                 .options(
                     selectinload(Barangay.barangay_account)
-                    .selectinload(BarangayAccount.user)
                 )
                 .where(Barangay.barangay_account.has())
             )

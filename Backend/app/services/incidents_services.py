@@ -11,7 +11,7 @@ from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
 from app.models.response import Response
 from app.models.incident_complaint import IncidentComplaintModel
-from app.schemas.incident_schema import IncidentData
+from app.schemas.incident_schema import IncidentData, IncidentOut
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
@@ -53,17 +53,17 @@ async def get_all_incidents_by_barangay(barangay_id: int, db: AsyncSession):
         all_incidents_cache = await get_cache(f"all_incidents: barangay_id:{barangay_id}")
         if all_incidents_cache is not None:
             logger.info("Cache hit for all incidents")
-            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in all_incidents_cache]
+            return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in all_incidents_cache]
         
         result = await db.execute(
             select(IncidentModel)
-            .options(*QueryOptions.incident_full())
+            .options(*QueryOptions.incident_list())
             .order_by(IncidentModel.first_reported_at.asc())
             .where(IncidentModel.barangay_id == barangay_id)
         )
 
         incidents = result.scalars().all()
-        incidents_data =  [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        incidents_data =  [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
         await set_cache(f"all_incidents: barangay_id:{barangay_id}", [i.model_dump_json() for i in incidents_data], expiration=3600)
         return incidents_data
     
@@ -80,7 +80,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
         incidents_cache = await get_cache(f"barangay_incidents:{barangay_id}")
         if incidents_cache is not None:
             logger.info(f"Cache hit for barangay ID: {barangay_id}")
-            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in incidents_cache]
+            return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents_cache]
         
         subq = (
             select(IncidentComplaintModel.incident_id)
@@ -107,7 +107,7 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
 
         incidents = result.scalars().all()
         logger.info(f"Found {len(incidents)} incidents for barangay ID: {barangay_id}")
-        incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        incidents_list = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
         await set_cache(f"barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
         return incidents_list
       
@@ -129,7 +129,7 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
         
         result = await db.execute(
             select(IncidentModel)
-            .options(*QueryOptions.incident_full())
+            .options(*QueryOptions.incident_detail())
             .where(IncidentModel.id == incident_id)
         )
         
@@ -281,7 +281,6 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         result = await db.execute(
             select(IncidentModel)
             .where(IncidentModel.id == incident_id)
-            .options(*QueryOptions.incident_full())
         )
         incident = result.scalars().first()
         
@@ -296,7 +295,6 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         incident.last_viewed_at = datetime.now(timezone.utc)
         
         await db.commit()
-        await db.refresh(incident)
         
         await CacheInvalidator.invalidate_cache(
             incident_ids=[incident_id],
@@ -305,7 +303,15 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
             include_global=True
         )
         
-        return IncidentData.model_validate(incident, from_attributes=True)
+        # Fetch updated incident with all relationships for response
+        result = await db.execute(
+            select(IncidentModel)
+            .where(IncidentModel.id == incident_id)
+            .options(*QueryOptions.incident_detail())
+        )
+        updated_incident = result.scalars().first()
+        
+        return IncidentData.model_validate(updated_incident, from_attributes=True)
 
     
     except HTTPException:
@@ -333,7 +339,7 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
             cached = await get_cache(cache_key)
             if cached is not None:
                 logger.info(f"Cache hit for archive incidents of barangay ID: {barangay_id}")
-                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
 
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
@@ -351,12 +357,12 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                     IncidentModel.barangay_id == barangay_id,
                     archive_filter,
                 )
-                .options(*QueryOptions.incident_full())
+                .options(*QueryOptions.incident_minimal())
                 .order_by(IncidentModel.first_reported_at.asc())
             )
 
             incidents = result.scalars().all()
-            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
             await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=360)
             return incidents_data
 
@@ -366,7 +372,7 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
             cached = await get_cache(cache_key)
             if cached is not None:
                 logger.info("Cache hit for archive incidents of LGU")
-                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
 
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
@@ -381,12 +387,12 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
             result = await db.execute(
                 select(IncidentModel)
                 .where(archive_filter)
-                .options(*QueryOptions.incident_full())
+                .options(*QueryOptions.incident_minimal())
                 .order_by(IncidentModel.first_reported_at.asc())
             )
 
             incidents = result.scalars().all()
-            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
             await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
             return incidents_data
 
@@ -401,7 +407,7 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
             cached = await get_cache(cache_key)
             if cached is not None:
                 logger.info(f"Cache hit for archive incidents of department account ID: {department_account_id}")
-                return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in cached]
+                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
 
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
@@ -419,12 +425,12 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                     IncidentModel.department_account_id == department_account_id,
                     archive_filter,
                 )
-                .options(*QueryOptions.incident_full())
+                .options(*QueryOptions.incident_list())
                 .order_by(IncidentModel.first_reported_at.asc())
             )
 
             incidents = result.scalars().all()
-            incidents_data = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
             await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
             return incidents_data
 

@@ -16,14 +16,14 @@ celery_worker.conf.update(
     enable_utc=True,
 )
 
-celery_worker.conf.beat_schedule = {
-    "resolve-expired-incidents-every-30-mins": {
+celery_worker.conf.beat_schedule = {    
+    "resolve-expired-incidents-every-60 -mins": {
         "task": "app.tasks.incident_tasks.resolve_expired_incidents_task",
-        "schedule": timedelta(minutes=30),
+        "schedule": timedelta(minutes=60),
     },
-    "expiry-warning-notifications-every-30-mins": {
+    "expiry-warning-notifications-every-60-mins": {
         "task": "app.tasks.incident_tasks.expiry_warning_notifications_task",
-        "schedule": timedelta(minutes=30),
+        "schedule": timedelta(minutes=60),
     },
     "unrestrict-users-every-10-mins": {
         "task": "app.tasks.restriction_tasks.unrestrict_users_task",

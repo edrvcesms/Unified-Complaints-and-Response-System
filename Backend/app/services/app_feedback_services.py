@@ -10,7 +10,7 @@ from app.models.complaint import Complaint
 from app.models.response import Response
 from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, load_only
 from app.schemas.app_feedback_schema import AppFeedbackCreate, AppFeedbackResponse, PostIncidentFeedbackCreate, PostIncidentFeedbackResponse
 from datetime import datetime, timezone
 from app.utils.logger import logger
@@ -52,7 +52,18 @@ async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db:
       
 async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
     try:
-        result = await db.execute(select(AppFeedback).options(selectinload(AppFeedback.user)).order_by(AppFeedback.created_at.desc()))
+        result = await db.execute(
+            select(AppFeedback)
+            .options(
+                selectinload(AppFeedback.user).load_only(
+                    User.id,
+                    User.first_name,
+                    User.last_name,
+                    User.email,
+                )
+            )
+            .order_by(AppFeedback.created_at.desc())
+        )
         feedbacks = result.scalars().all()
         return [AppFeedbackResponse.model_validate(feedback) for feedback in feedbacks]
     
@@ -131,8 +142,16 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
         result = await db.execute(
             select(PostIncidentFeedback)
             .options(
-                selectinload(PostIncidentFeedback.user),
-                selectinload(PostIncidentFeedback.incident)
+                selectinload(PostIncidentFeedback.user).load_only(
+                    User.id,
+                    User.first_name,
+                    User.last_name,
+                    User.email,
+                ),
+                selectinload(PostIncidentFeedback.incident).load_only(
+                    IncidentModel.id,
+                    IncidentModel.title,
+                )
             )
             .where(PostIncidentFeedback.incident_id == incident_id)
             .order_by(PostIncidentFeedback.created_at.desc())
@@ -155,8 +174,16 @@ async def get_resolver_feedbacks(user_id: int, db: AsyncSession) -> list[PostInc
         result = await db.execute(
             select(PostIncidentFeedback)
             .options(
-                selectinload(PostIncidentFeedback.user),
-                selectinload(PostIncidentFeedback.incident)
+                selectinload(PostIncidentFeedback.user).load_only(
+                    User.id,
+                    User.first_name,
+                    User.last_name,
+                    User.email,
+                ),
+                selectinload(PostIncidentFeedback.incident).load_only(
+                    IncidentModel.id,
+                    IncidentModel.title,
+                )
             )
             .join(IncidentModel, IncidentModel.id == PostIncidentFeedback.incident_id)
             .where(IncidentModel.resolver_id == user_id)

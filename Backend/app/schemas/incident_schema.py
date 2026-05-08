@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
-from .complaint_schema import ComplaintWithUserData
+from .complaint_schema import ComplaintOut
 from .response_schema import ResponseSchema
 from .category_schema import CategoryModel
 from .barangay_schema import BarangayModel
@@ -24,7 +24,7 @@ class IncidentComplaintClusterModel(BaseModel):
     incident_id: int
     similarity_score: float
     linked_at: datetime
-    complaint: ComplaintWithUserData
+    complaint: ComplaintOut
 
     class Config:
         from_attributes = True
@@ -43,5 +43,27 @@ class IncidentData(IncidentBaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     responses: Optional[List[ResponseSchema]] = None
+
+    class Config:
+        from_attributes = True
+        
+class IncidentOut(BaseModel):
+    id: int
+    title: str
+    description: str
+    barangay_id: int
+    category_id: int
+    department_id: Optional[int] = None
+    status: Optional[str] = None
+    complaint_count: int
+    severity_level: str
+    category: Optional[CategoryModel] = None   
+    complaint_count: int
+    complaint_clusters: List[IncidentComplaintClusterModel] = []
+    has_new_complaints: Optional[bool] = False
+    new_complaint_count: Optional[int] = 0
+    first_reported_at: datetime
+    last_reported_at: datetime
+
     class Config:
         from_attributes = True

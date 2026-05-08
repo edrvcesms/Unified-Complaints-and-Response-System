@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useState, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -12,6 +12,8 @@ interface MapModalProps {
   latitude: number;
   longitude: number;
   incidentTitle?: string;
+  originLatitude?: number | null;
+  originLongitude?: number | null;
 }
 
 const modalStyle: React.CSSProperties = {
@@ -85,8 +87,52 @@ const MapModal: React.FC<MapModalProps> = ({
   latitude,
   longitude,
   incidentTitle,
+  originLatitude = null,
+  originLongitude = null,
 }) => {
   const [satellite, setSatellite] = useState(false);
+  const [routeGeoJson, setRouteGeoJson] = useState<any | null>(null);
+  const [showRoute, setShowRoute] = useState(false);
+  const [routeDistance, setRouteDistance] = useState<number | null>(null);
+  const [routeDuration, setRouteDuration] = useState<number | null>(null);
+  const [routeSteps, setRouteSteps] = useState<any[] | null>(null);
+  const mapRef = useRef<any>(null);
+
+  React.useEffect(() => {
+    // Auto-fetch route when modal opens and origin/destination are available
+    if (!open) return;
+    if (!originLatitude || !originLongitude) return;
+
+    (async () => {
+      try {
+        const src = `${originLongitude},${originLatitude}`;
+        const dst = `${longitude},${latitude}`;
+        const url = `https://router.project-osrm.org/route/v1/driving/${src};${dst}?overview=full&geometries=geojson&steps=true`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Routing failed');
+        const data = await res.json();
+        const route = data.routes?.[0];
+        const geo = route?.geometry;
+        const legs = route?.legs ?? [];
+        const steps: any[] = [];
+        for (const leg of legs) {
+          if (leg?.steps) steps.push(...leg.steps);
+        }
+        if (geo) {
+          setRouteGeoJson(geo);
+          setShowRoute(true);
+          setRouteDistance(route?.distance ?? null);
+          setRouteDuration(route?.duration ?? null);
+          setRouteSteps(steps.length ? steps : null);
+          const coords = geo.coordinates.map((c: any) => [c[1], c[0]]);
+          const bounds = L.latLngBounds(coords as any);
+          mapRef.current?.fitBounds(bounds.pad(0.1));
+        }
+      } catch (err) {
+        console.error('Failed to fetch route', err);
+      }
+    })();
+  }, [open, originLatitude, originLongitude, latitude, longitude]);
 
   if (!open) return null;
 
@@ -114,6 +160,7 @@ const MapModal: React.FC<MapModalProps> = ({
           minZoom={2}
           maxZoom={18}
           style={{ width: '100%', height: '100%' }}
+          whenCreated={(map) => (mapRef.current = map)}
         >
           <TileLayer
             url={tileUrl}
@@ -122,18 +169,34 @@ const MapModal: React.FC<MapModalProps> = ({
             maxNativeZoom={19}
           />
 
+          {originLatitude && originLongitude && (
+            <Marker position={[originLatitude, originLongitude]}>
+              <Popup>Barangay Location</Popup>
+            </Marker>
+          )}
+
           <Marker position={[latitude, longitude]}>
             <Popup>{incidentTitle || 'Incident Location'}</Popup>
           </Marker>
+
+          {routeGeoJson && showRoute && (
+            <Polyline
+              positions={routeGeoJson.coordinates.map((c: any) => [c[1], c[0]])}
+              pathOptions={{ color: '#dc2626', weight: 5 }} // Tailwind's red-600
+            />
+          )}
         </MapContainer>
 
-        {/* Google Maps style bottom-right toggle */}
-        <button
-          style={toggleButtonStyle}
-          onClick={() => setSatellite(!satellite)}
-        >
-          🗺️ {satellite ? 'Map' : 'Satellite'}
-        </button>
+        
+
+        <div style={{ position: 'absolute', bottom: 14, right: 14, zIndex: 1001 }}>
+          <button
+            style={toggleButtonStyle}
+            onClick={() => setSatellite(!satellite)}
+          >
+            🗺️ {satellite ? 'Map' : 'Satellite'}
+          </button>
+        </div>
 
       </div>
     </div>

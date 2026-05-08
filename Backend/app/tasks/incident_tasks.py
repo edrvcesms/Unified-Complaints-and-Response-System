@@ -229,45 +229,15 @@ def cluster_complaint_task(self, complaint_data: dict):
                     }
 
                 if complaint:
-                    
-                    if result.existing_incident_status == "rejected":
-                        await RejectCounterHelper.increment_reject_counter(db, [complaint.user_id])
-                        reject_counters = await RejectCounterHelper.get_reject_counters(db, [complaint.user_id])
-                        current_reject_counter = reject_counters.get(complaint.user_id, 0)
+                    # NOTE: Auto-marking complaints as `rejected` when merged by the
+                    # clustering task has been disabled. We no longer increment reject
+                    # counters or send automated rejection warnings here. Complaint
+                    # status changes are only applied for non-rejected states below.
 
-                        if current_reject_counter >= 3:
-                            await RestrictSubmissionHelper.restrict_user_submissions(db, [complaint.user_id])
-
-                        warning_message = None
-                        if current_reject_counter == 1:
-                            warning_message = (
-                                f"Your complaint '{complaint.title}' was merged into a rejected incident and "
-                                "has been marked as invalid or inappropriate. Please follow complaint guidelines "
-                                "to avoid further rejections."
-                            )
-                        elif current_reject_counter == 2:
-                            warning_message = (
-                                f"Your complaint '{complaint.title}' was again merged into a rejected incident and "
-                                "marked as invalid or inappropriate. This is your last warning before restriction."
-                            )
-                        elif current_reject_counter >= 3:
-                            warning_message = (
-                                f"Your complaint '{complaint.title}' was merged into a rejected incident. "
-                                "Your account can no longer submit complaints due to repeated invalid reports."
-                            )
-
-                        if warning_message:
-                            rejection_warning_notification_payload = {
-                                "user_id": complaint.user_id,
-                                "title": "Complaint Rejected",
-                                "message": warning_message,
-                                "complaint_id": complaint.id,
-                                "incident_id": result.incident_id,
-                                "notification_type": "rejected_by_merging",
-                                "event": "reject",
-                            }
-
-                    if result.existing_incident_status != "submitted":
+                    # Only apply status changes when the existing incident status is
+                    # a meaningful progression (e.g. forwarded/resolved). Do NOT
+                    # automatically set the complaint status to `rejected` here.
+                    if result.existing_incident_status not in ("submitted", "rejected"):
                         complaint.status = result.existing_incident_status
                         complaint.updated_at = datetime.now(timezone.utc)
 

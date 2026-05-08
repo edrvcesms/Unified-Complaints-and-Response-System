@@ -1,7 +1,17 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from .user_schema import UserData
+
+
+class ResponseUserData(BaseModel):
+    id: int
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    role: str | None = None
+
+    class Config:
+        from_attributes = True
 
 
 
@@ -21,8 +31,7 @@ class ResponseSchema(BaseModel):
     responder_id: int
     actions_taken: str
     response_date: datetime
-    user: Optional[UserData] = None
-    response_attachments: Optional[List[ResponseAttachmentsData]] = None
+    user: Optional[ResponseUserData] = None
 
     class Config:
         from_attributes = True

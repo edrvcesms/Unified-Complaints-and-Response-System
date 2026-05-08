@@ -62,9 +62,6 @@ async def get_incidents(db: AsyncSession = Depends(get_async_db), current_user: 
     
     return await get_incidents_by_barangay(current_user.barangay_account.barangay_id, db)
 
-@router.get("/all", status_code=status.HTTP_200_OK)
-@router.get("/all/", status_code=status.HTTP_200_OK)
-@router.get("/archive", status_code=status.HTTP_200_OK)
 @router.get("/archive/", status_code=status.HTTP_200_OK)
 async def get_all_incidents_endpoint(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:

@@ -22,7 +22,6 @@ class BarangayAccountOut(BaseModel):
     id: int
     user_id: int
     barangay_id: int
-    user: UserData
     
     class Config:
         from_attributes = True

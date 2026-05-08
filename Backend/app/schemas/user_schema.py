@@ -77,4 +77,3 @@ class VerifyResetPasswordOTPData(BaseModel):
 class UserLocationData(BaseModel):
     latitude: str
     longitude: str
-    

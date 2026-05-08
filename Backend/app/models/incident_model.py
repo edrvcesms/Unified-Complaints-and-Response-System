@@ -32,6 +32,7 @@ class IncidentModel(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     hearing_date = Column(DateTime(timezone=True), nullable=True)
+    is_emergency = Column(Boolean, nullable=True, default=False)
     
     last_expiry_notif_user_id = Column(Integer, nullable=True, default=None)
     last_expiry_notif_checkpoint = Column(Integer, nullable=True, default=None)

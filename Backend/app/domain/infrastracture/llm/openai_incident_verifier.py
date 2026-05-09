@@ -1,8 +1,15 @@
 import logging
+from dataclasses import dataclass
 from openai import AsyncOpenAI
 from app.domain.interfaces.i_incident_verifier import IIncidentVerifier
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class VerificationResult:
+    is_same_incident: bool
+    is_emergency: bool
 
 
 class OpenAIIncidentVerifier(IIncidentVerifier):
@@ -16,7 +23,11 @@ class OpenAIIncidentVerifier(IIncidentVerifier):
 
     SYSTEM_PROMPT = """You are a deduplication validator for UCRS (Santa Maria, Laguna, PH).
 Upstream checks already confirmed: (1) GPS proximity, (2) high semantic similarity.
-Your only job: determine if two complaints describe the SAME problem at the SAME location.
+
+Answer TWO questions about the complaint pair.
+
+QUESTION 1 — SAME INCIDENT:
+Determine if complaints A and B describe the SAME problem at the SAME location.
 
 PRIORITY RULE — evaluate in order, stop at first match:
 
@@ -35,13 +46,35 @@ PRIORITY RULE — evaluate in order, stop at first match:
    GPS and semantic checks passed. Paraphrases, language differences, and missing
    location text are not grounds for rejection.
 
+QUESTION 2 — EMERGENCY:
+Determine if either complaint describes a situation requiring immediate response.
+Emergency examples: fire, landslide, flood, stabbing, death, serious injury,
+drowning, building collapse, armed threat, medical emergency.
+Non-emergency: noise complaints, garbage, broken streetlights, potholes.
+
 NORMALIZATION (apply before deciding):
 - Spelling/typos/slang/abbreviations are equivalent: "prk3"="purok 3", "basurra"="basura"
-- Languages are equivalent: "ingay"="noise", "baha"="flood", "ilaw"="streetlight"
+- Languages are equivalent: "ingay"="noise", "baha"="flood", "sunog"="fire", "patay"="dead"
 - Paraphrases are equivalent: "kapitbahay maingay" = "ingay ng kapitbahay"
 - Follow-ups count as SAME: "hindi pa naaayos", "kailan aayusin", "still not fixed"
 
-OUTPUT: Reply YES or NO only. No punctuation. No explanation."""
+OUTPUT FORMAT — exactly two lines, no punctuation, no explanation:
+SAME: YES or NO
+EMERGENCY: YES or NO"""
+
+    EMERGENCY_SYSTEM_PROMPT = """You are an emergency detector for UCRS (Santa Maria, Laguna, PH).
+
+Determine if the complaint describes a situation requiring immediate response.
+Emergency examples: fire, landslide, flood, stabbing, death, serious injury,
+drowning, building collapse, armed threat, medical emergency.
+Non-emergency: noise complaints, garbage, broken streetlights, potholes.
+
+NORMALIZATION:
+- Spelling/typos/slang/abbreviations are equivalent: "sunog"="fire", "baha"="flood", "patay"="dead"
+- Languages are equivalent: Filipino, Tagalog, English, mixed
+
+OUTPUT FORMAT — exactly one line, no punctuation, no explanation:
+EMERGENCY: YES or NO"""
 
     def __init__(self, api_key: str, model: str = "gpt-4.1-mini"):
         self._client = AsyncOpenAI(api_key=api_key)
@@ -51,7 +84,7 @@ OUTPUT: Reply YES or NO only. No punctuation. No explanation."""
         self,
         complaint_a: str,
         complaint_b: str,
-    ) -> bool:
+    ) -> VerificationResult:
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,
@@ -62,16 +95,48 @@ OUTPUT: Reply YES or NO only. No punctuation. No explanation."""
                         "content": (
                             f"A: {complaint_a}\n"
                             f"B: {complaint_b}\n\n"
-                            f"Same problem and location? YES or NO"
+                            f"Same problem and location? Is it an emergency?"
                         ),
                     },
+                ],
+                max_tokens=10,
+                temperature=0,
+            )
+            answer = response.choices[0].message.content.strip().upper()
+            logger.info(f"OpenAI verification result: {answer}")
+
+            is_same = False
+            is_emergency = False
+            for line in answer.splitlines():
+                line = line.strip()
+                if line.startswith("SAME:"):
+                    is_same = "YES" in line
+                elif line.startswith("EMERGENCY:"):
+                    is_emergency = "YES" in line
+
+            return VerificationResult(is_same_incident=is_same, is_emergency=is_emergency)
+
+        except Exception as e:
+            logger.exception(f"OpenAI verification failed: {e}")
+            return VerificationResult(is_same_incident=False, is_emergency=False)
+
+    async def detect_emergency(self, complaint: str) -> VerificationResult:
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": self.EMERGENCY_SYSTEM_PROMPT},
+                    {"role": "user", "content": complaint},
                 ],
                 max_tokens=5,
                 temperature=0,
             )
             answer = response.choices[0].message.content.strip().upper()
-            logger.info(f"OpenAI verification result: {answer}")
-            return answer == "YES"
+            logger.info(f"OpenAI emergency detection result: {answer}")
+
+            is_emergency = "YES" in answer
+            return VerificationResult(is_same_incident=False, is_emergency=is_emergency)
+
         except Exception as e:
-            logger.exception(f"OpenAI verification failed: {e}")
-            return False
+            logger.exception(f"OpenAI emergency detection failed: {e}")
+            return VerificationResult(is_same_incident=False, is_emergency=False)

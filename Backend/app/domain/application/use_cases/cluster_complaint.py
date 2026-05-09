@@ -22,6 +22,7 @@ from app.domain.interfaces.i_incident_verifier import IIncidentVerifier
 from app.domain.interfaces.i_vector_repository import IVectorRepository
 from app.domain.value_objects.severity_level import SeverityLevel
 from app.utils.embedding_translate import translate_to_english
+
 logger = logging.getLogger(__name__)
 
 # Hybrid scoring weights — semantic is dominant, spatial is a proximity signal
@@ -58,8 +59,8 @@ class ClusterComplaintResult:
     is_new_incident: bool
     similarity_score: float
     severity_level: str
-    existing_incident_status: Optional[str] = None  # e.g., "under_review", "submitted"
-    message: Optional[str] = None  # Message to display to the user
+    existing_incident_status: Optional[str] = None
+    message: Optional[str] = None
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -67,7 +68,7 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     Returns the great-circle distance in kilometres between two coordinates.
     Uses the Haversine formula — accurate enough for barangay-level distances.
     """
-    R = 6371.0  # Earth radius in km
+    R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     d_phi = math.radians(lat2 - lat1)
     d_lam = math.radians(lon2 - lon1)
@@ -91,7 +92,8 @@ class ClusterComplaintUseCase:
     5. Confidence band decision:
          hybrid_score >= threshold + 0.10  → LLM verifies (high confidence, leans YES)
          hybrid_score >= threshold         → LLM verifies (ambiguous zone, leans NO)
-         hybrid_score < threshold          → auto reject, new incident
+         hybrid_score < threshold          → auto reject; emergency detection still runs
+         no candidates                     → emergency detection still runs
     6. If new incident: upsert seed vector immediately (fixes race condition for
        concurrent complaints arriving before the task completes).
        If merged: upsert complaint vector with resolved incident_id.
@@ -100,6 +102,8 @@ class ClusterComplaintUseCase:
     Postgres is the source of truth for candidate discovery.
     Pinecone is used only for vector storage and retrieval.
     LLM is called for all candidates above threshold.
+    Emergency detection is piggy-backed onto the LLM verification call (no extra API cost).
+    For no-candidate and auto-reject paths, a dedicated detect_emergency() call is made.
     Severity recalculation is handled separately (SRP).
     """
 
@@ -126,10 +130,10 @@ class ClusterComplaintUseCase:
             f"  Radius      : {data.category_radius_km:.2f} km\n"
             f"  Threshold   : {data.similarity_threshold:.2f} | High: {data.similarity_threshold + 0.10:.2f}"
         )
-        
+
         translated_description = await translate_to_english(data.description)
         logger.info(f"  Original    : '{data.description[:120]}'")
-        logger.info(f"  Translated  : '{translated_description[:120]}'")  #  
+        logger.info(f"  Translated  : '{translated_description[:120]}'")
         embedding = await self._embedding_svc.generate(translated_description)
         created_at_unix = data.created_at.timestamp()
 
@@ -148,7 +152,7 @@ class ClusterComplaintUseCase:
 
         for incident in active_incidents:
 
-            # --- Spatial gate: hard disqualify if outside radius ---
+            # --- Spatial gate ---
             if incident.latitude is None or incident.longitude is None:
                 logger.warning(
                     f"Incident {incident.id} has no location — skipping spatial gate, "
@@ -162,9 +166,6 @@ class ClusterComplaintUseCase:
                     incident.latitude, incident.longitude,
                 )
                 if distance_km > data.category_radius_km:
-                      # Soft penalty — too far but let semantic decide
-                     # Handles cases where reporter is physically far from the incident
-                   # (e.g. filing from a different barangay about the same event)
                     logger.info(
                         f"DISQUALIFIED incident_id={incident.id}: "
                         f"distance={distance_km:.4f} km > radius={data.category_radius_km:.2f} km"
@@ -172,7 +173,7 @@ class ClusterComplaintUseCase:
                     spatial_score = 0.0
                 spatial_score = 1.0 - (distance_km / data.category_radius_km)
 
-            # --- Semantic score with retry (guards against Pinecone eventual consistency) ---
+            # --- Semantic score with retry ---
             incident_vector = None
             for attempt in range(_VECTOR_FETCH_RETRIES):
                 incident_vector = await self._vector_repo.fetch_incident_vector(
@@ -225,9 +226,12 @@ class ClusterComplaintUseCase:
             logger.info("No candidate passed spatial gate or scoring — will create new incident")
 
         # Step 3 — Confidence band decision (driven by hybrid score)
+        # is_match and is_emergency are initialised here.
+        # is_emergency is only overwritten by LLM calls below — never reset to False after being set.
         high_confidence_threshold = data.similarity_threshold + 0.10
         ambiguous_threshold = data.similarity_threshold
         is_match = False
+        is_emergency = False
 
         if best_incident is not None:
             if best_hybrid_score >= high_confidence_threshold:
@@ -236,13 +240,16 @@ class ClusterComplaintUseCase:
                     f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
                     f"  B (new complaint): '{data.description[:120]}'"
                 )
-                is_match = await self._verifier.is_same_incident(
+                verification = await self._verifier.is_same_incident(
                     complaint_a=best_incident.description,
                     complaint_b=data.description,
                 )
+                is_match = verification.is_same_incident
+                is_emergency = verification.is_emergency
                 logger.info(
                     f"LLM verdict (HIGH): "
-                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'}"
+                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
+                    f"Emergency: {is_emergency}"
                 )
 
             elif best_hybrid_score >= ambiguous_threshold:
@@ -251,24 +258,51 @@ class ClusterComplaintUseCase:
                     f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
                     f"  B (new complaint): '{data.description[:120]}'"
                 )
-                is_match = await self._verifier.is_same_incident(
+                verification = await self._verifier.is_same_incident(
                     complaint_a=best_incident.description,
                     complaint_b=data.description,
                 )
+                is_match = verification.is_same_incident
+                is_emergency = verification.is_emergency
                 logger.info(
                     f"LLM verdict (AMBIGUOUS): "
-                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'}"
+                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
+                    f"Emergency: {is_emergency}"
                 )
 
             else:
+                # Below threshold — no merge possible but still detect emergency
                 logger.info(
                     f"AUTO-REJECT: hybrid={best_hybrid_score:.4f} < threshold={ambiguous_threshold:.2f} "
-                    f"— creating new incident"
+                    f"— skipping merge, running standalone emergency detection"
+                )
+                emergency_check = await self._verifier.detect_emergency(
+                    complaint=data.description,
+                )
+                is_emergency = emergency_check.is_emergency
+                logger.info(
+                    f"Emergency detection (AUTO-REJECT path): is_emergency={is_emergency} "
+                    f"| complaint='{data.description[:120]}'"
                 )
 
             logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
 
-        # Initialize default values for new incidents
+        else:
+            # No candidates at all — still detect emergency before creating new incident
+            logger.info(
+                f"No candidates — running standalone emergency detection "
+                f"| complaint='{data.description[:120]}'"
+            )
+            emergency_check = await self._verifier.detect_emergency(
+                complaint=data.description,
+            )
+            is_emergency = emergency_check.is_emergency
+            logger.info(
+                f"Emergency detection (NO CANDIDATES path): is_emergency={is_emergency} "
+                f"| complaint='{data.description[:120]}'"
+            )
+
+        # Initialize default values
         existing_status = "submitted"
         message = "A new incident has been created for your complaint."
 
@@ -277,7 +311,6 @@ class ClusterComplaintUseCase:
             statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)
             logger.info(f"Existing incident {best_incident.id} has complaint statuses: {statuses}")
 
-            # Determine the highest priority status
             if "under_review" in statuses:
                 existing_status = "under_review"
                 message = "This incident is already under review by the barangay admin."
@@ -314,12 +347,10 @@ class ClusterComplaintUseCase:
                     status="ACTIVE",
                     created_at_unix=created_at_unix,
                 )
-                
                 logger.info(
                     f"Upserted vector for merged complaint_id={data.complaint_id} "
                     f"linked to incident_id={incident.id}"
                 )
-                
             except Exception as e:
                 logger.exception(
                     f"Failed to upsert vector for complaint_id={data.complaint_id} "
@@ -328,9 +359,20 @@ class ClusterComplaintUseCase:
 
         else:
             # Step 4b — Create new incident AND upsert seed vector immediately.
-            # This prevents a race condition where a concurrent complaint task queries
-            # Pinecone for this incident's vector before the end-of-task upsert runs.
-            incident = await self._create_new_incident(data=data, embedding=embedding, created_at_unix=created_at_unix)
+            # is_emergency is passed here — only new incidents get flagged.
+            # Merged complaints rely on the existing incident's is_emergency flag,
+            # which was set when that incident was first created.
+            logger.info(
+                f"Creating new incident | "
+                f"complaint_id={data.complaint_id} | "
+                f"is_emergency={is_emergency}"
+            )
+            incident = await self._create_new_incident(
+                data=data,
+                embedding=embedding,
+                created_at_unix=created_at_unix,
+                is_emergency=is_emergency,
+            )
             similarity_score = 1.0
 
         logger.info(
@@ -339,6 +381,7 @@ class ClusterComplaintUseCase:
             f"  Result      : {'MERGED' if is_match else 'NEW INCIDENT'}\n"
             f"  Incident ID : {incident.id}\n"
             f"  Score       : {similarity_score:.4f}\n"
+            f"  Emergency   : {is_emergency}\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         )
 
@@ -359,7 +402,6 @@ class ClusterComplaintUseCase:
     ):
         incident = await self._incident_repo.get_by_id(incident_id)
         if not incident or not incident.is_active:
-            # Race condition guard: if incident went inactive, create new
             logger.warning(
                 f"Incident {incident_id} no longer active. Creating new incident."
             )
@@ -387,6 +429,7 @@ class ClusterComplaintUseCase:
         data: ClusterComplaintInput,
         embedding: list,
         created_at_unix: float,
+        is_emergency: bool = False,
     ) -> IncidentEntity:
         now = datetime.utcnow()
         incident = IncidentEntity(
@@ -406,6 +449,7 @@ class ClusterComplaintUseCase:
             longitude=data.longitude,
             has_new_complaints=True,
             new_complaint_count=1,
+            is_emergency=is_emergency,
         )
         created = await self._incident_repo.create(incident)
 
@@ -413,12 +457,10 @@ class ClusterComplaintUseCase:
             id=None,
             incident_id=created.id,
             complaint_id=data.complaint_id,
-            similarity_score=1.0,  # Identical — it IS the seed
+            similarity_score=1.0,
         )
         await self._incident_repo.link_complaint(cluster)
 
-        # Upsert seed vector immediately — prevents race condition where a concurrent
-        # complaint task queries Pinecone for this incident before the parent task finishes.
         await self._vector_repo.upsert(
             complaint_id=data.complaint_id,
             embedding=embedding,
@@ -427,11 +469,12 @@ class ClusterComplaintUseCase:
             incident_id=created.id,
             status="ACTIVE",
             created_at_unix=created_at_unix,
-            is_seed=True,  
+            is_seed=True,
         )
 
         logger.info(
             f"New incident {created.id} created from complaint {data.complaint_id} "
-            f"at ({data.latitude:.6f}, {data.longitude:.6f}) — seed vector upserted immediately"
+            f"at ({data.latitude:.6f}, {data.longitude:.6f}) "
+            f"— seed vector upserted immediately | emergency={is_emergency}"
         )
         return created

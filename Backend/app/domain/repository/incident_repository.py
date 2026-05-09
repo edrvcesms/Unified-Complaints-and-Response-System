@@ -58,6 +58,7 @@ class IncidentRepository(IIncidentRepository):
         model.severity_level = incident.severity_level.value
         model.last_reported_at = incident.last_reported_at
         model.status = incident.status
+        model.is_emergency = incident.is_emergency
         model.has_new_complaints = incident.has_new_complaints
         model.new_complaint_count = incident.new_complaint_count
         model.last_viewed_at = incident.last_viewed_at
@@ -138,6 +139,7 @@ class IncidentRepository(IIncidentRepository):
             new_complaint_count=model.new_complaint_count,
             last_viewed_at=model.last_viewed_at,
             hearing_date=model.hearing_date,
+             is_emergency=model.is_emergency,
         )
 
     def _to_model(self, entity: IncidentEntity) -> IncidentModel:
@@ -159,6 +161,7 @@ class IncidentRepository(IIncidentRepository):
             new_complaint_count=entity.new_complaint_count,
             last_viewed_at=entity.last_viewed_at,
             hearing_date=entity.hearing_date,
+             is_emergency=entity.is_emergency,
         )
         
         

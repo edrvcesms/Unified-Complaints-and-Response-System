@@ -31,7 +31,7 @@ class IncidentEntity:
     new_complaint_count: int = 0
     last_viewed_at: Optional[datetime] = None
     hearing_date: Optional[datetime] = None
-
+    is_emergency: bool = False
     def increment_complaint_count(self) -> None:
         self.complaint_count += 1
         self.last_reported_at = datetime.utcnow()

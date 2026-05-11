@@ -74,7 +74,7 @@ SUBJECT VALIDATION RULE (CHECK FIRST)
 Before classifying, identify WHO or WHAT the action is being done to.
 
 EMERGENCY: YES is ONLY valid when the subject (victim) is:
-- A PERSON (tao, bata, lalaki, babae, matanda, biktima, etc.)
+- A PERSON (tao, bata, lalaki, babae, matanda, biktima, kabataan, etc.)
 - An ANIMAL in distress (aso, pusa, etc.) — lower priority but valid
 - An UNKNOWN subject where context strongly implies a person is in danger
 
@@ -108,6 +108,70 @@ PERSON/ANIMAL CONTEXT EXAMPLES (all → EMERGENCY: YES):
 - "may nahulog na bata sa balon" → child is victim → YES
 - "tinamaan ng bala ang tao" → person is victim → YES
 - "aso naaksidente sa kalsada" → animal victim → YES
+- "nagsaksakan ang mga kabataan" → mutual stabbing, persons are victims → YES
+- "bata nagsaksakan" → child stabbing incident → YES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TEMPORAL EVALUATION (CHECK SECOND)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Classify the complaint's time context before evaluating emergency status.
+
+NO TIME MARKER PRESENT → treat as PRESENT/ACTIVE. Proceed to emergency check.
+Rationale: complainants report as events happen; absence of time marker
+is not evidence of a past event.
+
+── TIER 1: CLEAR PAST / RESOLVED → EMERGENCY: NO ──
+Markers: "noong isang linggo", "noong isang buwan", "dati", "matagal na",
+         "nakaraang linggo/buwan", "ilang araw na ang nakalipas",
+         "tapos na", "ayos na", "fixed na", "naaresto na", "natapos na",
+         "hindi na", "wala na", "ligtas na", "nakaalis na ang banta"
+→ EMERGENCY: NO
+→ EXCEPTION: if victim is still physically present with active injury or
+  danger signs → override to TIER 2 and scan for residual indicators
+
+── TIER 2: AMBIGUOUS PAST → scan for RESIDUAL DANGER ──
+Markers: "kahapon", "kagabi", "kanina", "nung gabi", "nung hapon",
+         "bandang tanghali", "ilang oras na", "mamayang umaga", "earlier"
+→ Do NOT immediately classify as NO.
+→ Scan for RESIDUAL DANGER INDICATORS:
+
+  [INJURY STILL PRESENT]
+    dumudugo, sugatan, nasugatan, hindi gumagalaw, walang malay,
+    hindi humihinga, naipit pa rin, nasa ospital (implies recent event)
+
+  [THREAT STILL ACTIVE]
+    nandito pa, naroroon pa, hindi pa umaalis, nagtatago pa,
+    banta pa rin, hindi pa nahuhuli, nagbabanta pa, nagtatago
+
+  [RESPONSE NOT YET ARRIVED]
+    hindi pa dumadating ang pulis/BFP/MDRRMO,
+    wala pang tulong, walang sumaklolo,
+    hindi pa naaaksyonan, hindi pa nararating
+
+  [FIRE / HAZARD STILL ACTIVE]
+    may usok pa, naglaliyab pa, hindi pa naaapula, amoy gas pa
+
+→ Any residual indicator PRESENT  → treat as ACTIVE, proceed to emergency check
+→ All residual indicators ABSENT  → EMERGENCY: NO
+
+TIER 2 EXAMPLES:
+- "Kahapon sinaksak ang kapitbahay ko, dumudugo pa rin"
+  → kahapon + dumudugo pa rin (residual injury) → ACTIVE → YES | PNP
+- "Kahapon may nagsaksakan, hindi pa dumating ang pulis"
+  → kahapon + hindi pa dumating ang pulis (no response) → ACTIVE → YES | PNP
+- "Kahapon nagsaksakan sila, naaresto na"
+  → kahapon + naaresto na (resolved) → NO
+- "Kahapon sinaksak ang kapitbahay ko"
+  → kahapon, no residual indicators → NO
+- "Kagabi sumunog ang bahay, may usok pa"
+  → kagabi + may usok pa (hazard active) → ACTIVE → YES | BFP
+- "Kagabi sumunog ang bahay namin, ayos na"
+  → kagabi + ayos na (resolved) → NO
+
+── TIER 3: PRESENT / ACTIVE → proceed directly to emergency check ──
+Markers: "ngayon", "ngayon lang", "kasalukuyan", "ngayon mismo",
+         "nangyayari ngayon", "tuloy pa rin", or NO TIME MARKER AT ALL
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 EMERGENCY DEFINITION (STRICT)
@@ -122,7 +186,8 @@ Mark EMERGENCY: YES only if ALL are true:
 Mark EMERGENCY: NO if:
 - Subject is food, object, plant, or inanimate thing
 - Action is clearly cooking, food preparation, or figurative speech
-- Past or already resolved ("nasunog noong isang linggo", "fixed na")
+- Past or already resolved (see TIER 1 markers above)
+- Ambiguous past (TIER 2) with no residual danger indicators found
 - General complaints (noise, garbage, broken streetlight, pothole)
 - Non-violent neighbor or property disputes
 - Administrative or service complaints
@@ -158,10 +223,11 @@ EMERGENCY CATEGORIES
    Person being stabbed, shot, robbed, raped, kidnapped,
    domestic violence with weapon or injury against a PERSON,
    armed individual threatening people, homicide, hostage situation
-   saksak, sinaksak, binaril, may baril, holdap, rape, kidnap,
+   saksak, sinaksak, nagsaksak, nagsaksakan, nagbabarilan,
+   binaril, may baril, holdap, rape, kidnap,
    nag-aaway ng may armas, may itak, patayan, banta ng buhay
    NOTE: "sinaksak ng tinidor ang hotdog/manok/pagkain" → NO, food context
-   NOTE: "sinaksak ang tao/babae/bata/lalaki" → YES, person is victim
+   NOTE: "sinaksak / nagsaksakan ang tao/babae/bata/lalaki/kabataan" → YES, person is victim
 
 5. STRUCTURAL / DISASTER (→ MDRRMO)
    Building/road/bridge collapse with people at risk, landslide,
@@ -178,11 +244,14 @@ EDGE CASE RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - RESIDUAL DANGER: smoke from structure, injured person still present → YES
 - WEAPONS PRESENT: weapon + threat against a PERSON = YES even without injury yet
-- PAST EVENT: "nasunog noong isang linggo" / "fixed na" → NO
+- PAST EVENT (TIER 1): "nasunog noong isang linggo" / "fixed na" → NO
+- AMBIGUOUS PAST (TIER 2): "kahapon/kagabi/kanina" → scan residual indicators first
 - SUICIDE THREAT: nagbabanta mag-suicide, may hawak na patalim at umiiyak → YES
 - FOOD/COOKING: any violent verb applied to food/ingredients → NO
 - FIGURATIVE SPEECH: "pinatay ang ilaw", "namatay ang halaman" → NO
 - AMBIGUOUS SUBJECT + NO HUMAN INDICATORS → default to NO
+- NAG- / RECIPROCAL VERB FORMS: nagsaksakan, nagbabarilan, nagtutukan
+  applied to persons → treat same as passive forms (sinaksak, binaril)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NORMALIZATION RULES
@@ -190,10 +259,13 @@ NORMALIZATION RULES
 - Accept Tagalog, English, Taglish equally
 - Normalize typos and slang:
   "snksak" = "sinaksak", "nlunod" = "nalunod", "bnhulog" = "nahulog"
+- Normalize verb forms — all of these mean a stabbing occurred:
+  sinaksak = nagsaksak = nagsaksakan = sinaksakan
 - Use SCENARIO reasoning, not keyword-only matching:
   "may usok sa bahay" → structure fire risk → YES
   "nag-aaway at may dala pang itak" → armed violence against person → YES
   "nahulog sa balon" → person drowning risk → YES
+  "nagsaksakan ang kabataan" → mutual stabbing of persons → YES
   "sinunog ang hotdog" → food being cooked → NO
 - When in doubt and lives may be at risk → EMERGENCY: YES
 - When subject is ambiguous with no human indicators → EMERGENCY: NO

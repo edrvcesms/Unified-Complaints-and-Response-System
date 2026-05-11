@@ -93,7 +93,7 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const canSubmit = !isLoading && !isLoadingCategories && Boolean(selectedCategoryId) && !fileError;
+  const canSubmit = !isLoading && !isLoadingCategories && Boolean(selectedCategoryId) && !fileError && selectedFiles.length > 0;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -104,6 +104,11 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
             e.preventDefault();
             if (fileError || !selectedCategoryId) {
               setCategorySelectionError("Please choose a rejection reason.");
+              return;
+            }
+            // Validate that attachments are provided
+            if (!selectedFiles || selectedFiles.length === 0) {
+              setFileError("At least one attachment is required");
               return;
             }
             try {
@@ -125,7 +130,6 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
             disabled={isLoading || isLoadingCategories || rejectionCategories.length === 0}
             required
           >
-            <option value="">Select a reason</option>
             {rejectionCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {formatRejectionCategoryName(category.name)}
@@ -150,7 +154,9 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
             placeholder={t("frontend.actionsTaken.placeholder")}
           />
           <div className="mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Attachments (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attachments <span className="text-red-600">*</span>
+            </label>
             <div
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed border-gray-300 rounded-md p-4 text-center transition-colors cursor-pointer ${

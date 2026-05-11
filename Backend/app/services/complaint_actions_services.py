@@ -28,6 +28,13 @@ from app.constants.reject_category import RejectionCategory as RejectionCategory
 
 async def review_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
+        # Validate that attachments are provided
+        if not attachments or len(attachments) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Attachments are required when marking a complaint as reviewed"
+            )
+        
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
@@ -131,6 +138,13 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
 
 async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
+        # Validate that attachments are provided
+        if not attachments or len(attachments) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Attachments are required when resolving a complaint"
+            )
+        
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
@@ -242,6 +256,13 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
 
 async def reject_complaints_by_incident(incident_id: int, rejector_id: int, response_data: RejectComplaintSchema, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
+        # Validate that attachments are provided
+        if not attachments or len(attachments) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Attachments are required when rejecting or forwarding a complaint"
+            )
+        
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)

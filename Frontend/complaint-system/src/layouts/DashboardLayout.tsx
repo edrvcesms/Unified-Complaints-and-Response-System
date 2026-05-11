@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { HamburgerIcon } from "../features/barangay/components/Icons";
 import { useNotifications } from "../hooks/useNotifications";
 import { useToast } from "../hooks/useToast";
-import { ToastContainer } from "../components/Toast";
+import { EmergencyAlert, ToastContainer } from "../components/Toast";
 import { queryClient } from "../main";
 
 interface DashboardLayoutProps {
@@ -13,9 +13,12 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarComponent }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [emergencyAlert, setEmergencyAlert] = useState<{ title: string; message: string; incidentId?: number } | null>(null);
   const { t } = useTranslation();
   const { toasts, showToast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Emergency sound file (keeps original filename with space)
   const emergencySoundUrl = new URL('../assets/Emergency sound.mp3', import.meta.url).href;
@@ -24,23 +27,60 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
     audioRef.current = new Audio(emergencySoundUrl);
     audioRef.current.preload = 'auto';
 
-    if (import.meta.env.DEV) {
-      // expose test helpers in dev for quick verification
-      (window as any).playEmergencySound = () => audioRef.current?.play().catch((e: any) => console.warn('Play prevented:', e));
-      (window as any).triggerEmergencyNotification = (msg: any) => handleNotification({ event: 'emergency', data: { type: 'emergency', message: msg || 'Dev test emergency' } });
-    }
+    // audio element initialized for real emergency notifications
 
     return () => {
       if (audioRef.current) {
         try { audioRef.current.pause(); } catch (e) {}
         audioRef.current = null;
       }
-      if (import.meta.env.DEV) {
-        delete (window as any).playEmergencySound;
-        delete (window as any).triggerEmergencyNotification;
-      }
+      // cleanup complete
     };
   }, []);
+
+  const getRoutePrefix = () => {
+    if (location.pathname.startsWith('/lgu')) return '/lgu';
+    if (location.pathname.startsWith('/department')) return '/department';
+    if (location.pathname.startsWith('/superadmin')) return '/superadmin';
+    return '/dashboard';
+  };
+
+  const getIncidentPath = (incidentId: number) => {
+    const prefix = getRoutePrefix();
+
+    if (prefix === '/superadmin') {
+      return null;
+    }
+
+    return `${prefix}/incidents/${incidentId}`;
+  };
+
+  const stopEmergencyAlert = useCallback(() => {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.loop = false;
+      } catch (e) {
+        console.error('Failed to stop emergency sound:', e);
+      }
+    }
+
+    setEmergencyAlert(null);
+  }, []);
+
+  const viewEmergencyAlert = useCallback(() => {
+    const incidentPath = emergencyAlert?.incidentId ? getIncidentPath(emergencyAlert.incidentId) : null;
+
+    stopEmergencyAlert();
+
+    if (incidentPath) {
+      navigate(incidentPath);
+      return;
+    }
+
+    navigate(`${getRoutePrefix()}/notifications`);
+  }, [emergencyAlert, navigate, stopEmergencyAlert]);
 
   const handleNotification = useCallback((notification: any) => {
     console.log('Received notification:', notification);
@@ -52,9 +92,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
     switch (notification.event) {
       case 'emergency':
         console.log('Emergency notification received:', notification.data);
-        // Only treat as emergency when both event and data.type are 'emergency'
-        if (notification.data && notification.data.type === 'emergency') {
+        // Treat as emergency when event is 'emergency' and either data.type
+        // or data.notification_type equals 'emergency'
+        if (notification.data && (notification.data.type === 'emergency' || notification.data.notification_type === 'emergency')) {
           try {
+            if (audioRef.current) {
+              audioRef.current.loop = true;
+              audioRef.current.currentTime = 0;
+            }
             audioRef.current?.play().catch((e: any) => {
               console.warn('Emergency sound play prevented:', e);
             });
@@ -62,11 +107,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
             console.error('Failed to play emergency sound:', e);
           }
 
-          showToast({
-            type: 'error',
-            title: 'Emergency',
+          setEmergencyAlert({
+            title: notification.data.title || 'Emergency',
             message: notification.data.message || 'Emergency notification received',
-            duration: 8000,
+            incidentId: notification.data.incident_id,
           });
         }
         break;
@@ -126,6 +170,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
   return (
     <>
       <ToastContainer toasts={toasts} />
+      {emergencyAlert ? (
+        <EmergencyAlert
+          title={emergencyAlert.title}
+          message={emergencyAlert.message}
+          onView={viewEmergencyAlert}
+          onClose={stopEmergencyAlert}
+        />
+      ) : null}
       <div
         className="flex overflow-hidden bg-gray-50"
         style={{ height: "calc(100dvh - var(--navbar-h))" }}

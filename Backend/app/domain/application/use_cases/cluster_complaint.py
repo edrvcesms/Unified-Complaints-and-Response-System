@@ -61,6 +61,7 @@ class ClusterComplaintResult:
     severity_level: str
     existing_incident_status: Optional[str] = None
     message: Optional[str] = None
+    is_emergency: Optional[bool] = None
 
 
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -392,6 +393,7 @@ class ClusterComplaintUseCase:
             severity_level=incident.severity_level.value,
             existing_incident_status=existing_status,
             message=message,
+            is_emergency=is_emergency,
         )
 
     async def _merge_into_existing(

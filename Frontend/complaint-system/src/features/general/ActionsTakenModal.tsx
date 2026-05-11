@@ -90,6 +90,13 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
       setActionsTakenError(error);
       return false;
     }
+    
+    // Validate that attachments are provided
+    if (!selectedFiles || selectedFiles.length === 0) {
+      setFileError("At least one attachment is required");
+      return false;
+    }
+    
     return true;
   };
 
@@ -133,7 +140,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
           )}
           <div className="mt-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Attachments (optional)
+              Attachments <span className="text-red-600">*</span>
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}

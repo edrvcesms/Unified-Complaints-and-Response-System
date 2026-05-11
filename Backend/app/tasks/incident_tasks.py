@@ -186,6 +186,9 @@ def cluster_complaint_task(self, complaint_data: dict):
                         .where(Complaint.id == cluster_data.complaint_id)
                     )
                 ).scalars().first()
+                
+                is_emergency = result.is_emergency
+                logger.info(f"New incident created with ID {result.incident_id} for complaint {cluster_data.complaint_id}. Emergency status: {is_emergency}")
 
                 if (
                     complaint_for_barangay_notification
@@ -194,12 +197,12 @@ def cluster_complaint_task(self, complaint_data: dict):
                 ):
                     barangay_notification_payload = {
                         "user_id": complaint_for_barangay_notification.barangay_account.user_id,
-                        "title": "New Complaint Submitted",
-                        "message": f"New complaint has been submitted to your barangay",
+                        "title": "Emergency!" if is_emergency else "New Incident",
+                        "message": f"There's an emergency incident reported." if is_emergency else "A new incident has been reported.",
                         "complaint_id": cluster_data.complaint_id,
                         "incident_id": result.incident_id,
-                        "notification_type": "info",
-                        "event": "new_incident",
+                        "notification_type": "emergency" if is_emergency else "info",
+                        "event": "emergency" if is_emergency else "new_complaint",
                     }
 
             if not result.is_new_incident and result.existing_incident_status:

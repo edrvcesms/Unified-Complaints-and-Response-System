@@ -110,6 +110,8 @@ PERSON/ANIMAL CONTEXT EXAMPLES (all → EMERGENCY: YES):
 - "aso naaksidente sa kalsada" → animal victim → YES
 - "nagsaksakan ang mga kabataan" → mutual stabbing, persons are victims → YES
 - "bata nagsaksakan" → child stabbing incident → YES
+- "lolo nahulog sa 2nd floor" → elderly person fell from height → YES
+- "nahulog sa hagdan ang nanay" → person fell from stairs → YES
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TEMPORAL EVALUATION (CHECK SECOND)
@@ -211,13 +213,19 @@ EMERGENCY CATEGORIES
    someone fell into water/well/river/canal, swept by flood/current
    NOTE: "nahulog sa balon" alone = YES even without "nalunod" — implies person in danger
    NOTE: Subject must be a person or animal, not an object dropped into water
+   NOTE: "nahulog sa 2nd floor / hagdan / bubong" → NOT this category → see MEDICAL EMERGENCY
 
 3. MEDICAL EMERGENCY (→ MDRRMO)
    Person unconscious, not breathing, heart attack, stroke, severe bleeding,
-   person seizing, vehicular accident with human injury, person collapsed
+   person seizing, vehicular accident with human injury, person collapsed,
+   person fell from a height (2nd floor, rooftop, stairs, ladder, tree, cliff, elevated area)
    nahimatay, hindi humihinga, walang malay, atake sa puso,
-   dumudugo nang malala, nasagasaan, overdose, hindi na gumagalaw
+   dumudugo nang malala, nasagasaan, overdose, hindi na gumagalaw,
+   nahulog sa 2nd floor / bubong / hagdan / puno / hagdanan / taas / bangin,
+   natumba mula sa taas, nalaglag mula sa itaas, nahulog habang nag-aayos,
+   nahulog sa gusali, bumagsak mula sa 2nd floor / rooftop / ladder
    NOTE: Victim must be a PERSON — "nasagasaan ang aso" is valid but lower priority
+   NOTE: Any person falling from an elevated surface (not water) → EMERGENCY: YES | MDRRMO
 
 4. VIOLENCE / CRIME IN PROGRESS (→ PNP)
    Person being stabbed, shot, robbed, raped, kidnapped,
@@ -252,6 +260,8 @@ EDGE CASE RULES
 - AMBIGUOUS SUBJECT + NO HUMAN INDICATORS → default to NO
 - NAG- / RECIPROCAL VERB FORMS: nagsaksakan, nagbabarilan, nagtutukan
   applied to persons → treat same as passive forms (sinaksak, binaril)
+- FALL FROM HEIGHT: person falling from any elevated surface (floor, roof, stairs,
+  ladder, tree, cliff) → EMERGENCY: YES | MDRRMO regardless of injury confirmation
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NORMALIZATION RULES
@@ -267,6 +277,9 @@ NORMALIZATION RULES
   "nahulog sa balon" → person drowning risk → YES
   "nagsaksakan ang kabataan" → mutual stabbing of persons → YES
   "sinunog ang hotdog" → food being cooked → NO
+  "lolo nahulog sa 2nd floor" → elderly person fell from height → YES | MDRRMO
+  "nahulog sa hagdan ang bata" → child fell from stairs → YES | MDRRMO
+  "nahulog sa bubong ang manggagawa" → worker fell from roof → YES | MDRRMO
 - When in doubt and lives may be at risk → EMERGENCY: YES
 - When subject is ambiguous with no human indicators → EMERGENCY: NO
 

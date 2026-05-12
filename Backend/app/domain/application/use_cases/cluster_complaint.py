@@ -434,6 +434,17 @@ class ClusterComplaintUseCase:
         is_emergency: bool = False,
     ) -> IncidentEntity:
         now = datetime.utcnow()
+        
+           # Emergency incidents are guaranteed at least HIGH severity (score >= 6.0).
+    # max() ensures we never downgrade a category that already sits at CRITICAL
+    # (e.g. base_weight=8.5 stays CRITICAL, not clamped down to 6.0).
+        if is_emergency:
+            severity_score = max(data.category_base_severity_weight, 6.0)
+            severity_level = SeverityLevel.from_score(severity_score)
+        else:
+           severity_score = data.category_base_severity_weight
+           severity_level = SeverityLevel.from_score(data.category_base_severity_weight)
+           
         incident = IncidentEntity(
             id=None,
             title=data.title,
@@ -442,8 +453,8 @@ class ClusterComplaintUseCase:
             category_id=data.category_id,
             status="ACTIVE",
             complaint_count=1,
-            severity_score=data.category_base_severity_weight,
-            severity_level=SeverityLevel.from_score(data.category_base_severity_weight),
+            severity_score=severity_score,
+            severity_level=severity_level,
             time_window_hours=data.category_time_window_hours,
             first_reported_at=now,
             last_reported_at=now,

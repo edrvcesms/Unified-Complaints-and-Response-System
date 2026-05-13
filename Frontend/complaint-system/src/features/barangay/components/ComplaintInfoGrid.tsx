@@ -72,5 +72,33 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       bgColor=""
       iconColor="text-yellow-600"
     />
+      {/* Hearing date */}
+      {((complaint as any).hearing_date || (complaint as any).incident?.hearing_date) && (
+        <InfoCard
+          icon={<Calendar size={20} />}
+          label="Hearing Date"
+          value={(complaint as any).hearing_date ? (complaint as any).hearing_date : (complaint as any).incident?.hearing_date}
+          bgColor=""
+          iconColor="text-teal-600"
+        />
+      )}
+
+      {/* Hearing count */}
+      {((complaint as any).incident?.hearing_count || (complaint as any).hearing_count) && (
+        <InfoCard
+          icon={<Calendar size={20} />}
+          label="Hearing Count"
+          value={(() => {
+            const hc = (complaint as any).incident?.hearing_count ?? (complaint as any).hearing_count;
+            if (!hc) return "0";
+            if (hc === 1) return "First Hearing";
+            if (hc === 2) return "Second Hearing";
+            if (hc === 3) return "Third Hearing";
+            return `${hc}th Hearing`;
+          })()}
+          bgColor=""
+          iconColor="text-teal-600"
+        />
+      )}
   </div>
 );

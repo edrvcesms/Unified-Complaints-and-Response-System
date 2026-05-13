@@ -2,12 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, CalendarIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing, useRejectIncident } from '../../../hooks/useIncidents';
+import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing, useRejectIncident, useRescheduleHearing, useMarkHearingSuccess } from '../../../hooks/useIncidents';
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { ConfirmationModal } from "../../general/ConfirmationModal";
@@ -19,6 +20,23 @@ import { CustomDateTimePicker } from '../../general/CustomDateTimePicker';
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { validateAttachments } from '../../../utils/attachmentHelper';
 import { RejectIncidentModal } from "../components/RejectIncidentModal";
+import { startOfTomorrow } from "date-fns";
+
+const getHearingDateLabel = (count: number) => {
+  if (count <= 0) {
+    return 'Hearing Date';
+  }
+
+  if (count === 1) {
+    return 'First Hearing Date';
+  }
+
+  if (count === 2) {
+    return 'Second Hearing Date';
+  }
+
+  return 'Last Hearing Date';
+};
 
 export const IncidentDetails: React.FC = () => {
   const { t } = useTranslation();
@@ -33,14 +51,18 @@ export const IncidentDetails: React.FC = () => {
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
   const { rejectionCategories, isLoading: isLoadingRejectionCategories, error: rejectionCategoriesError } = useRejectionCategories();
   const notifyHearingMutation = useNotifyHearing();
+  const rescheduleHearingMutation = useRescheduleHearing(Number(incidentId));
+  const markHearingMutation = useMarkHearingSuccess(Number(incidentId));
   const [hearingDate, setHearingDate] = useState('');
+  const [hearingActionMode, setHearingActionMode] = useState<'notify' | 'reschedule'>('notify');
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
+  const isHearingMutationPending = notifyHearingMutation.isPending || rescheduleHearingMutation.isPending;
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [attachmentError, setAttachmentError] = useState('');
 
   const confirmationModal = useConfirmationModal();
   const actionsTakenModal = useActionsTakenModal();
-  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+  const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string; shouldNavigateOnClose?: boolean }>({
     isOpen: false,
     title: '',
     message: '',
@@ -134,6 +156,7 @@ export const IncidentDetails: React.FC = () => {
         isOpen: true,
         title: 'Success!',
         message: 'Users have been notified for the hearing successfully.',
+        shouldNavigateOnClose: false,
       });
     }
   }, [notifyHearingMutation.isSuccess]);
@@ -220,6 +243,61 @@ export const IncidentDetails: React.FC = () => {
       });
     }
   }, [notifyHearingMutation.isError]);
+
+  // Handle successful hearing reschedule
+  useEffect(() => {
+    if (rescheduleHearingMutation.isSuccess) {
+      confirmationModal.closeModal();
+      setIsHearingModalOpen(false);
+      setHearingDate('');
+      setErrorModal({ isOpen: false, title: '', message: '' });
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: 'Hearing has been rescheduled successfully.',
+        shouldNavigateOnClose: false,
+      });
+    }
+  }, [rescheduleHearingMutation.isSuccess]);
+
+  // Handle hearing reschedule error
+  useEffect(() => {
+    if (rescheduleHearingMutation.isError) {
+      confirmationModal.closeModal();
+      setSuccessModal({ isOpen: false, title: '', message: '' });
+      const error = rescheduleHearingMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to reschedule hearing. Please try again.';
+      setErrorModal({
+        isOpen: true,
+        title: 'Error',
+        message: errorMessage,
+      });
+    }
+  }, [rescheduleHearingMutation.isError]);
+
+  // Handle successful mark hearing
+  useEffect(() => {
+    if (markHearingMutation.isSuccess) {
+      const isSuccessful = markHearingMutation.variables === true;
+      setSuccessModal({
+        isOpen: true,
+        title: 'Success!',
+        message: isSuccessful
+          ? 'Hearing marked successful. The incident has been resolved.'
+          : 'Hearing marked unsuccessful. You can schedule a new hearing.',
+        shouldNavigateOnClose: false,
+      });
+    }
+  }, [markHearingMutation.isSuccess, markHearingMutation.variables]);
+
+  // Handle mark hearing error
+  useEffect(() => {
+    if (markHearingMutation.isError) {
+      const error = markHearingMutation.error as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to update hearing status.';
+      setErrorModal({ isOpen: true, title: 'Error', message: errorMessage });
+    }
+  }, [markHearingMutation.isError]);
 
   const handleViewAllComplaints = () => {
     navigate(`/dashboard/incidents/${incidentId}/complaints`);
@@ -309,8 +387,17 @@ export const IncidentDetails: React.FC = () => {
     setIsRejectModalOpen(true);
   };
 
-  const handleOpenHearingModal = () => {
-    if (incidentHearingDate) {
+  const handleMarkHearingOutcome = async (isSuccessful: boolean) => {
+    try {
+      await markHearingMutation.mutateAsync(isSuccessful);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleOpenHearingModal = (mode: 'notify' | 'reschedule' = 'notify') => {
+    setHearingActionMode(mode);
+    if (mode === 'reschedule' && incidentHearingDate) {
       const existingDate = new Date(incidentHearingDate);
       if (!Number.isNaN(existingDate.getTime())) {
         const localDateTime = new Date(existingDate.getTime() - existingDate.getTimezoneOffset() * 60000)
@@ -318,6 +405,8 @@ export const IncidentDetails: React.FC = () => {
           .slice(0, 16);
         setHearingDate(localDateTime);
       }
+    } else {
+      setHearingDate('');
     }
     setIsHearingModalOpen(true);
   };
@@ -333,12 +422,27 @@ export const IncidentDetails: React.FC = () => {
       return;
     }
 
-    const hearingDateFormData = new FormData();
-    hearingDateFormData.append("hearing_date", hearingDate);
-    await notifyHearingMutation.mutateAsync({
-      incidentId: Number(incidentId),
-      hearingDate: hearingDateFormData,
-    });
+    try {
+      if (hearingActionMode === 'reschedule') {
+        const formData = new FormData();
+        formData.append('hearing_date', format(new Date(hearingDate), "yyyy-MM-dd'T'HH:mm"));
+        await rescheduleHearingMutation.mutateAsync(formData);
+      } else {
+        const hearingDateFormData = new FormData();
+        hearingDateFormData.append("hearing_date", hearingDate);
+        await notifyHearingMutation.mutateAsync({
+          incidentId: Number(incidentId),
+          hearingDate: hearingDateFormData,
+        });
+      }
+      setIsHearingModalOpen(false);
+      setHearingDate('');
+    } catch (err) {
+      console.error(err);
+      const error = err as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to notify/reschedule hearing.';
+      setErrorModal({ isOpen: true, title: 'Error', message: errorMessage });
+    }
   };
 
   if (isLoading) {
@@ -380,6 +484,10 @@ export const IncidentDetails: React.FC = () => {
       ? incidentHearingDateRaw.trim() || null
       : incidentHearingDateRaw;
   const hasScheduledHearingDate = Boolean(incidentHearingDate);
+  const hearingCount = Number(incident.hearing_count ?? 0);
+  const hearingOutcome = incident.is_hearing_successful ?? null;
+  const canScheduleFollowUpHearing = hasScheduledHearingDate && hearingOutcome === false;
+  const hearingDateLabel = getHearingDateLabel(hearingCount);
   const showNewComplaintBadge = Boolean(incident.has_new_complaints) || Number(incident.new_complaint_count ?? 0) > 0;
 
   const responses = incident.responses ?? [];
@@ -394,18 +502,7 @@ export const IncidentDetails: React.FC = () => {
     if (!dateString) return '';
     const date = new Date(dateString);
     if (Number.isNaN(date.getTime())) return dateString;
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    };
-    // e.g. March 22, 2026, 03:30 PM
-    const formatted = date.toLocaleString(undefined, options);
-    // Convert ", " before time to " at "
-    return formatted.replace(/, (\d{2}:\d{2} [AP]M)$/i, ' at $1');
+    return format(date, "MMMM d, yyyy 'at' hh:mm a");
   };
 
   return (
@@ -663,22 +760,50 @@ export const IncidentDetails: React.FC = () => {
         {hasScheduledHearingDate && (
           <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
-            Hearing Date: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
+            {hearingDateLabel}: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
           </div>
         )}
 
-        <button
-          onClick={handleOpenHearingModal}
-          disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejected}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <CalendarIcon className="w-4 h-4 text-primary-200" />
-          {notifyHearingMutation.isPending
-            ? "Notifying..."
-            : hasScheduledHearingDate
-              ? "Reschedule Hearing Date"
-              : "Notify Complainants for Hearing"}
-        </button>
+        {hasScheduledHearingDate && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleMarkHearingOutcome(true)}
+              disabled={markHearingMutation.isPending || hearingOutcome === false}
+              className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {markHearingMutation.isPending ? 'Updating...' : 'Mark Hearing Successful'}
+            </button>
+            <button
+              onClick={() => handleMarkHearingOutcome(false)}
+              disabled={markHearingMutation.isPending || hearingOutcome === false}
+              className="px-3 py-2 bg-rose-600 text-white text-sm font-medium rounded-md hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {markHearingMutation.isPending ? 'Updating...' : 'Mark Hearing Unsuccessful'}
+            </button>
+          </div>
+        )}
+
+        {!hasScheduledHearingDate && (
+          <button
+            onClick={() => handleOpenHearingModal('notify')}
+            disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejected}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <CalendarIcon className="w-4 h-4 text-primary-200" />
+            {isHearingMutationPending ? 'Notifying...' : 'Notify Complainants for Hearing'}
+          </button>
+        )}
+
+        {canScheduleFollowUpHearing && (
+          <button
+            onClick={() => handleOpenHearingModal('reschedule')}
+            disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByDepartment || isUnderReviewByLgu || isForwardedToDepartment || isForwardedToLgu || isRejected}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <CalendarIcon className="w-4 h-4 text-primary-200" />
+            {isHearingMutationPending ? 'Rescheduling...' : 'Schedule a New Hearing'}
+          </button>
+        )}
       </div>
 
       {/* Modal */}
@@ -693,7 +818,7 @@ export const IncidentDetails: React.FC = () => {
             <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-medium text-gray-900">
-                  {hasScheduledHearingDate ? "Reschedule Hearing Date" : "Notify Complainants for Hearing"}
+                  {hearingActionMode === 'reschedule' ? 'Reschedule Hearing Date' : hasScheduledHearingDate ? 'Schedule a New Hearing' : 'Notify Complainants for Hearing'}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
                   Select a date and time to notify all complainants.
@@ -716,7 +841,8 @@ export const IncidentDetails: React.FC = () => {
               <div className="mb-4">
                 <CustomDateTimePicker
                   value={hearingDate ? new Date(hearingDate) : null}
-                  onChange={(date) => setHearingDate(date.toISOString())}
+                  onChange={(date) => setHearingDate(format(date, "yyyy-MM-dd'T'HH:mm"))}
+                  minDate={startOfTomorrow()}
                 />
               </div>
 
@@ -735,7 +861,7 @@ export const IncidentDetails: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsHearingModalOpen(false)}
-                  disabled={notifyHearingMutation.isPending}
+                  disabled={isHearingMutationPending}
                   className="px-4 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Cancel
@@ -743,15 +869,15 @@ export const IncidentDetails: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleNotifyHearing}
-                  disabled={notifyHearingMutation.isPending || !hearingDate}
+                  disabled={isHearingMutationPending || !hearingDate}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="w-4 h-4 rounded-full border border-primary-300 flex items-center justify-center text-[9px]">✓</span>
-                  {notifyHearingMutation.isPending
-                    ? "Notifying..."
-                    : hasScheduledHearingDate
-                      ? "Confirm & Reschedule"
-                      : "Confirm & Notify"}
+                  {isHearingMutationPending
+                    ? hearingActionMode === 'reschedule' ? 'Rescheduling...' : 'Notifying...'
+                    : hearingActionMode === 'reschedule'
+                      ? 'Confirm & Reschedule'
+                      : 'Confirm & Notify'}
                 </button>
               </div>
             </div>
@@ -776,7 +902,9 @@ export const IncidentDetails: React.FC = () => {
         title={successModal.title}
         message={successModal.message}
         onClose={() => {
-          navigate(`/dashboard/incidents`);
+          if (successModal.shouldNavigateOnClose !== false) {
+            navigate(`/dashboard/incidents`);
+          }
           setSuccessModal({ isOpen: false, title: '', message: '' });
         }}
       />

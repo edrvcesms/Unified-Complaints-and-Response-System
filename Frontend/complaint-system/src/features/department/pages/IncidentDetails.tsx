@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 // import { useTranslation } from 'react-i18next';
-import { useIncidentDetails, useResolveIncident, useReviewIncident, useRejectIncident } from "../../../hooks/useIncidents";
+import { useIncidentDetails, useResolveIncident, useReviewIncident, useRejectIncident, useMarkHearingSuccess, useRescheduleHearing } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import { formatHearingDate, isHearingDatePast } from "../../../utils/hearingDateUtils";
+import dayjs from "dayjs";
+import { format } from "date-fns";
 import { isAbortError } from "../../../utils/axiosException";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
@@ -26,6 +28,8 @@ export const DepartmentIncidentDetails: React.FC = () => {
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
+  const markHearingMutation = useMarkHearingSuccess(Number(incidentId));
+  const rescheduleHearingMutation = useRescheduleHearing(Number(incidentId));
 
   const actionsTakenModal = useActionsTakenModal();
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -239,6 +243,46 @@ export const DepartmentIncidentDetails: React.FC = () => {
     }
   }
 
+  const handleMarkHearingSuccessful = async () => {
+    try {
+      await markHearingMutation.mutateAsync(true);
+      setSuccessModal({ isOpen: true, title: 'Success!', message: 'Hearing marked as successful.' });
+    } catch (err) {
+      const error = err as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to update hearing status.';
+      setErrorModal({ isOpen: true, title: 'Error', message: errorMessage });
+    }
+  };
+
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState<string>("");
+  const tomorrowStart = dayjs().add(1, 'day').startOf('day');
+
+  const handleRescheduleSubmit = async () => {
+    if (!rescheduleDate) {
+      setErrorModal({ isOpen: true, title: 'Error', message: 'Please choose a new date and time.' });
+      return;
+    }
+    const chosen = dayjs(rescheduleDate);
+    if (chosen.isBefore(tomorrowStart)) {
+      setErrorModal({ isOpen: true, title: 'Error', message: 'Hearing must be scheduled at least 24 hours from now.' });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      // send ISO string
+      formData.append('hearing_date', format(chosen.toDate(), "yyyy-MM-dd'T'HH:mm"));
+      await rescheduleHearingMutation.mutateAsync(formData);
+      setSuccessModal({ isOpen: true, title: 'Success', message: 'Hearing rescheduled.' });
+      setShowRescheduleForm(false);
+    } catch (err) {
+      const error = err as any;
+      const errorMessage = error?.response?.data?.detail || 'Failed to reschedule hearing.';
+      setErrorModal({ isOpen: true, title: 'Error', message: errorMessage });
+    }
+  };
+
   const responses = incident.responses ?? [];
   const sortedResponses = [...responses].sort((a, b) => {
     const aTime = new Date(a.response_date).getTime();
@@ -375,6 +419,36 @@ export const DepartmentIncidentDetails: React.FC = () => {
                   <span className="ml-2 text-yellow-700 font-semibold">Reschedule</span>
                 )}
               </p>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={handleMarkHearingSuccessful}
+                  disabled={markHearingMutation.isPending}
+                  className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {markHearingMutation.isPending ? 'Updating...' : 'Mark Hearing Successful'}
+                </button>
+                <button
+                  onClick={() => setShowRescheduleForm((s) => !s)}
+                  className="px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  {showRescheduleForm ? 'Cancel' : 'Reschedule Hearing'}
+                </button>
+              </div>
+              {showRescheduleForm && (
+                <div className="mt-4">
+                  <label className="text-xs text-gray-500 mb-1 block">New Hearing Date</label>
+                  <input
+                    type="datetime-local"
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    min={tomorrowStart.format('YYYY-MM-DDTHH:mm')}
+                    className="mt-1 p-2 border rounded w-full"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={handleRescheduleSubmit} disabled={rescheduleHearingMutation.isPending} className="px-3 py-2 bg-blue-600 text-white rounded">{rescheduleHearingMutation.isPending ? 'Rescheduling...' : 'Reschedule'}</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

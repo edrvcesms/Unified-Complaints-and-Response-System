@@ -4,6 +4,7 @@ import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, Send, CalendarIcon } from "lucide-react";
 import { CustomDateTimePicker } from '../../general/CustomDateTimePicker';
+import { format } from "date-fns";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -22,6 +23,7 @@ import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateAttachments } from '../../../utils/attachmentHelper';
+import { startOfTomorrow } from "date-fns";
 
 export const LguIncidentDetails: React.FC = () => {
   const actionsTakenModal = useActionsTakenModal();
@@ -250,18 +252,7 @@ export const LguIncidentDetails: React.FC = () => {
     });
   };
 
-  const handleOpenHearingModal = () => {
-    if (incidentHearingDate) {
-      const existingDate = new Date(incidentHearingDate);
-      if (!Number.isNaN(existingDate.getTime())) {
-        const localDateTime = new Date(existingDate.getTime() - existingDate.getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
-        setHearingDate(localDateTime);
-      }
-    }
-    setIsHearingModalOpen(true);
-  };
+  // Hearing modal is opened via UI; toolbar is currently disabled in this view.
 
   const handleNotifyHearing = async () => {
     if (!hearingDate) {
@@ -365,15 +356,10 @@ export const LguIncidentDetails: React.FC = () => {
   const isUnderReviewByDepartment = incidentStatus === "reviewed_by_department";
   const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
   const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
-  const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
+  // `isForwardedToLgu` removed — use `isForwardedIncident` if needed
   const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
 
-  const incidentHearingDateRaw = (incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null;
-  const incidentHearingDate =
-    typeof incidentHearingDateRaw === "string"
-      ? incidentHearingDateRaw.trim() || null
-      : incidentHearingDateRaw;
-  const hasScheduledHearingDate = Boolean(incidentHearingDate);
+  const hasScheduledHearingDate = Boolean((incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null);
 
   const responses = incident.responses ?? [];
   const sortedResponses = [...responses].sort((a, b) => {
@@ -382,21 +368,7 @@ export const LguIncidentDetails: React.FC = () => {
     return bTime - aTime;
   });
 
-  const formatHearingDate = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) return dateString;
-    const options: Intl.DateTimeFormatOptions = {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    };
-    const formatted = date.toLocaleString(undefined, options);
-    return formatted.replace(/, (\d{2}:\d{2} [AP]M)$/i, ' at $1');
-  };
+  // formatHearingDate removed — not used in this view
 
 
   return (
@@ -615,7 +587,7 @@ export const LguIncidentDetails: React.FC = () => {
 
       
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      {/* <div className="flex flex-wrap items-center justify-end gap-3">
         {hasScheduledHearingDate && (
           <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
@@ -635,7 +607,7 @@ export const LguIncidentDetails: React.FC = () => {
               ? "Reschedule Hearing Date"
               : "Notify Complainants for Hearing"}
         </button>
-      </div>
+      </div> */}
 
       {/* Modal */}
       {isHearingModalOpen && (
@@ -672,7 +644,8 @@ export const LguIncidentDetails: React.FC = () => {
               <div className="mb-4">
                 <CustomDateTimePicker
                   value={hearingDate ? new Date(hearingDate) : null}
-                  onChange={(date) => setHearingDate(date.toISOString())}
+                  onChange={(date) => setHearingDate(format(date, "yyyy-MM-dd'T'HH:mm"))}
+                  minDate={startOfTomorrow()}
                 />
               </div>
 

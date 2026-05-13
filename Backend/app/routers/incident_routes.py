@@ -6,7 +6,7 @@ from app.dependencies.rate_limiter import limiter
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.incidents_services import get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed, get_all_incidents
 from app.dependencies.auth_dependency import get_current_user
-from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing
+from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing, reschedule_hearing, mark_hearing_as_successful
 from app.services.incidents_services import forward_incident_to_lgu
 from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident, reject_incident
 from app.services.lgu_services import assign_incident_to_department
@@ -215,4 +215,21 @@ async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_
 @router.post("/notify-hearing/{incident_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def notify_hearing(request: Request, incident_id: int, hearing_date: datetime = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    await notify_user_for_hearing(incident_id, hearing_date, db)
+    await notify_user_for_hearing(incident_id, hearing_date, current_user.id, db)
+
+
+@router.post("/mark-hearing/{incident_id}", status_code=status.HTTP_200_OK)
+async def mark_hearing(incident_id: int, is_successful: bool = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+    return await mark_hearing_as_successful(incident_id, is_successful, current_user.id, db)
+
+
+@router.post("/reschedule-hearing/{incident_id}", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def reschedule_hearing_route(request: Request, incident_id: int, hearing_date: datetime = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
+    return await reschedule_hearing(incident_id, hearing_date, current_user.id, db)

@@ -105,3 +105,23 @@ export const notifyHearing = async (incidentId: number, hearingDate: FormData): 
     throw error;
   }
 };
+
+export const markHearingAsSuccessful = async (incidentId: number, isSuccessful: boolean): Promise<void> => {
+  try {
+    const formData = new FormData();
+    formData.append('is_successful', String(isSuccessful));
+    await incidentsApi.post(`/mark-hearing/${incidentId}`, formData);
+  } catch (error) {
+    console.error('Error marking hearing status:', error);
+    throw error;
+  }
+};
+
+export const rescheduleHearing = async (incidentId: number, hearingDate: FormData): Promise<void> => {
+  try {
+    await incidentsApi.post(`/reschedule-hearing/${incidentId}`, hearingDate);
+  } catch (error) {
+    console.error('Error rescheduling hearing:', error);
+    throw error;
+  }
+};

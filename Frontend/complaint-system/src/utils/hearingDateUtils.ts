@@ -12,5 +12,5 @@ export function formatHearingDate(dateString: string | null | undefined): string
   if (!dateString) return '';
   const date = dayjs(dateString);
   if (!date.isValid()) return String(dateString);
-  return date.format("MMMM D, YYYY [at] hh:mm A");
+  return date.format("MMMM D, YYYY [at] h:mm A");
 }

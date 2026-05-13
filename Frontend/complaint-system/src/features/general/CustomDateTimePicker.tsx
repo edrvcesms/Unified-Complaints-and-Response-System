@@ -20,9 +20,11 @@ import { useTranslation } from "react-i18next";
 export const CustomDateTimePicker = ({
   value,
   onChange,
+  minDate,
 }: {
   value: Date | null;
   onChange: (date: Date) => void;
+  minDate?: Date;
 }) => {
   const { t } = useTranslation();
   const [viewDate, setViewDate] = useState(value ?? new Date());
@@ -33,10 +35,10 @@ export const CustomDateTimePicker = ({
     end: endOfWeek(endOfMonth(viewDate)),
   });
 
-  const today = startOfDay(new Date());
+  const minimumDate = startOfDay(minDate ?? new Date());
 
   const handleDayClick = (day: Date) => {
-    if (isBefore(day, today)) return;
+    if (isBefore(day, minimumDate)) return;
     const h = time.period === "PM" && time.hour !== "12"
       ? String(+time.hour + 12)
       : time.period === "AM" && time.hour === "12"
@@ -97,7 +99,7 @@ export const CustomDateTimePicker = ({
       {/* Days grid */}
       <div className="grid grid-cols-7 gap-y-1">
         {days.map((day) => {
-          const isPast = isBefore(day, today);
+          const isPast = isBefore(day, minimumDate);
           const isSelected = value ? isSameDay(day, value) : false;
           const isCurrentMonth = isSameMonth(day, viewDate);
           const isTodayDay = isToday(day);

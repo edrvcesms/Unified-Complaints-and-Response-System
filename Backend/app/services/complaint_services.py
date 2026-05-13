@@ -1,6 +1,7 @@
 import calendar
 from typing import List
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from app.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
@@ -28,6 +29,16 @@ from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
 from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
 from app.utils.cache_invalidator_optimized import CacheInvalidator
+
+
+APP_TIMEZONE = ZoneInfo("Asia/Manila")
+
+
+def _normalize_hearing_datetime(hearing_date: datetime) -> datetime:
+    """Keep hearing dates in the application's local timezone."""
+    if hearing_date.tzinfo is None or hearing_date.utcoffset() is None:
+        return hearing_date.replace(tzinfo=APP_TIMEZONE)
+    return hearing_date.astimezone(APP_TIMEZONE)
 
 
 def _empty_status_counts():
@@ -570,13 +581,9 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
-async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: AsyncSession):
+async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user_id: int, db: AsyncSession):
     try:
-        normalized_hearing_date = (
-            hearing_date.replace(tzinfo=None)
-            if hearing_date.tzinfo is not None and hearing_date.utcoffset() is not None
-            else hearing_date
-        )
+        normalized_hearing_date = _normalize_hearing_datetime(hearing_date)
 
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -587,7 +594,6 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         if not complaint_ids:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
 
-        # OPTIMIZED: Batch fetch all complaints at once instead of in loop
         complaints_dict = await BatchLoader.fetch_complaints_by_ids(db, complaint_ids, minimal=False)
         complaints = list(complaints_dict.values())
         
@@ -597,21 +603,29 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
         if not incident:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
 
+        if (incident.hearing_count or 0) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A new hearing can only be scheduled after an unsuccessful hearing. Use the reschedule hearing action instead.",
+            )
+
         if not complaints:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
         
-        # Update all complaints and incident with hearing date
+        # Update all complaints with hearing date
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
             .values(hearing_date=normalized_hearing_date)
         )
-        await db.execute(
-            update(IncidentModel)
-            .where(IncidentModel.id == incident_id)
-            .values(hearing_date=normalized_hearing_date)
-        )
+
+        # Increment hearing count on the incident object and persist
+        incident.hearing_date = normalized_hearing_date
+        incident.hearing_count = (incident.hearing_count or 0) + 1
+        incident.is_hearing_successful = None
+        db.add(incident)
         await db.commit()
+        await db.refresh(incident)
         
         # Send notifications using cached complaints
         for complaint in complaints:
@@ -640,16 +654,29 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
                 hearing_time=normalized_hearing_date.strftime("%I:%M %p")
             )
         
-        # Get complaint barangay_id from first complaint for cache invalidation
+        if incident.is_hearing_successful is False and incident.hearing_count and incident.hearing_count >= 3:
+            await db.execute(
+                update(Complaint)
+                .where(Complaint.id.in_(complaint_ids))
+                .values(status=ComplaintStatus.FORWARDED_TO_LGU.value)
+            )
+            await db.commit()
+            await log_status_change(
+                complaint_ids=complaint_ids,
+                new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
+                changed_by_user_id=user_id,
+                db=db,
+            )
+
         first_complaint = complaints[0] if complaints else None
         complaint_barangay_id = first_complaint.barangay_id if first_complaint else None
-            
+
         await CacheInvalidator.invalidate_cache(
             complaint_ids=complaint_ids,
             user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, complaint_ids),
             barangay_id=complaint_barangay_id,
             incident_ids=[incident_id],
-            include_global=False
+            include_global=True
         )
         
         user_name = f"{first_complaint.user.first_name} {first_complaint.user.last_name}".strip() if first_complaint and first_complaint.user else "User"
@@ -665,6 +692,187 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, db: 
     
     except Exception as e:
         logger.exception(f"Error in notify_user_for_hearing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e))
+
+
+async def reschedule_hearing(incident_id: int, hearing_date: datetime, user_id: int, db: AsyncSession):
+    try:
+        normalized_hearing_date = _normalize_hearing_datetime(hearing_date)
+
+        complaint_id_result = await db.execute(
+            select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id)
+        )
+        complaint_ids = complaint_id_result.scalars().all()
+
+        if not complaint_ids:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No complaints found for the specified incident")
+
+        incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
+        incident = incident_result.scalar()
+
+        if not incident:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
+        if (incident.hearing_count or 0) == 0 or incident.is_hearing_successful is not False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A new hearing can only be scheduled after an unsuccessful hearing.",
+            )
+
+        await db.execute(
+            update(Complaint)
+            .where(Complaint.id.in_(complaint_ids))
+            .values(hearing_date=normalized_hearing_date)
+        )
+
+        incident.hearing_date = normalized_hearing_date
+        incident.hearing_count = (incident.hearing_count or 0) + 1
+        incident.is_hearing_successful = None
+        db.add(incident)
+        await db.commit()
+
+        if incident.is_hearing_successful is False and incident.hearing_count and incident.hearing_count >= 3:
+            await db.execute(
+                update(Complaint)
+                .where(Complaint.id.in_(complaint_ids))
+                .values(status=ComplaintStatus.FORWARDED_TO_LGU.value)
+            )
+            await db.commit()
+            await log_status_change(
+                complaint_ids=complaint_ids,
+                new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
+                changed_by_user_id=user_id,
+                db=db,
+            )
+
+        first_complaint_result = await db.execute(
+            select(Complaint).where(Complaint.id == complaint_ids[0]).options(*QueryOptions.complaints())
+        )
+        first_complaint = first_complaint_result.scalars().first()
+
+        await CacheInvalidator.invalidate_cache(
+            complaint_ids=complaint_ids,
+            user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, complaint_ids),
+            barangay_id=first_complaint.barangay_id if first_complaint else None,
+            incident_ids=[incident_id],
+            include_global=True,
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "Hearing rescheduled successfully."},
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error in reschedule_hearing: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+ 
+        
+async def mark_hearing_as_successful(incident_id: int, is_successful: bool, user_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
+        incident = result.scalar()
+
+        if not incident:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
+
+        incident.is_hearing_successful = is_successful
+        db.add(incident)
+        await db.commit()
+
+        if is_successful:
+            res = await db.execute(
+                select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id)
+            )
+            linked_ids = res.scalars().all()
+            if linked_ids:
+                await db.execute(
+                    update(Complaint)
+                    .where(Complaint.id.in_(linked_ids))
+                    .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value)
+                )
+                await db.commit()
+                await log_status_change(
+                    complaint_ids=linked_ids,
+                    new_status=ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+                    changed_by_user_id=user_id,
+                    db=db,
+                )
+
+                await CacheInvalidator.invalidate_cache(
+                    complaint_ids=linked_ids,
+                    user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, linked_ids),
+                    barangay_id=incident.barangay_id if hasattr(incident, 'barangay_id') else None,
+                    incident_ids=[incident_id],
+                    include_global=False,
+                )
+        else:
+            # If this unsuccessful hearing is the last allowed hearing, forward linked complaints to LGU
+            res = await db.execute(
+                select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id)
+            )
+            linked_ids = res.scalars().all()
+
+            if linked_ids:
+                # If the hearing_count reached the limit (3), forward to LGU
+                if incident.hearing_count and incident.hearing_count >= 3:
+                    await db.execute(
+                        update(Complaint)
+                        .where(Complaint.id.in_(linked_ids))
+                        .values(status=ComplaintStatus.FORWARDED_TO_LGU.value)
+                    )
+
+                    # reset incident hearing info
+                    incident.hearing_date = None
+                    incident.hearing_count = 0
+                    db.add(incident)
+                    await db.commit()
+
+                    await log_status_change(
+                        complaint_ids=linked_ids,
+                        new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
+                        changed_by_user_id=user_id,
+                        db=db,
+                    )
+
+                    await CacheInvalidator.invalidate_cache(
+                        complaint_ids=linked_ids,
+                        user_ids=await BatchLoader.fetch_user_ids_for_complaints(db, linked_ids),
+                        barangay_id=incident.barangay_id if hasattr(incident, 'barangay_id') else None,
+                        incident_ids=[incident_id],
+                        include_global=False,
+                    )
+                else:
+                    # Not the last hearing yet — just invalidate incident cache
+                    await CacheInvalidator.invalidate_cache(
+                        incident_ids=[incident_id],
+                        include_global=False,
+                    )
+            else:
+                # No linked complaints found — still invalidate incident cache
+                await CacheInvalidator.invalidate_cache(
+                    incident_ids=[incident_id],
+                    include_global=False,
+                )
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "message": f"Hearing for incident ID {incident_id} marked as {'successful' if is_successful else 'unsuccessful'}"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.exception(f"Error in mark_hearing_as_successful: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e))

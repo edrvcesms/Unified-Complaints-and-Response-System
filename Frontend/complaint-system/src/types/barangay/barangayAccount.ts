@@ -13,6 +13,8 @@ export interface BarangayAccountData {
 
 export interface BarangayData {
   barangay_name: string;
+  latitude: number;
+  longitude: number;
   barangay_address: string;
   barangay_contact_number: string;
   barangay_email: string;

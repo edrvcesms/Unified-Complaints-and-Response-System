@@ -24,5 +24,7 @@ export interface Incident {
   longitude: number;
   latitude: number;
   hearing_date?: string | null;
+  hearing_count?: number | null;
+  is_hearing_successful?: boolean | null;
   responses?: ResponseData[];
 }

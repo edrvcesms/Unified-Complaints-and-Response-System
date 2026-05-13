@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
 import type { Complaint } from "../types/complaints/complaint";
+import { markHearingAsSuccessful, rescheduleHearing } from "../services/incidents/incidents";
 import type { RejectionCategory } from "../types/general/category";
 
 type ReviewIncidentPayload = {
@@ -197,6 +198,32 @@ export const useNotifyHearing = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", variables.incidentId] });
+    }
+  });
+  return mutation;
+};
+
+export const useMarkHearingSuccess = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["markHearing", incidentId],
+    mutationFn: (isSuccessful: boolean) => markHearingAsSuccessful(incidentId, isSuccessful),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId, "complaints"] });
+    }
+  });
+  return mutation;
+};
+
+export const useRescheduleHearing = (incidentId: number) => {
+  const mutation = useMutation({
+    mutationKey: ["rescheduleHearing", incidentId],
+    mutationFn: (hearingFormData: FormData) => rescheduleHearing(incidentId, hearingFormData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incidents"] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId, "complaints"] });
     }
   });
   return mutation;

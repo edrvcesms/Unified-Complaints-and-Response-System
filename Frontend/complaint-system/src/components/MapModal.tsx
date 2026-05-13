@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import type { Map } from 'leaflet';
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -93,10 +94,8 @@ const MapModal: React.FC<MapModalProps> = ({
   const [satellite, setSatellite] = useState(false);
   const [routeGeoJson, setRouteGeoJson] = useState<any | null>(null);
   const [showRoute, setShowRoute] = useState(false);
-  const [routeDistance, setRouteDistance] = useState<number | null>(null);
-  const [routeDuration, setRouteDuration] = useState<number | null>(null);
-  const [routeSteps, setRouteSteps] = useState<any[] | null>(null);
-  const mapRef = useRef<any>(null);
+  // route distance/duration/steps were removed because they're not used elsewhere
+  const mapRef = useRef<Map | null>(null);
 
   React.useEffect(() => {
     // Auto-fetch route when modal opens and origin/destination are available
@@ -121,9 +120,6 @@ const MapModal: React.FC<MapModalProps> = ({
         if (geo) {
           setRouteGeoJson(geo);
           setShowRoute(true);
-          setRouteDistance(route?.distance ?? null);
-          setRouteDuration(route?.duration ?? null);
-          setRouteSteps(steps.length ? steps : null);
           const coords = geo.coordinates.map((c: any) => [c[1], c[0]]);
           const bounds = L.latLngBounds(coords as any);
           mapRef.current?.fitBounds(bounds.pad(0.1));
@@ -160,7 +156,9 @@ const MapModal: React.FC<MapModalProps> = ({
           minZoom={2}
           maxZoom={18}
           style={{ width: '100%', height: '100%' }}
-          whenCreated={(map) => (mapRef.current = map)}
+          // react-leaflet type for `whenReady` may vary by version — ignore strict typing here
+          // @ts-ignore
+          whenReady={(map: any) => (mapRef.current = map)}
         >
           <TileLayer
             url={tileUrl}

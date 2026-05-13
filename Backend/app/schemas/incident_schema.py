@@ -34,6 +34,8 @@ class IncidentData(IncidentBaseModel):
     severity_score: float
     first_reported_at: datetime
     last_reported_at: datetime
+    hearing_count: Optional[int] = 0
+    is_hearing_successful: Optional[bool] = None
     category: Optional[CategoryModel] = None
     barangay: Optional[BarangayModel] = None
     complaint_clusters: List[IncidentComplaintClusterModel] = []
@@ -57,6 +59,8 @@ class IncidentOut(BaseModel):
     status: Optional[str] = None
     complaint_count: int
     severity_level: str
+    hearing_count: Optional[int] = 0
+    is_hearing_successful: Optional[bool] = None
     category: Optional[CategoryModel] = None   
     complaint_count: int
     complaint_clusters: List[IncidentComplaintClusterModel] = []

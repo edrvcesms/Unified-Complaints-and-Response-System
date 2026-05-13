@@ -76,9 +76,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);
   const isWarningNotification = (notification: Notification) => notification.notification_type === "warning";
   const isCriticalNotification = (notification: Notification) => notification.notification_type === "critical";
+  const isEmergencyNotification = (notification: Notification) => notification.notification_type === "emergency";
 
   const getNotificationColorClass = (notification: Notification) => {
     if (isCriticalNotification(notification)) return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-50', badgeUnread: 'bg-red-50/70', dot: 'bg-red-500' };
+    if (isEmergencyNotification(notification)) return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-50', badgeUnread: 'bg-red-50/70', dot: 'bg-red-500' };
     if (isWarningNotification(notification)) return { bg: 'bg-amber-100', text: 'text-amber-700', badge: 'bg-amber-50', badgeUnread: 'bg-amber-50/70', dot: 'bg-amber-500' };
     if (isRejectNotification(notification)) return { bg: 'bg-red-100', text: 'text-red-700', badge: 'bg-red-50', badgeUnread: 'bg-red-50/70', dot: 'bg-red-500' };
     return { bg: 'bg-green-100', text: 'text-green-700', badge: 'bg-green-50', badgeUnread: 'bg-green-50/70', dot: 'bg-green-500' };
@@ -217,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
                       {isRejectNotification(notification) ? t('frontend.notifications.reject') : notification.notification_type.replace(/_/g, ' ')}
                     </span>
                     {!notification.is_read && (
-                      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getNotificationColorClass(notification).bg} ${getNotificationColorClass(notification).text}`}>
                         {t('frontend.notifications.new')}
                       </span>
                     )}

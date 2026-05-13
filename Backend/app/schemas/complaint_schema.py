@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
+from .response_schema import ResponseSchema
+
 from .attachment_schema import AttachmentBaseModel
 from .barangay_schema import BarangayModel
 from .category_schema import CategoryModel
@@ -38,10 +40,17 @@ class ComplaintBaseModel(BaseModel):
 class ComplaintCreateData(ComplaintBaseModel):
     pass
 
+class ResponseData(BaseModel):
+    id: int
+    responses: Optional[List[ResponseSchema]] = []
+
+    class Config:
+        from_attributes = True
+
 class IncidentLinkData(BaseModel):
     id: int
     response_id: Optional[int] = None
-    incident_id: Optional[int] = None
+    incident: Optional[ResponseData] = None
 
     class Config:
         from_attributes = True

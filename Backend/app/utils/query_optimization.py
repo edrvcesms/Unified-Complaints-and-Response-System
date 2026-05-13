@@ -21,6 +21,7 @@ from app.models.user import User
 from app.models.barangay import Barangay
 from app.models.category import Category
 from app.models.attachment import Attachment
+from app.models.response_attachments import ResponseAttachments
 
 
 class QueryOptions:
@@ -67,6 +68,16 @@ class QueryOptions:
             Response.responder_id,
             Response.actions_taken,
             Response.response_date,
+        )
+
+    @staticmethod
+    def _response_attachment_summary_load(loader):
+        return loader.load_only(
+            ResponseAttachments.id,
+            ResponseAttachments.response_id,
+            ResponseAttachments.file_url,
+            ResponseAttachments.media_type,
+            ResponseAttachments.created_at,
         )
 
     # Incident minimal loading (for list views)
@@ -236,7 +247,14 @@ class QueryOptions:
             QueryOptions._barangay_summary_load(selectinload(Complaint.barangay)),
             QueryOptions._category_summary_load(selectinload(Complaint.category)),
             QueryOptions._attachment_summary_load(selectinload(Complaint.attachment)),
-            selectinload(Complaint.incident_links),
+            selectinload(Complaint.incident_links)
+            .selectinload(IncidentComplaintModel.incident)
+            .selectinload(IncidentModel.responses)
+            .selectinload(Response.user),
+            selectinload(Complaint.incident_links)
+            .selectinload(IncidentComplaintModel.incident)
+            .selectinload(IncidentModel.responses)
+            .selectinload(Response.response_attachments),
         )
 
     # Complaint for statistics (only load category for grouping)

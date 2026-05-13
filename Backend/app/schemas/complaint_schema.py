@@ -97,6 +97,7 @@ class ComplaintWithUserData(ComplaintBaseModel):
     incident_links: Optional[List[IncidentLinkData]] = None
     is_rejected_by_lgu: Optional[bool] = None
     is_rejected_by_department: Optional[bool] = None
+    hearing_date: Optional[datetime] = None
     
     class Config:
         from_attributes = True

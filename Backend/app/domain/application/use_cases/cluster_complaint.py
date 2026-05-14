@@ -103,7 +103,7 @@ class ClusterComplaintUseCase:
     Postgres is the source of truth for candidate discovery.
     Pinecone is used only for vector storage and retrieval.
     LLM is called for all candidates above threshold.
-    Emergency detection is piggy-backed onto the LLM verification call (no extra API cost).
+    Emergency detection runs concurrently with is_same_incident (no extra latency).
     For no-candidate and auto-reject paths, a dedicated detect_emergency() call is made.
     Severity recalculation is handled separately (SRP).
     """
@@ -171,7 +171,8 @@ class ClusterComplaintUseCase:
                         f"DISQUALIFIED incident_id={incident.id}: "
                         f"distance={distance_km:.4f} km > radius={data.category_radius_km:.2f} km"
                     )
-                    spatial_score = 0.0
+                    continue  # FIX: skip this incident entirely, do not score it
+
                 spatial_score = 1.0 - (distance_km / data.category_radius_km)
 
             # --- Semantic score with retry ---
@@ -241,12 +242,16 @@ class ClusterComplaintUseCase:
                     f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
                     f"  B (new complaint): '{data.description[:120]}'"
                 )
-                verification = await self._verifier.is_same_incident(
-                    complaint_a=best_incident.description,
-                    complaint_b=data.description,
+                # FIX: run is_same_incident and detect_emergency concurrently
+                verification, emergency_check = await asyncio.gather(
+                    self._verifier.is_same_incident(
+                        complaint_a=best_incident.description,
+                        complaint_b=data.description,
+                    ),
+                    self._verifier.detect_emergency(complaint=data.description),
                 )
                 is_match = verification.is_same_incident
-                is_emergency = verification.is_emergency
+                is_emergency = emergency_check.is_emergency
                 logger.info(
                     f"LLM verdict (HIGH): "
                     f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
@@ -259,12 +264,16 @@ class ClusterComplaintUseCase:
                     f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
                     f"  B (new complaint): '{data.description[:120]}'"
                 )
-                verification = await self._verifier.is_same_incident(
-                    complaint_a=best_incident.description,
-                    complaint_b=data.description,
+                # FIX: run is_same_incident and detect_emergency concurrently
+                verification, emergency_check = await asyncio.gather(
+                    self._verifier.is_same_incident(
+                        complaint_a=best_incident.description,
+                        complaint_b=data.description,
+                    ),
+                    self._verifier.detect_emergency(complaint=data.description),
                 )
                 is_match = verification.is_same_incident
-                is_emergency = verification.is_emergency
+                is_emergency = emergency_check.is_emergency
                 logger.info(
                     f"LLM verdict (AMBIGUOUS): "
                     f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
@@ -434,17 +443,17 @@ class ClusterComplaintUseCase:
         is_emergency: bool = False,
     ) -> IncidentEntity:
         now = datetime.utcnow()
-        
-           # Emergency incidents are guaranteed at least HIGH severity (score >= 6.0).
-    # max() ensures we never downgrade a category that already sits at CRITICAL
-    # (e.g. base_weight=8.5 stays CRITICAL, not clamped down to 6.0).
+
+        # Emergency incidents are guaranteed at least HIGH severity (score >= 6.0).
+        # max() ensures we never downgrade a category that already sits at CRITICAL
+        # (e.g. base_weight=8.5 stays CRITICAL, not clamped down to 6.0).
         if is_emergency:
             severity_score = max(data.category_base_severity_weight, 6.0)
             severity_level = SeverityLevel.from_score(severity_score)
         else:
-           severity_score = data.category_base_severity_weight
-           severity_level = SeverityLevel.from_score(data.category_base_severity_weight)
-           
+            severity_score = data.category_base_severity_weight
+            severity_level = SeverityLevel.from_score(data.category_base_severity_weight)
+
         incident = IncidentEntity(
             id=None,
             title=data.title,

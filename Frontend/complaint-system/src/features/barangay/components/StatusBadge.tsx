@@ -16,6 +16,7 @@ const getStatusConfig = (status: string, userRole?: string, t?: (key: string) =>
     reviewed_by_barangay:     { label: t?.('status.underReview') || "Under Review",           classes: "bg-primary-100 text-primary-800 border-primary-200",     dot: "bg-primary-500"   },
     forwarded_to_lgu:         { label: t?.('status.forwarded') || "Forwarded",              classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
     forwarded_to_department:  { label: t?.('status.forwarded') || "Forwarded",              classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+    rejected:                { label: t?.('status.rejected') || "Rejected",               classes: "bg-red-100 text-red-800 border-red-200",       dot: "bg-red-500"    },
   };
   
   const STATUS_MAP_LGU_DEPT: Record<string, { label: string; classes: string; dot: string }> = {
@@ -28,6 +29,7 @@ const getStatusConfig = (status: string, userRole?: string, t?: (key: string) =>
     reviewed_by_barangay:     { label: t?.('status.underReview') || "Under Review", classes: "bg-primary-100 text-primary-800 border-primary-200",     dot: "bg-primary-500"   },
     forwarded_to_lgu:         { label: t?.('status.forwarded') || "Forwarded",    classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
     forwarded_to_department:  { label: t?.('status.forwarded') || "Forwarded",    classes: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+    rejected:                { label: t?.('status.rejected') || "Rejected",               classes: "bg-red-100 text-red-800 border-red-200",       dot: "bg-red-500"    },
   };
   
   const FALLBACK = { label: t?.('status.unknown') || "Unknown", classes: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400" };

@@ -7,7 +7,7 @@ async def set_cookies(response: JSONResponse, refresh_token: str, key: str = "re
         httponly=True,
         secure=True,
         samesite="Lax",
-        domain="backend-production-11000.up.railway.app",
+        domain=".cfms-stamaria.com",
         max_age=7 * 24 * 60 * 60,
         path="/"
     )
@@ -15,7 +15,7 @@ async def set_cookies(response: JSONResponse, refresh_token: str, key: str = "re
 async def clear_cookies(response: JSONResponse, key: str = "refresh_token"):
     response.delete_cookie(
         key=key,
-        domain="backend-production-11000.up.railway.app",
+        domain=".cfms-stamaria.com",
         path="/"
     )
     

@@ -54,6 +54,7 @@ class IncidentOut(BaseModel):
     title: str
     description: str
     barangay_id: int
+    barangay: Optional[BarangayModel] = None
     category_id: int
     department_id: Optional[int] = None
     status: Optional[str] = None

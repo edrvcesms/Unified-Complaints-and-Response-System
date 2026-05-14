@@ -319,8 +319,9 @@ EMERGENCY: YES or NO"""
             is_same = False
             for line in answer.splitlines():
                 line = line.strip()
-                if line.startswith("SAME:"):
-                    is_same = "YES" in line
+                if "SAME" in line and "YES" in line:
+                  is_same = True
+                  break
 
             return VerificationResult(is_same_incident=is_same, is_emergency=False)
 

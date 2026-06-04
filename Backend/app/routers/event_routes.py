@@ -14,12 +14,12 @@ router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def fetch_events(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def fetch_events(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await get_events(db)
 
 @router.get("/{event_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def fetch_event_by_id(request: Request, event_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def fetch_event_by_id(request: Request, event_id: int, db: AsyncSession = Depends(get_async_db)):
     return await get_event_by_id(event_id, db)
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)

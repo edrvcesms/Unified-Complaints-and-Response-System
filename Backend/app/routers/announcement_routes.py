@@ -13,7 +13,7 @@ router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def read_announcements(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def read_announcements(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await get_all_announcements(db)
 
 @router.get("/my-announcements", status_code=status.HTTP_200_OK)
@@ -23,7 +23,7 @@ async def read_my_announcements(request: Request, db: AsyncSession = Depends(get
 
 @router.get("/{announcement_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def read_announcement(request: Request, announcement_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def read_announcement(request: Request, announcement_id: int, db: AsyncSession = Depends(get_async_db)):
     return await get_announcement_by_id(announcement_id, db)
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)

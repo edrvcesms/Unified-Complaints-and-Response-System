@@ -36,8 +36,7 @@ async def create_emergency_hotline(
 @limiter.limit("10/minute")
 async def get_emergency_hotlines_route(
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
 ):
     return await get_emergency_hotlines(db)
 

@@ -29,6 +29,7 @@ default_origins = [
     "https://cfms-stamaria.com",
     "http://localhost:19006",
     "http://127.0.0.1:19006",
+    "https://www.cfms-stamaria.com",
     "https://cfms-stamaria.netlify.app"
 ]
 

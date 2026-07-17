@@ -68,7 +68,7 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
 }) => {
   const TABLE_HEADERS = [
     { label: "Incident ID", className: "text-center" },
-    { label: "Title", className: "text-center" },
+    { label: "Complaint", className: "text-center" },
     { label: "Barangay", className: "hidden sm:table-cell text-center" },
     { label: "Category", className: "hidden md:table-cell text-center" },
     { label: "Status", className: "text-center" },

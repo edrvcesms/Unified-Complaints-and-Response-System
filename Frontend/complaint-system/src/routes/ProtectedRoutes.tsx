@@ -45,9 +45,6 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     if (userRole === 'lgu_official') {
       return <Navigate to="/lgu/dashboard" replace />;
     }
-    if (userRole === 'department_staff') {
-      return <Navigate to="/department/dashboard" replace />;
-    }
     if (userRole === 'superadmin') {
       return <Navigate to="/superadmin/accounts" replace />;
     }
@@ -86,14 +83,6 @@ export const LguRoute: React.FC<{ children?: React.ReactNode }> = ({ children })
   );
 };
 
-export const DepartmentRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  return (
-    <RoleProtectedRoute allowedRoles={['department_staff']}>
-      {children}
-    </RoleProtectedRoute>
-  );
-};
-
 export const SuperAdminRoute: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   return (
     <RoleProtectedRoute allowedRoles={['superadmin']}>
@@ -111,9 +100,6 @@ export const AuthRoutes: React.FC<{ children?: React.ReactNode }> = ({ children 
     }
     if (userRole === 'lgu_official') {
       return <Navigate to="/lgu/dashboard" replace />;
-    }
-    if (userRole === 'department_staff') {
-      return <Navigate to="/department/dashboard" replace />;
     }
     if (userRole === 'superadmin') {
       return <Navigate to="/superadmin/accounts" replace />;

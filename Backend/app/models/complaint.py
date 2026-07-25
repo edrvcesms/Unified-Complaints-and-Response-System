@@ -32,6 +32,8 @@ class Complaint(Base):
     hearing_date = Column(DateTime(timezone=True), nullable=True)
     is_rejected_by_lgu = Column(Boolean, default=False, nullable=True)
     is_rejected_by_department = Column(Boolean, default=False, nullable=True)
+    
+    has_feedback = Column(Boolean, default=False, nullable=True)
 
     user = relationship("User", back_populates="complaint")
     barangay = relationship("Barangay", back_populates="complaint")

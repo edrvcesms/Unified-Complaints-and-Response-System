@@ -9,8 +9,6 @@ from app.dependencies.auth_dependency import get_current_user
 from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing, reschedule_hearing, mark_hearing_as_successful
 from app.services.incidents_services import forward_incident_to_lgu
 from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident, reject_incident
-from app.services.lgu_services import assign_incident_to_department
-from app.services.department_services import get_incidents_forwarded_to_department
 from app.dependencies.db_dependency import get_async_db
 from app.constants.roles import UserRole
 from app.schemas.response_schema import ResponseCreateSchema, RejectComplaintSchema
@@ -70,15 +68,6 @@ async def get_all_incidents_endpoint(db: AsyncSession = Depends(get_async_db), c
 
     return await get_all_incidents(current_user, db)
 
-@router.get("/department", status_code=status.HTTP_200_OK)
-async def get_department_incidents(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    
-    if current_user.role != UserRole.DEPARTMENT_STAFF:
-        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
-    
-    return await get_incidents_forwarded_to_department(current_user.department_account.id, db)
-  
 @router.get("/{incident_id}", status_code=status.HTTP_200_OK)
 async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
@@ -184,24 +173,6 @@ async def forward_incident_lgu(
     
     response_payload = parse_response_data(response_data, actions_taken)
     return await forward_incident_to_lgu(response_payload, incident_id, current_user.id, attachments=attachments, db=db)
-
-@router.patch("/assign/{incident_id}/department/{department_account_id}", status_code=status.HTTP_200_OK)
-async def assign_incident_department(
-    incident_id: int,
-    department_account_id: int,
-    response_data: Optional[str] = Form(None),
-    actions_taken: Optional[str] = Form(None),
-    attachments: List[UploadFile] = File([]),
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_user)
-):
-    
-    if current_user.role != UserRole.LGU_OFFICIAL:
-        logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
-    
-    response_payload = parse_response_data(response_data, actions_taken)
-    return await assign_incident_to_department(response_payload, incident_id, current_user.id, department_account_id, attachments=attachments, db=db)
 
 @router.post("/{incident_id}/mark-viewed", status_code=status.HTTP_200_OK)
 async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

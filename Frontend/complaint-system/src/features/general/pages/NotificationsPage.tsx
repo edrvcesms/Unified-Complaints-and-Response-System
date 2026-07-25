@@ -32,7 +32,6 @@ export const NotificationsPage: React.FC = () => {
 
   const getRoutePrefix = () => {
     if (location.pathname.startsWith("/lgu")) return "/lgu";
-    if (location.pathname.startsWith("/department")) return "/department";
     if (location.pathname.startsWith("/superadmin")) return "/superadmin";
     return "/dashboard";
   };
@@ -43,9 +42,6 @@ export const NotificationsPage: React.FC = () => {
     }
     if (userRole === "lgu_official") {
       return `/lgu/incidents/${incidentId}`;
-    }
-    if (userRole === "department_staff") {
-      return `/department/incidents/${incidentId}`;
     }
 
     // Fallback to current route context while auth role is still resolving.

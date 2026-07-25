@@ -4,7 +4,7 @@ from datetime import datetime
 from .user_schema import UserData
 
 class BarangayModel(BaseModel):
-    id: int
+    id: Optional[int] = None
     barangay_name: str
     barangay_address: str
     barangay_contact_number: str

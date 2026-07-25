@@ -12,9 +12,6 @@ import { useState, useEffect } from "react";
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { useReviewIncident, useResolveIncident, useRejectIncident, useNotifyHearing } from '../../../hooks/useIncidents';
-import { useAllDepartments } from "../../../hooks/useDepartment";
-import { DepartmentSelectionModal } from "../components/DepartmentSelectionModal";
-import { endorseIncidentToDepartment } from "../../../services/endorsement/incidentEndorsement";
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/Toast";
 import { queryClient } from "../../../main";
@@ -32,11 +29,8 @@ export const LguIncidentDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
-  const { departments, isLoading: isDepartmentsLoading } = useAllDepartments();
   const { toasts, showToast } = useToast();
 
-  const [isDepartmentModalOpen, setIsDepartmentModalOpen] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
@@ -138,38 +132,6 @@ export const LguIncidentDetails: React.FC = () => {
 
   const handleViewAllComplaints = () => {
     navigate(`/lgu/incidents/${incidentId}/complaints`);
-  };
-
-  const handleOpenDepartmentModal = () => {
-    setIsDepartmentModalOpen(true);
-  };
-
-  const handleDepartmentSelect = (departmentAccountId: number) => {
-    const department = departments?.find(d => d.department_account?.id === departmentAccountId);
-    if (department) {
-      setIsDepartmentModalOpen(false);
-
-      actionsTakenModal.openModal({
-        title: `Assign to ${department.department_name}`,
-        description: "Please provide any relevant notes or instructions for the department when assigning this incident.",
-        confirmText: "Assign",
-        confirmColor: "blue",
-        onConfirm: async (actionsTaken: string, attachments: File[]) => {
-          try {
-            const validationError = validateAttachments(attachments);
-            if (validationError) {
-              return;
-            }
-            actionsTakenModal.setIsLoading(true);
-            await handleConfirmAssignment(departmentAccountId, actionsTaken, attachments);
-          } catch (err) {
-            console.error(err);
-          } finally {
-            actionsTakenModal.setIsLoading(false);
-          }
-        },
-      });
-    }
   };
 
   // Add actions taken modal logic for resolve/review
@@ -289,48 +251,6 @@ export const LguIncidentDetails: React.FC = () => {
     }
   };
 
-  const handleConfirmAssignment = async (
-    departmentAccountId: number,
-    actionsTaken: string,
-    attachments: File[]
-  ) => {
-    setIsAssigning(true);
-    try {
-      await endorseIncidentToDepartment(Number(incidentId), departmentAccountId, {
-        actions_taken: actionsTaken,
-        attachments,
-      });
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["incidentDetails", Number(incidentId)] });
-      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
-
-      showToast({
-        type: 'success',
-        message: 'Incident successfully assigned to department.',
-        title: ''
-      });
-
-      actionsTakenModal.closeModal();
-
-      // Navigate back to incidents list after a short delay
-      setTimeout(() => {
-        navigate("/lgu/incidents");
-      }, 1500);
-
-    } catch (error) {
-      console.error("Error assigning incident:", error);
-      showToast({
-        type: 'error',
-        message: 'Failed to assign incident. Please try again.',
-        title: ''
-      });
-      actionsTakenModal.closeModal();
-    } finally {
-      setIsAssigning(false);
-    }
-  };
-
   const isForwardedIncident = incident?.complaint_clusters?.some(
     cluster => cluster.complaint.status === "forwarded_to_lgu"
   );
@@ -353,13 +273,24 @@ export const LguIncidentDetails: React.FC = () => {
   const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
   const isSubmitted = incidentStatus === "submitted";
   const isUnderReviewByBarangay = incidentStatus === "reviewed_by_barangay";
-  const isUnderReviewByDepartment = incidentStatus === "reviewed_by_department";
   const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
-  const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_department" || incidentStatus === "resolved_by_lgu";
-  // `isForwardedToLgu` removed — use `isForwardedIncident` if needed
+  const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_lgu";
+  const isRejected = incidentStatus === "rejected";
+  const isRejectedByLgu = incident.complaint_clusters[0]?.complaint?.is_rejected_by_lgu === true;
+  const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
   const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
+  const shouldShowHearingControls = !isResolved && !isRejected;
 
   const hasScheduledHearingDate = Boolean((incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null);
+  const titleStatusBadge = isResolved
+    ? { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-200', dotClassName: 'bg-green-600' }
+    : isRejected || isRejectedByLgu
+      ? { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200', dotClassName: 'bg-red-600' }
+      : isUnderReviewByBarangay || isUnderReviewByLgu
+        ? { label: 'Under Review', className: 'bg-yellow-50 text-yellow-700 border-yellow-200', dotClassName: 'bg-yellow-600' }
+        : isForwardedToLgu || isForwardedToDepartment
+          ? { label: 'Forwarded', className: 'bg-blue-50 text-blue-700 border-blue-200', dotClassName: 'bg-blue-600' }
+          : null;
 
   const responses = incident.responses ?? [];
   const sortedResponses = [...responses].sort((a, b) => {
@@ -386,7 +317,15 @@ export const LguIncidentDetails: React.FC = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{incident.title}</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{incident.title}</h1>
+                  {titleStatusBadge && (
+                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${titleStatusBadge.className}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${titleStatusBadge.dotClassName}`} />
+                      {titleStatusBadge.label}
+                    </div>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
               </div>
             </div>
@@ -539,21 +478,13 @@ export const LguIncidentDetails: React.FC = () => {
               </p>
             </div>
 
-            {isForwardedIncident || isUnderReviewByLgu && (
+            {isForwardedIncident && (
               <div className="border-t pt-6 mt-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
                   Assignment Actions
                 </h3>
-                <button
-                  onClick={handleOpenDepartmentModal}
-                  disabled={isDepartmentsLoading || isAssigning}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send size={16} />
-                  Assign to Designated Department
-                </button>
                 <p className="text-sm text-gray-600 mt-2">
-                  Endorse this incident to a specific department for handling.
+                  Department assignment actions are temporarily disabled.
                 </p>
               </div>
             )}
@@ -562,62 +493,67 @@ export const LguIncidentDetails: React.FC = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        <button
-          onClick={handleReview}
-          disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
-          className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
-        </button>
-        <button
-          onClick={handleReject}
-          disabled={rejectIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
-          className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
-        </button>
-        <button
-          onClick={handleResolve}
-          disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isForwardedToDepartment || isUnderReviewByDepartment || isUnderReviewByBarangay}
-          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
-        </button>
+        {isResolved || isRejected ? null : (
+          <>
+            <button
+              onClick={handleReview}
+              disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isUnderReviewByBarangay}
+              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={rejectIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
+            </button>
+            <button
+              onClick={handleResolve}
+              disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
+            </button>
+          </>
+        )}
       </div>
 
       
       {/* Toolbar */}
-      {/* <div className="flex flex-wrap items-center justify-end gap-3">
-        {hasScheduledHearingDate && (
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
-            Hearing Date: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
-          </div>
-        )}
+      {/* {shouldShowHearingControls && (
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {hasScheduledHearingDate && (
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
+              Hearing Date scheduled
+            </div>
+          )}
 
-        <button
-          onClick={handleOpenHearingModal}
-          disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isUnderReviewByDepartment || isForwardedToDepartment || isForwardedToLgu}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <CalendarIcon className="w-4 h-4 text-primary-200" />
-          {notifyHearingMutation.isPending
-            ? "Notifying..."
-            : hasScheduledHearingDate
-              ? "Reschedule Hearing Date"
-              : "Notify Complainants for Hearing"}
-        </button>
-      </div> */}
+          <button
+            onClick={() => setIsHearingModalOpen(true)}
+            disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isRejected}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <CalendarIcon className="w-4 h-4 text-primary-200" />
+            {notifyHearingMutation.isPending
+              ? "Notifying..."
+              : hasScheduledHearingDate
+                ? "Reschedule Hearing Date"
+                : "Notify Complainants for Hearing"}
+          </button>
+        </div>
+      )} */}
 
       {/* Modal */}
-      {isHearingModalOpen && (
+      {/*isHearingModalOpen && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black bg-opacity-50"
           onClick={(e) => e.target === e.currentTarget && setIsHearingModalOpen(false)}
         >
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full max-w-sm overflow-hidden">
 
-            {/* Header */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-base font-medium text-gray-900">
@@ -689,13 +625,7 @@ export const LguIncidentDetails: React.FC = () => {
         </div>
       )}
 
-      <DepartmentSelectionModal
-        isOpen={isDepartmentModalOpen}
-        departments={departments || []}
-        onSelect={handleDepartmentSelect}
-        onCancel={() => setIsDepartmentModalOpen(false)}
-        isLoading={isAssigning}
-      />
+      {/* DepartmentSelectionModal temporarily disabled. */}
 
       <ActionsTakenModal
         isOpen={actionsTakenModal.isOpen}

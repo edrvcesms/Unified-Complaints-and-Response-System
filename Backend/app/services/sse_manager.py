@@ -16,25 +16,35 @@ class SSEManager:
         self._pubsub = None
         self._lock = asyncio.Lock()
 
-    # Queue sentinel used to force-close a single user's active streams.
     _CLOSE_STREAM = None
 
     async def connect_redis(self):
-        if not self._redis:
-            self._redis = await aioredis.from_url(self.redis_url)
-        else:
-            try:
-                await self._redis.ping()
-            except Exception:
-                self._redis = await aioredis.from_url(self.redis_url)
-                
-        if not self._redis:
-            logger.info(f"SSE Redis connect attempt. redis_url={self.redis_url}")
-            self._redis = await aioredis.from_url(self.redis_url)
-            logger.info("Connected to Redis for SSEManager.")
-        if not self._listener_task:
-            self._listener_task = asyncio.create_task(self._redis_listener())
-            logger.info("Started Redis listener task for SSEManager.")
+        # Guard the whole "check redis / check listener" sequence with the
+        # lock so concurrent callers (send/broadcast/stream all call this)
+        # can't both observe "not connected" and both spin up a listener.
+        async with self._lock:
+            if not self._redis:
+                logger.info(f"SSE Redis connect attempt. redis_url={self.redis_url}")
+                self._redis = await aioredis.from_url(
+                    self.redis_url,
+                    health_check_interval=30,
+                    socket_keepalive=True,
+                )
+                logger.info("Connected to Redis for SSEManager.")
+            else:
+                try:
+                    await self._redis.ping()
+                except Exception:
+                    logger.info("SSE Redis ping failed, reconnecting.")
+                    self._redis = await aioredis.from_url(
+                        self.redis_url,
+                        health_check_interval=30,
+                        socket_keepalive=True,
+                    )
+
+            if not self._listener_task:
+                self._listener_task = asyncio.create_task(self._redis_listener())
+                logger.info("Started Redis listener task for SSEManager.")
 
     async def _redis_listener(self):
         try:
@@ -42,7 +52,17 @@ class SSEManager:
             self._pubsub = redis.pubsub()
             await self._pubsub.subscribe("sse:user", "sse:broadcast")
             logger.info("Subscribed to Redis channels for SSEManager.")
-            async for message in self._pubsub.listen():
+            while True:
+                # get_message(timeout=...) returns None on idle instead of
+                # raising redis.exceptions.TimeoutError the way listen()
+                # does. That kept tearing down and resubscribing the
+                # pubsub every few seconds during normal idle periods,
+                # with a message-loss window on every resubscribe.
+                message = await self._pubsub.get_message(
+                    ignore_subscribe_messages=True, timeout=5.0
+                )
+                if message is None:
+                    continue
                 if message["type"] != "message":
                     continue
                 try:
@@ -64,18 +84,31 @@ class SSEManager:
                     continue
         except asyncio.CancelledError:
             logger.info("SSE Redis listener task cancelled.")
+            raise
         except Exception as e:
             logger.exception(f"Error in SSE listener: {e}")
+            # Clean up the old pubsub/task state before restarting so we
+            # don't end up with two live subscriptions after a crash.
+            try:
+                if self._pubsub:
+                    await self._pubsub.close()
+            except Exception:
+                logger.exception("Error closing pubsub during listener recovery.")
+            finally:
+                self._pubsub = None
+                self._listener_task = None
             await asyncio.sleep(1)
             logger.info("Restarting SSE Redis listener task after failure.")
-            self._listener_task = asyncio.create_task(self._redis_listener())
+            async with self._lock:
+                if not self._listener_task:
+                    self._listener_task = asyncio.create_task(self._redis_listener())
 
     async def _fan_out_user(self, user_id: str, message: str):
         async with self._lock:
             queues = self._connections.get(user_id, set()).copy()
         logger.info(f"SSE fan-out to user. user_id={user_id} subscribers={len(queues)}")
         for queue in queues:
-            await self._safe_put(queue, message)
+            await self._safe_put(queue, message, user_id=user_id)
 
     async def _fan_out_all(self, message: str):
         async with self._lock:
@@ -84,11 +117,16 @@ class SSEManager:
         for queue in all_queues:
             await self._safe_put(queue, message)
 
-    async def _safe_put(self, queue: asyncio.Queue, message: str | None):
+    async def _safe_put(self, queue: asyncio.Queue, message: str | None, user_id: str | None = None):
         try:
             queue.put_nowait(message)
         except asyncio.QueueFull:
-            pass
+            # Previously silently dropped. Log so slow-consumer message loss
+            # is visible instead of vanishing without a trace.
+            logger.warning(
+                "SSE queue full, dropping message. "
+                f"user_id={user_id} queue_maxsize={queue.maxsize}"
+            )
 
     async def disconnect_user(self, user_id: str | int):
         user_id = str(user_id)
@@ -96,7 +134,7 @@ class SSEManager:
             queues = list(self._connections.get(user_id, set()))
 
         for queue in queues:
-            await self._safe_put(queue, self._CLOSE_STREAM)
+            await self._safe_put(queue, self._CLOSE_STREAM, user_id=user_id)
 
         logger.info(
             f"SSE disconnect requested for user. user_id={user_id} subscribers={len(queues)}"
@@ -167,15 +205,18 @@ class SSEManager:
 
     async def disconnect(self):
         logger.info("SSE manager disconnect requested.")
-        if self._listener_task:
-            self._listener_task.cancel()
-        if self._pubsub:
-            await self._pubsub.close()
-            logger.info("SSE Redis pubsub closed.")
-        if self._redis:
-            await self._redis.close()
-            self._redis = None
-            logger.info("SSE Redis connection closed.")
+        async with self._lock:
+            if self._listener_task:
+                self._listener_task.cancel()
+                self._listener_task = None
+            if self._pubsub:
+                await self._pubsub.close()
+                self._pubsub = None
+                logger.info("SSE Redis pubsub closed.")
+            if self._redis:
+                await self._redis.close()
+                self._redis = None
+                logger.info("SSE Redis connection closed.")
 
 
 sse_manager = SSEManager()

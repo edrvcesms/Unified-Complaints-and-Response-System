@@ -9,8 +9,27 @@ interface DailyCounts {
   };
 }
 
+interface MonthlyCounts {
+  [month: string]: {
+    forwarded?: number;
+    resolved?: number;
+    under_review?: number;
+  };
+}
+
 interface WeeklyStats {
   daily_counts: DailyCounts;
+}
+
+interface MonthlyStats {
+  year: number;
+  month: number;
+  daily_counts: DailyCounts;
+}
+
+interface YearlyStats {
+  year: number;
+  monthly_counts: MonthlyCounts;
 }
 
 interface BarangayCategoryCount {
@@ -38,6 +57,24 @@ export const getWeeklyForwardedIncidentsStats = async (): Promise<WeeklyStats> =
     console.error("Error fetching weekly forwarded incidents stats:", error);
     throw error;
   };
+};
+
+export const getMonthlyForwardedIncidentsStats = async (year: number, month: number): Promise<MonthlyStats> => {
+  try {
+    return await lguApi.get('/stats/monthly-forwarded-incidents', { params: { year, month } });
+  } catch (error) {
+    console.error("Error fetching monthly forwarded incidents stats:", error);
+    throw error;
+  }
+};
+
+export const getYearlyForwardedIncidentsStats = async (year: number): Promise<YearlyStats> => {
+  try {
+    return await lguApi.get('/stats/yearly-forwarded-incidents', { params: { year } });
+  } catch (error) {
+    console.error("Error fetching yearly forwarded incidents stats:", error);
+    throw error;
+  }
 };
 
 export const getComplaintCountsByBarangayCategory = async (): Promise<ComplaintCountsByBarangayCategory> => {

@@ -28,8 +28,8 @@ const formatName = (feedback: PostIncidentFeedback) => {
 const RatingBadge: React.FC<{ rating: number }> = ({ rating }) => {
   const roundedRating = Number.isFinite(rating) ? rating.toFixed(1) : "0.0";
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
-      <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+    <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-3 py-1 text-sm font-semibold text-yellow-700">
+      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
       {roundedRating}
     </span>
   );

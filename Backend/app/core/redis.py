@@ -3,4 +3,10 @@ from redis.asyncio import Redis
 from app.core.config import settings
 
 # Async Redis client
-redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True, socket_connect_timeout=2, retry_on_timeout=False)
+redis_client = Redis.from_url(
+  settings.REDIS_URL, 
+  decode_responses=True, 
+  socket_connect_timeout=2, 
+  retry_on_timeout=False
+  )
+

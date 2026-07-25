@@ -665,17 +665,9 @@ function StatusBadge({ status }: { status: string }) {
       label: t("dashboard.statuses.reviewedByBarangay"),
       className: "bg-primary-100 text-primary-800",
     },
-    reviewed_by_department: {
-      label: t("dashboard.statuses.reviewedByDepartment"),
-      className: "bg-primary-100 text-primary-800",
-    },
     forwarded_to_lgu: {
       label: t("dashboard.statuses.forwardedToLgu"),
-      className: "bg-orange-100 text-orange-800",
-    },
-    forwarded_to_department: {
-      label: t("dashboard.statuses.forwardedToDepartment"),
-      className: "bg-orange-100 text-orange-800",
+      className: "bg-blue-100 text-blue-800",
     },
     resolved_by_lgu: {
       label: t("dashboard.statuses.resolved_by_lgu"),
@@ -683,10 +675,6 @@ function StatusBadge({ status }: { status: string }) {
     },
     resolved_by_barangay: {
       label: t("dashboard.statuses.resolved_by_barangay"),
-      className: "bg-green-100 text-green-800",
-    },
-    resolved_by_department: {
-      label: t("dashboard.statuses.resolved_by_department"),
       className: "bg-green-100 text-green-800",
     },
     rejected: {

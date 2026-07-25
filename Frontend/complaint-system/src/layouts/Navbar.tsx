@@ -21,7 +21,6 @@ interface NavbarProps {
 const ROLES = {
   barangay_official: "Barangay Official",
   lgu_official: "LGU Official",
-  department_staff: "Department Staff",
   superadmin: "Super Admin",
 }
 
@@ -88,7 +87,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
 
   const getRoutePrefix = () => {
     if (location.pathname.startsWith("/lgu")) return "/lgu";
-    if (location.pathname.startsWith("/department")) return "/department";
     if (location.pathname.startsWith("/superadmin")) return "/superadmin";
     return "/dashboard";
   };
@@ -96,7 +94,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const getNotificationsPagePath = () => {
     if (userRole === "barangay_official") return "/dashboard/notifications";
     if (userRole === "lgu_official") return "/lgu/notifications";
-    if (userRole === "department_staff") return "/department/notifications";
     if (userRole === "superadmin") return "/superadmin/notifications";
     return `${getRoutePrefix()}/notifications`;
   };
@@ -104,7 +101,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const getIncidentPath = (incidentId: number) => {
     if (userRole === "barangay_official") return `/dashboard/incidents/${incidentId}`;
     if (userRole === "lgu_official") return `/lgu/incidents/${incidentId}`;
-    if (userRole === "department_staff") return `/department/incidents/${incidentId}`;
 
     // Fallback to current route context while auth role is still resolving.
     const prefix = getRoutePrefix();

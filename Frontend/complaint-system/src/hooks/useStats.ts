@@ -1,7 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWeeklyForwardedIncidentsStats, getComplaintCountsByBarangayCategory } from "../services/lgu/stats";
+import {
+  getWeeklyForwardedIncidentsStats,
+  getMonthlyForwardedIncidentsStats,
+  getYearlyForwardedIncidentsStats,
+  getComplaintCountsByBarangayCategory,
+} from "../services/lgu/stats";
 
 type WeeklyStats = Awaited<ReturnType<typeof getWeeklyForwardedIncidentsStats>>;
+type MonthlyStats = Awaited<ReturnType<typeof getMonthlyForwardedIncidentsStats>>;
+type YearlyStats = Awaited<ReturnType<typeof getYearlyForwardedIncidentsStats>>;
 
 type ComplaintCountsByBarangayCategory = Awaited<ReturnType<typeof getComplaintCountsByBarangayCategory>>;
 
@@ -14,6 +21,34 @@ export const useWeeklyForwardedIncidentsStats = () => {
   return {
     stats: data,
     isLoading,
+    error,
+  };
+};
+
+export const useMonthlyForwardedIncidentsStats = (year: number, month: number) => {
+  const { data, isLoading, error, isFetching } = useQuery<MonthlyStats>({
+    queryKey: ["monthlyForwardedIncidentsStats", year, month],
+    queryFn: () => getMonthlyForwardedIncidentsStats(year, month),
+  });
+
+  return {
+    stats: data,
+    isLoading,
+    isFetching,
+    error,
+  };
+};
+
+export const useYearlyForwardedIncidentsStats = (year: number) => {
+  const { data, isLoading, error, isFetching } = useQuery<YearlyStats>({
+    queryKey: ["yearlyForwardedIncidentsStats", year],
+    queryFn: () => getYearlyForwardedIncidentsStats(year),
+  });
+
+  return {
+    stats: data,
+    isLoading,
+    isFetching,
     error,
   };
 };

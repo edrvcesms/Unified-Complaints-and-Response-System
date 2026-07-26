@@ -10,8 +10,7 @@ export const LguIncidents: React.FC = () => {
   const { incidents, isLoading, error: isError } = useAllForwardedIncidents();
   const { t } = useTranslation();
   const manageIncidents = (incidents || []).filter((incident) => {
-    const incidentStatus = incident.complaint_clusters[0]?.complaint?.status || incident.status;
-    return incidentStatus !== "forwarded_to_department";
+    return Boolean(incident);
   });
   const {
     search,

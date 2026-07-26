@@ -5,14 +5,13 @@ import { ForgotPasswordPage } from "./features/authentication/pages/ForgotPasswo
 import { Dashboard } from "./features/barangay/pages/Dashboard"
 import { useAuthStore } from "./store/authStore"
 import { NetworkProvider } from "./context/NetworkContext"
-import { BarangayRoute, LguRoute, DepartmentRoute, AuthRoutes, SuperAdminRoute } from "./routes/ProtectedRoutes"
+import { BarangayRoute, LguRoute, AuthRoutes, SuperAdminRoute } from "./routes/ProtectedRoutes"
 import { NotFound } from "./features/general/NotFound"
 import { useEffect } from "react"
 import LoadingIndicator from "./features/general/LoadingIndicator"
 import Navbar from "./layouts/Navbar"
 import DashboardLayout from "./layouts/BarangayDashboardLayout"
 import LguDashboardLayout from "./layouts/LguDashboardLayout"
-import DepartmentDashboardLayout from "./layouts/DepartmentDashboardLayout"
 import SuperAdminDashboardLayout from "./layouts/SuperAdminDashboardLayout"
 import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
@@ -33,8 +32,6 @@ import { LguAnnouncements } from "./features/lgu/pages/Announcements"
 import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayReports"
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
-import { DepartmentDashboard, DepartmentIncidents, DepartmentIncidentDetails, DepartmentIncidentComplaints, DepartmentComplaintDetails } from "./features/department/pages"
-import { DepartmentArchiveIncidents } from "./features/department/pages/ArchiveIncidents"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminResidentAccountManagement, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
@@ -51,7 +48,6 @@ function App() {
 
   const getDefaultDashboardPath = (role: string | null) => {
     if (role === "lgu_official") return "/lgu/dashboard";
-    if (role === "department_staff") return "/department/dashboard";
     if (role === "superadmin") return "/superadmin/accounts";
     return "/dashboard";
   };
@@ -113,20 +109,6 @@ function App() {
               <Route path="feedbacks" element={<FeedbacksPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               {/* Additional LGU routes can be added here */}
-            </Route>
-          </Route>
-
-          {/* Department Staff Routes */}
-          <Route element={<DepartmentRoute />}>
-            <Route path="/department/*" element={<DepartmentDashboardLayout />}>
-              <Route path="dashboard" element={<DepartmentDashboard />} />
-              <Route path="incidents" element={<DepartmentIncidents />} />
-              <Route path="archive" element={<DepartmentArchiveIncidents />} />
-              <Route path="incidents/:incidentId" element={<DepartmentIncidentDetails />} />
-              <Route path="incidents/:incidentId/complaints" element={<DepartmentIncidentComplaints />} />
-              <Route path="incidents/complaints/:id" element={<DepartmentComplaintDetails />} />
-              <Route path="feedbacks" element={<FeedbacksPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
 

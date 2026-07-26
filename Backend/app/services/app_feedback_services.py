@@ -103,7 +103,8 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
                     ComplaintStatus.RESOLVED_BY_BARANGAY.value,
                     ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
                     ComplaintStatus.RESOLVED_BY_LGU.value,
-                ])
+                ]),
+                Complaint.has_feedback == False
             )
         )
         if not complaint_result.scalar_one_or_none():
@@ -111,6 +112,10 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Feedback can only be submitted for resolved complaints"
             )
+            
+        complaint = complaint_result.scalar_one()
+        complaint.has_feedback = True
+        await db.commit()
             
         new_feedback = PostIncidentFeedback(
             user_id=user_id,

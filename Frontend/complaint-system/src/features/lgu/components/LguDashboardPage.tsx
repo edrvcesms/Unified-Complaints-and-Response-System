@@ -11,7 +11,12 @@ import {
 } from "chart.js";
 import { Bar as ChartJsBar } from "react-chartjs-2";
 import type { Incident } from "../../../types/complaints/incident";
-import { useWeeklyForwardedIncidentsStats, useComplaintCountsByBarangayCategory } from "../../../hooks/useStats";
+import {
+  useWeeklyForwardedIncidentsStats,
+  useMonthlyForwardedIncidentsStats,
+  useYearlyForwardedIncidentsStats,
+  useComplaintCountsByBarangayCategory,
+} from "../../../hooks/useStats";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
 import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
@@ -44,20 +49,146 @@ interface DashboardPageProps {
   isLoading: boolean;
 }
 
-interface WeeklyDataPoint {
-  day: string;
+interface ForwardedCounts {
+  forwarded?: number;
+  resolved?: number;
+  under_review?: number;
+}
+
+interface ChartRow {
+  label: string;
   forwarded: number;
-  forwarded_to_department: number;
   resolved: number;
   under_review: number;
 }
 
-interface WeeklyCounts {
-  forwarded?: number;
-  forwarded_to_department?: number;
-  resolved?: number;
-  under_review?: number;
+type Period = "weekly" | "monthly" | "yearly";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// ─── Transform helpers ─────────────────────────────────────────────────────
+
+function transformWeekly(dailyCounts: Record<string, ForwardedCounts> | undefined): ChartRow[] {
+  if (!dailyCounts) return [];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const today = new Date();
+
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date();
+    date.setDate(today.getDate() - (6 - i));
+    const iso = date.toISOString().split("T")[0];
+    const counts = dailyCounts[iso] || {};
+
+    return {
+      label: dayNames[date.getDay()],
+      forwarded: counts.forwarded ?? 0,
+      resolved: counts.resolved ?? 0,
+      under_review: counts.under_review ?? 0,
+    };
+  });
 }
+
+function transformMonthly(dailyCounts: Record<string, ForwardedCounts> | undefined): ChartRow[] {
+  if (!dailyCounts) return [];
+
+  return Object.keys(dailyCounts)
+    .sort()
+    .map((dateStr) => {
+      const counts = dailyCounts[dateStr] || {};
+      const day = dateStr.split("-")[2];
+
+      return {
+        label: day,
+        forwarded: counts.forwarded ?? 0,
+        resolved: counts.resolved ?? 0,
+        under_review: counts.under_review ?? 0,
+      };
+    });
+}
+
+function transformYearly(monthlyCounts: Record<string, ForwardedCounts> | undefined): ChartRow[] {
+  if (!monthlyCounts) return [];
+
+  return MONTH_ABBR.map((m) => {
+    const counts = monthlyCounts[m] || {};
+    return {
+      label: m,
+      forwarded: counts.forwarded ?? 0,
+      resolved: counts.resolved ?? 0,
+      under_review: counts.under_review ?? 0,
+    };
+  });
+}
+
+// ─── Period Selector ────────────────────────────────────────────────────────
+
+interface PeriodSelectorProps {
+  period: Period;
+  onChange: (p: Period) => void;
+  year: number;
+  month: number;
+  onYearChange: (y: number) => void;
+  onMonthChange: (m: number) => void;
+}
+
+function PeriodSelector({
+  period, onChange,
+  year, month, onYearChange, onMonthChange,
+}: PeriodSelectorProps) {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white text-base">
+        {(["weekly", "monthly", "yearly"] as Period[]).map((p) => (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={`px-3 py-1.5 font-medium capitalize transition-colors ${
+              period === p
+                ? "bg-primary-600 text-white"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+
+      {period === "monthly" && (
+        <select
+          value={month}
+          onChange={(e) => onMonthChange(Number(e.target.value))}
+          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          {MONTHS.map((name, idx) => (
+            <option key={idx + 1} value={idx + 1}>{name}</option>
+          ))}
+        </select>
+      )}
+
+      {(period === "monthly" || period === "yearly") && (
+        <select
+          value={year}
+          onChange={(e) => onYearChange(Number(e.target.value))}
+          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          {years.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
   const { t } = useTranslation();
@@ -68,51 +199,45 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     .sort((a, b) => new Date(b.first_reported_at).getTime() - new Date(a.first_reported_at).getTime())
     .slice(0, 5);
 
-  const { stats: weeklyStats } = useWeeklyForwardedIncidentsStats();
-  const weeklyDailyCounts = (weeklyStats as { daily_counts?: Record<string, WeeklyCounts> } | undefined)?.daily_counts;
+  // Period state for the forwarded-incidents chart
+  const now = new Date();
+  const [period, setPeriod] = useState<Period>("weekly");
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+
+  const weekly = useWeeklyForwardedIncidentsStats();
+  const monthly = useMonthlyForwardedIncidentsStats(year, month);
+  const yearly = useYearlyForwardedIncidentsStats(year);
+
+  const activeQuery = period === "weekly" ? weekly : period === "monthly" ? monthly : yearly;
+  const { stats: forwardedStats, isLoading: forwardedLoading } = activeQuery;
+
   const { stats: categoryStats, isLoading: isCategoryLoading } = useComplaintCountsByBarangayCategory();
 
-  const WEEKLY_DATA: WeeklyDataPoint[] = useMemo(() => {
-    if (!weeklyDailyCounts) return [];
+  const PERIOD_DATA: ChartRow[] = useMemo(() => {
+    if (!forwardedStats) return [];
 
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const today = new Date();
-
-    return Array.from({ length: 7 }).map((_, i) => {
-      const date = new Date();
-      date.setDate(today.getDate() - (6 - i));
-      const iso = date.toISOString().split("T")[0];
-      const counts = weeklyDailyCounts[iso] || {
-        forwarded: 0,
-        forwarded_to_department: 0,
-        resolved: 0,
-        under_review: 0,
-      };
-
-      return {
-        day: dayNames[date.getDay()],
-        forwarded: counts.forwarded ?? 0,
-        forwarded_to_department: counts.forwarded_to_department ?? 0,
-        resolved: counts.resolved ?? 0,
-        under_review: counts.under_review ?? 0,
-      };
-    });
-  }, [weeklyDailyCounts]);
+    if (period === "weekly") {
+      return transformWeekly((forwardedStats as { daily_counts?: Record<string, ForwardedCounts> }).daily_counts);
+    }
+    if (period === "monthly") {
+      return transformMonthly((forwardedStats as { daily_counts?: Record<string, ForwardedCounts> }).daily_counts);
+    }
+    return transformYearly((forwardedStats as { monthly_counts?: Record<string, ForwardedCounts> }).monthly_counts);
+  }, [forwardedStats, period]);
 
   const stats = useMemo(() => {
-    if (WEEKLY_DATA.length > 0) {
-      return WEEKLY_DATA.reduce(
+    if (PERIOD_DATA.length > 0) {
+      return PERIOD_DATA.reduce(
         (acc, row) => ({
           forwardedToLgu: acc.forwardedToLgu + row.forwarded,
           reviewedByLgu: acc.reviewedByLgu + row.under_review,
           resolvedByLgu: acc.resolvedByLgu + row.resolved,
-          forwardedToDepartment: acc.forwardedToDepartment + row.forwarded_to_department,
         }),
         {
           forwardedToLgu: 0,
           reviewedByLgu: 0,
           resolvedByLgu: 0,
-          forwardedToDepartment: 0,
         }
       );
     }
@@ -127,11 +252,16 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
       resolvedByLgu: incidents.filter(
         (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "resolved_by_lgu"
       ).length,
-      forwardedToDepartment: incidents.filter(
+    };
+  }, [PERIOD_DATA, incidents]);
+
+  const forwardedToDepartment = useMemo(
+    () =>
+      incidents.filter(
         (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "forwarded_to_department"
       ).length,
-    };
-  }, [WEEKLY_DATA, incidents]);
+    [incidents]
+  );
 
   const CATEGORY_COLORS = [
     "#0ea5e9",
@@ -175,17 +305,16 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     return { data, series };
   }, [categoryStats, selectedCategory]);
 
-  const weeklyChartData = {
-    labels: WEEKLY_DATA.map((row) => row.day),
+  const forwardedChartData = {
+    labels: PERIOD_DATA.map((row) => row.label),
     datasets: [
-      { label: "Forwarded to LGU", data: WEEKLY_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
-      { label: "Reviewed by LGU", data: WEEKLY_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
-      { label: "Resolved by LGU", data: WEEKLY_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
-      { label: "Forwarded to Department", data: WEEKLY_DATA.map((row) => row.forwarded_to_department), backgroundColor: "#f97316", borderRadius: 4 },
+      { label: "Forwarded to LGU", data: PERIOD_DATA.map((row) => row.forwarded), backgroundColor: "#3b82f6", borderRadius: 4 },
+      { label: "Reviewed by LGU", data: PERIOD_DATA.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
+      { label: "Resolved by LGU", data: PERIOD_DATA.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
     ],
   };
 
-  const weeklyChartOptions: ChartOptions<"bar"> = {
+  const forwardedChartOptions: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -271,27 +400,40 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
         <p className="text-base text-gray-600 mt-1">{t('dashboard.lgu.description')}</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <StatCard label="Forwarded to LGU" value={stats.forwardedToLgu} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
             <StatCard label="Reviewed by LGU" value={stats.reviewedByLgu} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
             <StatCard label="Resolved by LGU" value={stats.resolvedByLgu} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
-            <StatCard label="Forwarded to Department" value={stats.forwardedToDepartment} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<TotalIcon />} />
           </>
         )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
-        <div className="mb-4">
-          <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.weeklyTitle')}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.weeklyDescription')}</p>
+          </div>
+          <PeriodSelector
+            period={period}
+            onChange={setPeriod}
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+          />
         </div>
-        <div className="w-full h-[22rem] sm:h-[300px]">
-          <ChartJsBar data={weeklyChartData} options={weeklyChartOptions} />
-        </div>
+        {forwardedLoading ? (
+          <div className="h-72 bg-gray-100 rounded animate-pulse" />
+        ) : (
+          <div className="w-full h-[22rem] sm:h-[300px]">
+            <ChartJsBar data={forwardedChartData} options={forwardedChartOptions} />
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-5">
@@ -358,13 +500,13 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
                     <td className="px-5 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-sm font-semibold
                         ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'submitted' ? "bg-yellow-100 text-yellow-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "bg-orange-100 text-orange-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "bg-primary-100 text-primary-800" : ""}
-                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' ? "bg-green-100 text-green-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' ? "bg-blue-100 text-blue-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'under_review' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_lgu' ? "bg-yellow-100 text-yellow-800" : ""}
+                        ${incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_lgu' ? "bg-green-100 text-green-800" : ""}
                       `}>
-                        {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_department' ? "FORWARDED" : 
-                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_barangay' ? "RESOLVED" :
-                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_department' || incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_barangay' ? "UNDER REVIEW" :
+                        {incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'forwarded_to_lgu' ? "FORWARDED" : 
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'resolved_by_lgu' ? "RESOLVED" :
+                         incident.complaint_clusters[0]?.complaint?.status?.toLowerCase() === 'reviewed_by_lgu' ? "UNDER REVIEW" :
                          incident.complaint_clusters[0]?.complaint?.status?.replace("_", " ").toUpperCase() || "N/A"}
                       </span>
                     </td>

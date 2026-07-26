@@ -197,7 +197,7 @@ def cluster_complaint_task(self, complaint_data: dict):
                 ):
                     barangay_notification_payload = {
                         "user_id": complaint_for_barangay_notification.barangay_account.user_id,
-                        "title": "Emergency!" if is_emergency else "New Incident",
+                        "title": complaint_for_barangay_notification.title if complaint_for_barangay_notification.title else ("Emergency!" if is_emergency else "New Incident"),
                         "message": f"There's an emergency incident reported." if is_emergency else "A new incident has been reported.",
                         "complaint_id": cluster_data.complaint_id,
                         "incident_id": result.incident_id,

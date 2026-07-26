@@ -27,11 +27,9 @@ const getSeverityColor = (severity: string) => {
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "resolved":
-    case "resolved_by_department":
     case "resolved_by_barangay":
       return "bg-green-100 text-green-800";
     case "under_review":
-    case "reviewed_by_department":
     case "reviewed_by_barangay":
       return "bg-primary-100 text-primary-800";
     case "submitted":
@@ -49,15 +47,15 @@ const formatStatus = (status: string) => {
   if (!status) return "N/A";
   const lowerStatus = status.toLowerCase();
 
-  if (lowerStatus === 'forwarded_to_lgu' || lowerStatus === 'forwarded_to_department') {
+  if (lowerStatus === 'forwarded_to_lgu') {
     return "FORWARDED";
   }
 
-  if (lowerStatus === 'resolved_by_department' || lowerStatus === 'resolved_by_barangay') {
+  if (lowerStatus === 'resolved_by_barangay') {
     return "RESOLVED";
   }
 
-  if (lowerStatus === 'reviewed_by_department' || lowerStatus === 'reviewed_by_barangay') {
+  if (lowerStatus === 'reviewed_by_barangay') {
     return "UNDER REVIEW";
   }
 

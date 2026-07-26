@@ -27,10 +27,6 @@ export const useLoginForm = () => {
         navigate("/lgu/dashboard");
         return;
       }
-      if (role === 'department_staff') {
-        navigate("/department/dashboard");
-        return;
-      }
       if (role === 'superadmin') {
         navigate("/superadmin/accounts");
         return;

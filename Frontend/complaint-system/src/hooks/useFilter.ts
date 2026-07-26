@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import type { Incident } from "../types/complaints/incident";
 import type { StatusFilter, SeverityScoreFilter, ComplaintStatusFilter } from "../types/complaints/complaint";
 import { ITEMS_PER_PAGE } from "../types/complaints/complaint";
@@ -28,15 +29,51 @@ const getPriorityScore = (incident: Incident): number => {
   return (levelWeight * 3) + incident.severity_score;
 };
 
+const isStatusFilter = (value: string | null): value is StatusFilter => {
+  return value === "all" || value === "LOW" || value === "MODERATE" || value === "HIGH" || value === "VERY_HIGH";
+};
+
+const isSortOption = (value: string | null): value is SortOption => {
+  return value === "priority_high_to_low"
+    || value === "priority_low_to_high"
+    || value === "date_newest_first"
+    || value === "date_oldest_first"
+    || value === "date_newest_last"
+    || value === "date_oldest_last"
+    || value === "none";
+};
+
 export function useComplaintsFilter(complaints: Incident[], filterByComplaintStatus: boolean = false) {
+  const location = useLocation();
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>(() => {
+    const severityParam = searchParams.get("severity");
+    return isStatusFilter(severityParam?.toUpperCase() ?? null) ? severityParam.toUpperCase() as StatusFilter : "all";
+  });
   const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
-  const [sortBy, setSortBy] = useState<SortOption>("date_oldest_first");
+  const [sortBy, setSortBy] = useState<SortOption>(() => {
+    const sortParam = searchParams.get("sort");
+    return isSortOption(sortParam) ? sortParam : "date_oldest_first";
+  });
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+
+  useEffect(() => {
+    const severityParam = searchParams.get("severity");
+    if (isStatusFilter(severityParam?.toUpperCase() ?? null)) {
+      setFilterStatus(severityParam.toUpperCase() as StatusFilter);
+      setCurrentPage(1);
+    }
+
+    const sortParam = searchParams.get("sort");
+    if (isSortOption(sortParam)) {
+      setSortBy(sortParam);
+      setCurrentPage(1);
+    }
+  }, [searchParams]);
 
   // Calculate min and max dates from incidents
   const { minDate, maxDate } = useMemo(() => {

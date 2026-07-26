@@ -1,22 +1,32 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { HamburgerIcon } from "../features/barangay/components/Icons";
 import { useNotifications } from "../hooks/useNotifications";
 import { useToast } from "../hooks/useToast";
-import { EmergencyAlert, ToastContainer } from "../components/Toast";
+import { ToastContainer } from "../components/Toast";
+import { EmergencyAlert } from "../components/EmergencyAlert";
 import { queryClient } from "../main";
 
 interface DashboardLayoutProps {
   SidebarComponent: React.ComponentType<{ isOpen: boolean; onClose: () => void }>;
 }
 
+type EmergencyAlertItem = {
+  id: number | string;
+  title: string;
+  incidentId?: number;
+  severityLevel: string;
+  receivedAt: string | Date;
+};
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarComponent }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [emergencyAlert, setEmergencyAlert] = useState<{ title: string; message: string; incidentId?: number } | null>(null);
+  const [emergencyQueue, setEmergencyQueue] = useState<EmergencyAlertItem[]>([]);
   const { t } = useTranslation();
   const { toasts, showToast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previousEmergencyCount = useRef(0);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -40,22 +50,35 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
 
   const getRoutePrefix = () => {
     if (location.pathname.startsWith('/lgu')) return '/lgu';
-    if (location.pathname.startsWith('/department')) return '/department';
     if (location.pathname.startsWith('/superadmin')) return '/superadmin';
     return '/dashboard';
   };
 
-  const getIncidentPath = (incidentId: number) => {
+  const getIncidentPath = () => {
     const prefix = getRoutePrefix();
 
     if (prefix === '/superadmin') {
       return null;
     }
 
-    return `${prefix}/incidents/${incidentId}`;
+    return `${prefix}/incidents?severity=HIGH&sort=date_oldest_first`;
   };
 
-  const stopEmergencyAlert = useCallback(() => {
+  const emergencyItems = useMemo(
+    () => [...emergencyQueue]
+      .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        severityLevel: item.severityLevel,
+        reportedAt: item.receivedAt,
+      })),
+    [emergencyQueue]
+  );
+
+  const emergencyCount = emergencyItems.length;
+
+  const pauseEmergencySound = useCallback(() => {
     if (audioRef.current) {
       try {
         audioRef.current.pause();
@@ -65,22 +88,40 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
         console.error('Failed to stop emergency sound:', e);
       }
     }
-
-    setEmergencyAlert(null);
   }, []);
 
-  const viewEmergencyAlert = useCallback(() => {
-    const incidentPath = emergencyAlert?.incidentId ? getIncidentPath(emergencyAlert.incidentId) : null;
+  useEffect(() => {
+    if (emergencyCount > 0 && previousEmergencyCount.current === 0) {
+      try {
+        if (audioRef.current) {
+          audioRef.current.loop = true;
+          audioRef.current.currentTime = 0;
+        }
 
-    stopEmergencyAlert();
-
-    if (incidentPath) {
-      navigate(incidentPath);
-      return;
+        audioRef.current?.play().catch((e: any) => {
+          console.warn('Emergency sound play prevented:', e);
+        });
+      } catch (e) {
+        console.error('Failed to play emergency sound:', e);
+      }
     }
 
-    navigate(`${getRoutePrefix()}/notifications`);
-  }, [emergencyAlert, navigate, stopEmergencyAlert]);
+    if (emergencyCount === 0 && previousEmergencyCount.current > 0) {
+      pauseEmergencySound();
+    }
+
+    previousEmergencyCount.current = emergencyCount;
+  }, [emergencyCount, pauseEmergencySound]);
+
+  const stopEmergencyAlert = useCallback(() => {
+    setEmergencyQueue([]);
+    pauseEmergencySound();
+  }, [pauseEmergencySound]);
+
+  const viewEmergencyAlert = useCallback(() => {
+    setEmergencyQueue([]);
+    navigate(getIncidentPath() ?? `${getRoutePrefix()}/notifications`);
+  }, [navigate]);
 
   const handleNotification = useCallback((notification: any) => {
     console.log('Received notification:', notification);
@@ -95,23 +136,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
         // Treat as emergency when event is 'emergency' and either data.type
         // or data.notification_type equals 'emergency'
         if (notification.data && (notification.data.type === 'emergency' || notification.data.notification_type === 'emergency')) {
-          try {
-            if (audioRef.current) {
-              audioRef.current.loop = true;
-              audioRef.current.currentTime = 0;
-            }
-            audioRef.current?.play().catch((e: any) => {
-              console.warn('Emergency sound play prevented:', e);
-            });
-          } catch (e) {
-            console.error('Failed to play emergency sound:', e);
-          }
-
-          setEmergencyAlert({
+          setEmergencyQueue((queue) => [...queue, {
+            id: notification.data.incident_id ?? notification.data.id ?? `${Date.now()}-${queue.length}`,
             title: notification.data.title || 'Emergency',
-            message: notification.data.message || 'Emergency notification received',
             incidentId: notification.data.incident_id,
-          });
+            severityLevel: notification.data.severity_level || 'HIGH',
+            receivedAt: notification.data.sent_at || notification.data.created_at || new Date().toISOString(),
+          }]);
         }
         break;
       case 'new_complaint':
@@ -170,12 +201,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ SidebarCompone
   return (
     <>
       <ToastContainer toasts={toasts} />
-      {emergencyAlert ? (
+      {emergencyItems.length > 0 ? (
         <EmergencyAlert
-          title={emergencyAlert.title}
-          message={emergencyAlert.message}
-          onView={viewEmergencyAlert}
-          onClose={stopEmergencyAlert}
+          items={emergencyItems}
+          onViewAll={viewEmergencyAlert}
+          onDismissAll={stopEmergencyAlert}
         />
       ) : null}
       <div

@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload, load_only
 from app.schemas.app_feedback_schema import AppFeedbackCreate, AppFeedbackResponse, PostIncidentFeedbackCreate, PostIncidentFeedbackResponse
 from datetime import datetime, timezone
 from app.utils.logger import logger
-
+from app.utils.caching import delete_cache
 async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db: AsyncSession) -> AppFeedbackResponse:
     
     try:
@@ -120,6 +120,8 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
             created_at=datetime.now(timezone.utc)
         )
         db.add(new_feedback)
+        
+        await delete_cache(f"complaint:{feedbackData.complaint_id}")
         await db.commit()
         
         return JSONResponse(

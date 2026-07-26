@@ -12,6 +12,6 @@ class PostIncidentFeedback(Base):
     ratings = Column(Float, nullable=False)
     message = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
-
+    
     user = relationship("User", back_populates="post_incident_feedbacks")
     incident = relationship("IncidentModel", back_populates="post_incident_feedbacks")

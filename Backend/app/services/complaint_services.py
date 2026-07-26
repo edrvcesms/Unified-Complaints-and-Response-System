@@ -71,19 +71,22 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         if complaint_cache is not None:
             logger.info(f"Cache hit for complaint ID: {complaint_id}")
             return ComplaintWithUserData.model_validate_json(complaint_cache) if isinstance(complaint_cache, str) else ComplaintWithUserData.model_validate(complaint_cache, from_attributes=True)
-        
+            
         result = await db.execute(
             select(Complaint)
             .options(*QueryOptions.complaint_full())
             .where(Complaint.id == complaint_id)
         )
         complaint = result.scalars().first()
-
+  
         if not complaint:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
         
         logger.info(f"Fetched complaint with ID {complaint_id}")
         complaint_data = ComplaintWithUserData.model_validate(complaint, from_attributes=True)
+        logger.info(
+            f"Complaint Detail Data: {complaint_data.model_dump()}"
+        )
         await set_cache(f"complaint:{complaint_id}", complaint_data.model_dump_json(), expiration=3600)
         return complaint_data
     

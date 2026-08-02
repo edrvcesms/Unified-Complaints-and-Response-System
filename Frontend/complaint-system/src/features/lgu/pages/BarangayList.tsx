@@ -7,14 +7,19 @@ import { StatCard, ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { Bell } from "lucide-react";
 import { Pagination } from "../../barangay/components/Pagination";
+import type { PaginationQueryParams } from "../../../types/general/pagination";
 
 export const BarangayList: React.FC = () => {
-  const { barangays, isLoading, error } = useAllBarangays();
+  const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: 9 });
+  const { barangays, isLoading, error, pagination } = useAllBarangays(metaData);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
+  const handlePageChange = (page: number) => {
+    setMetaData((prev) => ({ ...prev, page }));
+  }
 
   const filteredBarangays = useMemo(() => {
     if (!barangays) return [];
@@ -105,9 +110,9 @@ export const BarangayList: React.FC = () => {
       </div>
 
       <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        currentPage={pagination?.page ?? 1}
+        totalPages={pagination?.total_pages ?? 1}
+        onPageChange={handlePageChange}
       />
     </div>
   );

@@ -15,6 +15,10 @@ from app.utils.caching import set_cache, get_cache, delete_cache
 from app.utils.cache_invalidator_optimized import invalidate_cache
 from datetime import datetime, timezone
 from app.utils.attachments import validate_upload_files
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams, PaginationParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
 async def get_events(db: AsyncSession):
     try:
@@ -44,6 +48,64 @@ async def get_events(db: AsyncSession):
         logger.exception(f"Error fetching events: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch events")
     
+async def get_my_events(
+    user_id: int,
+    db: AsyncSession,
+    params: PaginationParams,
+) -> PaginatedResponse[EventData]:
+    try:
+        cache_key = build_list_cache_key(
+            "my_events",
+            params.model_dump(mode="json"),
+            user_id=user_id,
+        )
+
+        cached_events = await get_cache(cache_key)
+        if cached_events is not None:
+            logger.info(f"Cache hit for events by uploader ID {user_id}")
+            return PaginatedResponse[EventData].model_validate(cached_events)
+
+        statement = (
+            select(Event)
+            .where(Event.uploader_id == user_id)
+            .options(selectinload(Event.media))
+            .order_by(Event.date.asc())
+        )
+
+        page = await paginate(
+            db,
+            statement,
+            params,
+            mapper=lambda item: EventData.model_validate(
+                item,
+                from_attributes=True,
+            ),
+        )
+
+        response = PaginatedResponse[EventData].model_validate(page)
+
+        await set_cache(
+            cache_key,
+            response.model_dump(mode="json"),
+            expiration=(
+                DEFAULT_LIST_CACHE_TTL_SECONDS
+                if response.data
+                else EMPTY_LIST_CACHE_TTL_SECONDS
+            ),
+        )
+
+        return response
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.exception(f"Error fetching user's events: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch user's events: {str(e)}",
+        )
+    
 async def get_event_by_id(event_id: int, db: AsyncSession):
     try:
         event_cache = await get_cache(f"event_{event_id}")
@@ -71,12 +133,13 @@ async def get_event_by_id(event_id: int, db: AsyncSession):
         logger.exception(f"Error fetching event {event_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch event")
 
-async def create_new_event(event_data: EventCreate, event_files: Optional[List[UploadFile]], db: AsyncSession) -> Event:
+async def create_new_event(user_id: int, event_data: EventCreate, event_files: Optional[List[UploadFile]], db: AsyncSession) -> Event:
     try:
         if event_files:
             await validate_upload_files(event_files)
 
         new_event = Event(
+            uploader_id=user_id,
             event_name=event_data.event_name,
             description=event_data.description,
             date=event_data.date,
@@ -119,7 +182,7 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to prepare media for upload"
                 )
-        await delete_cache("events_cache")
+        await invalidate_cache(event_ids=[new_event.id], event_uploader_id=user_id)
         await delete_cache(f"event_{new_event.id}")
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
@@ -133,7 +196,7 @@ async def create_new_event(event_data: EventCreate, event_files: Optional[List[U
         logger.exception(f"Error creating event: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create event")
     
-async def update_event(event_id: int, event_data: EventCreate, event_files: Optional[List[UploadFile]],keep_media_ids: Optional[List[int]], db: AsyncSession,):
+async def update_event(user_id: int, event_id: int, event_data: EventCreate, event_files: Optional[List[UploadFile]],keep_media_ids: Optional[List[int]], db: AsyncSession,):
     try:
         if event_files:
             await validate_upload_files(event_files)
@@ -206,7 +269,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
                     detail=f"Error processing media files: {str(e)}",
                 )
                 
-        await invalidate_cache(event_ids=[event_id])
+        await invalidate_cache(event_ids=[event_id], event_uploader_id=user_id)
 
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -223,7 +286,7 @@ async def update_event(event_id: int, event_data: EventCreate, event_files: Opti
             detail="Failed to update event",
         )
     
-async def delete_event(event_id: int, db: AsyncSession):
+async def delete_event(user_id: int, event_id: int, db: AsyncSession):
     try:
         result = await db.execute(select(Event).options(selectinload(Event.media)).where(Event.id == event_id))
         event = result.scalars().first()
@@ -238,7 +301,7 @@ async def delete_event(event_id: int, db: AsyncSession):
         await db.delete(event)
         await db.commit()
         
-        await invalidate_cache(event_ids=[event_id])
+        await invalidate_cache(event_ids=[event_id], event_uploader_id=user_id)
         
         return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Event deleted successfully"})
         
@@ -248,6 +311,6 @@ async def delete_event(event_id: int, db: AsyncSession):
         await db.rollback()
         logger.exception(f"Error deleting event {event_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete event")
-    
 
-    
+
+

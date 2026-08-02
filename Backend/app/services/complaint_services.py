@@ -27,8 +27,12 @@ from app.tasks.incident_tasks import cluster_complaint_task
 from app.tasks.notification_tasks import send_notifications_task
 from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
-from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
+from app.utils.query_optimization import PaginationParams, QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
 from app.utils.cache_invalidator_optimized import CacheInvalidator
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
 
 APP_TIMEZONE = ZoneInfo("Asia/Manila")
@@ -97,13 +101,13 @@ async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
         logger.exception(f"Error in get_complaint_by_id: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
+async def get_all_complaints(db: AsyncSession, params: ListParams, barangay_id: int | None = None) -> PaginatedResponse[ComplaintWithUserData]:
     try:
-        cache_key = f"barangay_{barangay_id}_complaints" if barangay_id else "all_complaints"
+        cache_key = build_list_cache_key("complaints", params.model_dump(mode="json"), barangay_id=barangay_id)
         complaints_cache = await get_cache(cache_key)
         if complaints_cache is not None:
             logger.info(f"Cache hit for complaints (barangay_id: {barangay_id or 'all'})")
-            return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
+            return PaginatedResponse[ComplaintWithUserData].model_validate(complaints_cache)
         
         # Load full complaint relationships (attachments, incident links) so
         # Pydantic can access attributes without triggering lazy loads
@@ -114,15 +118,14 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         
         query = query.order_by(Complaint.created_at.asc())
         
-        result = await db.execute(query)
-        complaints = result.scalars().all()
-        
-        logger.info(f"Fetched complaints: {len(complaints)} complaints found (barangay_id: {barangay_id or 'all'})")
-        
-        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-
-        await set_cache(cache_key, [c.model_dump_json() for c in complaints_list], expiration=3600)
-        return complaints_list
+        if params.status:
+            query = query.where(Complaint.status == params.status)
+        if params.search:
+            query = query.where(Complaint.title.ilike(f"%{params.search}%"))
+        page = await paginate(db, query, params, mapper=lambda item: ComplaintWithUserData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[ComplaintWithUserData].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
     
     except HTTPException:
         raise
@@ -132,26 +135,25 @@ async def get_all_complaints(db: AsyncSession, barangay_id: int = None):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
     
-async def get_complaints_by_incident(incident_id: int, db: AsyncSession):
+async def get_complaints_by_incident(incident_id: int, db: AsyncSession, params: PaginationParams) -> PaginatedResponse[ComplaintWithUserData]:
     try:
-        complaints_cache = await get_cache(f"incident_complaints:{incident_id}")
+        cache_key = build_list_cache_key("complaints", params.model_dump(mode="json"), incident_id=incident_id)
+        complaints_cache = await get_cache(cache_key)
         if complaints_cache is not None:
             logger.info(f"Cache hit for complaints of incident ID: {incident_id}")
-            return [ComplaintWithUserData.model_validate_json(c) if isinstance(c, str) else ComplaintWithUserData.model_validate(c, from_attributes=True) for c in complaints_cache]
+            return PaginatedResponse[ComplaintWithUserData].model_validate(complaints_cache)
         
-        result = await db.execute(
+        statement = (
             select(Complaint)
             .join(IncidentComplaintModel, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)
             .options(*QueryOptions.complaint_full())
             .order_by(Complaint.created_at.asc())
         )
-        complaints = result.scalars().all()
-        
-        logger.info(f"Fetched complaints for incident ID {incident_id}: {len(complaints)} complaints found")
-        complaints_list = [ComplaintWithUserData.model_validate(complaint, from_attributes=True) for complaint in complaints]
-        await set_cache(f"incident_complaints:{incident_id}", [c.model_dump_json() for c in complaints_list], expiration=3600)
-        return complaints_list
+        page = await paginate(db, statement, params, mapper=lambda item: ComplaintWithUserData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[ComplaintWithUserData].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
     
     except HTTPException:
         raise
@@ -584,6 +586,7 @@ async def get_my_complaints(user_id: int, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+        
 async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user_id: int, db: AsyncSession):
     try:
         normalized_hearing_date = _normalize_hearing_datetime(hearing_date)

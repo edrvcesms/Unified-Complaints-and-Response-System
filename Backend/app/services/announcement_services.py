@@ -3,6 +3,10 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams, PaginationParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 import base64
 from app.models.barangay_account import BarangayAccount
 from app.models.announcements import Announcement
@@ -80,25 +84,26 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
             detail=f"Error retrieving announcement: {str(e)}"
         )
         
-async def get_announcement_by_uploader(uploader_id: int, db: AsyncSession):
+async def get_announcement_by_uploader(uploader_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[AnnouncementOut]:
     try:
-        announcement_by_uploader_cache = await get_cache(f"announcements_by_uploader:{uploader_id}")
-        if announcement_by_uploader_cache:
+        cache_key = build_list_cache_key("announcements", params.model_dump(mode="json"), uploader_id=uploader_id)
+        announcement_by_uploader_cache = await get_cache(cache_key)
+        if announcement_by_uploader_cache is not None:
             logger.info(f"Cache hit for announcements by uploader ID {uploader_id}")
-            return [AnnouncementOut.model_validate_json(announcement) if isinstance(announcement, str) else AnnouncementOut.model_validate(announcement) for announcement in announcement_by_uploader_cache]
+            return PaginatedResponse[AnnouncementOut].model_validate(announcement_by_uploader_cache)
 
-        result = await db.execute(
-            select(Announcement).options(
+        statement = select(Announcement).options(
                 selectinload(Announcement.uploader),
                 selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
                 selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
                 selectinload(Announcement.media)
             ).order_by(Announcement.created_at.desc()).where(Announcement.uploader_id == uploader_id)
-        )
-        announcements = result.scalars().all()
-        announcements_by_uploader = [AnnouncementOut.model_validate(announcement, from_attributes=True) for announcement in announcements]
-        await set_cache(f"announcements_by_uploader:{uploader_id}", [announcement.model_dump_json() for announcement in announcements_by_uploader], expiration=300)
-        return announcements_by_uploader
+        if params.search:
+            statement = statement.where(Announcement.title.ilike(f"%{params.search}%"))
+        page = await paginate(db, statement, params, mapper=lambda item: AnnouncementOut.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[AnnouncementOut].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
     
     except HTTPException:
         raise
@@ -173,11 +178,6 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
                         detail="Failed to enqueue media upload task"
                     )
                     
-                if medias:
-                    await invalidate_cache(
-                        announcement_uploader_id=uploader_id,
-                        announcement_id=new_announcement.id
-                    )
 
             except HTTPException:
                 raise
@@ -188,6 +188,7 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
                 )
             
       
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=new_announcement.id)
         return AnnouncementOut.model_validate(new_announcement)
       
     except HTTPException:
@@ -199,8 +200,8 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating announcement: {str(e)}"
         )
-    
-    
+
+
 async def edit_announcement(announcement_id: int, announcement_data: AnnouncementCreate, media_files: Optional[List[UploadFile]], keep_media_ids: List[int], uploader_id: int, db: AsyncSession):
     try:
         if media_files:
@@ -267,9 +268,6 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
                     
                 logger.info(f"Enqueued upload task for {len(files_data)} new media files")
                 
-                if medias:
-                    await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
-                    logger.info(f"Invalidated relevant caches after enqueuing media upload task")
 
             except HTTPException:
                 raise
@@ -279,6 +277,7 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
                     detail=f"Error processing media files: {str(e)}"
                 )
         
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
         result = await db.execute(
             select(Announcement).where(Announcement.id == announcement_id).options(
                 selectinload(Announcement.uploader),
@@ -348,4 +347,4 @@ async def delete_announcement(announcement_id: int, uploader_id: int, db: AsyncS
             detail=f"Error deleting announcement: {str(e)}"
         )
         
-        
+

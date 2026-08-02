@@ -3,8 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, Send, CalendarIcon } from "lucide-react";
-import { CustomDateTimePicker } from '../../general/CustomDateTimePicker';
-import { format } from "date-fns";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -14,13 +12,11 @@ import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
 import { useReviewIncident, useResolveIncident, useRejectIncident, useNotifyHearing } from '../../../hooks/useIncidents';
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/Toast";
-import { queryClient } from "../../../main";
 import { isAbortError } from "../../../utils/axiosException";
 import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateAttachments } from '../../../utils/attachmentHelper';
-import { startOfTomorrow } from "date-fns";
 
 export const LguIncidentDetails: React.FC = () => {
   const actionsTakenModal = useActionsTakenModal();

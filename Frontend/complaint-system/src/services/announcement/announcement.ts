@@ -1,18 +1,23 @@
 import { announcementApi, announcementInstance } from "../axios/apiServices";
 import type { Announcement } from "../../types/general/announcement";
+import type { PaginatedResponse, PaginationQueryParams } from "../../types/general/pagination";
+import {buildQueryString} from "../../utils/buildQuery";
 
-export const getAnnouncements = async (): Promise<Announcement[]> => {
+
+export const getAnnouncements = async (params?: PaginationQueryParams): Promise<PaginatedResponse<Announcement>> => {
     try {
-      return await announcementApi.get("/");
+      const queryString = buildQueryString(params || {});
+      return await announcementApi.get(`/?${queryString}`);
     } catch (error) {
       console.error("Error fetching announcements:", error);
       throw error;
     }
 };
 
-export const getAnnouncementById = async (announcementId: number): Promise<Announcement> => {
+export const getAnnouncementById = async (announcementId: number, params?: PaginationQueryParams): Promise<Announcement> => {
     try {
-      return await announcementApi.get(`/${announcementId}`);
+      const queryString = buildQueryString(params || {});
+      return await announcementApi.get(`/my-announcements/?${queryString}`);
     } catch (error) {
       console.error(`Error fetching announcement with id ${announcementId}:`, error);
       throw error;
@@ -33,9 +38,11 @@ export const createAnnouncement = async (formData: FormData): Promise<{ message:
     }
 };
 
-export const getMyAnnouncements = async (): Promise<Announcement[]> => {
+export const getMyAnnouncements = async (params?: PaginationQueryParams): Promise<PaginatedResponse<Announcement>> => {
     try {
-      return await announcementApi.get("/my-announcements");
+      const queryString = buildQueryString(params || {});
+      console.log(params, queryString, "params and queryString in getMyAnnouncements");
+      return await announcementApi.get(`/my-announcements?${queryString}`);
     } catch (error) {
       console.error("Error fetching my announcements:", error);
       throw error;

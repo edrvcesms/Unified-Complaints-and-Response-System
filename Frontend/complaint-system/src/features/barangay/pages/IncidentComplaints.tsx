@@ -8,7 +8,7 @@ import { SkeletonComplaintCard } from "../components/Skeletons";
 import { ComplaintCard } from "../components/ComplaintCard";
 import { Pagination } from "../components/Pagination";
 
-const ITEMS_PER_PAGE = 9;
+const ITEMS_PER_PAGE = 10;
 
 export const IncidentComplaints: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();
@@ -20,7 +20,8 @@ export const IncidentComplaints: React.FC = () => {
     complaints,
     isLoading: complaintsLoading,
     error: complaintsError,
-  } = useIncidentComplaints(Number(incidentId), true);
+    pagination,
+  } = useIncidentComplaints(Number(incidentId), true, { page: 1, page_size: ITEMS_PER_PAGE });
   
   const markAsViewed = useMarkIncidentAsViewed();
   const hasMarkedAsViewed = useRef(false);

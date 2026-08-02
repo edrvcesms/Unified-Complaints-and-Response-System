@@ -1,9 +1,13 @@
 import { complaintsApi } from "../axios/apiServices";
 import type { Complaint, WeeklyComplaintStats } from "../../types/complaints/complaint";
+import type { PaginatedResponse } from "../../types/general/pagination";
+import type { PaginationQueryParams } from "../../types/general/pagination";
+import { buildQueryString } from "../../utils/buildQuery";
 
-export const getComplaints = async (): Promise<Complaint[]> => {
+export const getComplaints = async (params?: PaginationQueryParams): Promise<PaginatedResponse<Complaint>> => {
   try {
-    return await complaintsApi.get("/all");
+    const queryString = buildQueryString(params || {});
+    return await complaintsApi.get(`/all?${queryString}`);
   } catch (error) {
     console.error("Error fetching complaints:", error);
     throw error;

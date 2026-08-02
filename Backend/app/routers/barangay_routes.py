@@ -8,6 +8,7 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.utils.logger import logger
+from app.core.pagination_params import ListParams
 
 router = APIRouter()
 
@@ -19,8 +20,8 @@ async def barangay_profile(request: Request, db: AsyncSession = Depends(get_asyn
 
 @router.get("/all", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def list_barangays(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_all_barangays(db, current_user.id)
+async def list_barangays(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_all_barangays(db, params, current_user.id)
 
 @router.get("/{barangay_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

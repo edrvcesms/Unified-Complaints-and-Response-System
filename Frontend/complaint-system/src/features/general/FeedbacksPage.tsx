@@ -17,6 +17,12 @@ interface FeedbacksPageProps {
   emptyMessage?: string;
 }
 
+interface PaginationQueryParams {
+  page: number;
+  page_size: number;
+  search?: string;
+}
+
 const formatName = (feedback: PostIncidentFeedback) => {
   const firstName = feedback.user.first_name || "";
   const lastName = feedback.user.last_name || "";
@@ -43,9 +49,13 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { feedbacks, isLoading, error } = useResolvedPostIncidentFeedbacks();
+  const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: FEEDBACKS_PER_PAGE });
+  const { feedbacks, isLoading, error, pagination } = useResolvedPostIncidentFeedbacks({ page: metaData.page, page_size: metaData.page_size });
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const handlePageChange = (page: number) => {
+    setMetaData((prev) => ({ ...prev, page }));
+  }
 
   const filteredFeedbacks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -94,6 +104,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
   if (error) {
     return <ErrorMessage message="Failed to load feedbacks. Please refresh the page." />;
   }
+  
 
   return (
     <div className="space-y-5">
@@ -189,7 +200,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
         />
       </div>
     </div>

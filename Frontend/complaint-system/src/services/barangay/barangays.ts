@@ -1,9 +1,13 @@
 import { barangayApi } from "../axios/apiServices";
 import type { BarangayAccountData } from "../../types/barangay/barangayAccount";
+import type { PaginatedResponse } from "../../types/general/pagination";
+import type { PaginationQueryParams } from "../../types/general/pagination";
+import { buildQueryString } from "../../utils/buildQuery";
 
-export const getAllBarangays = async (): Promise<BarangayAccountData[]> => {
+export const getAllBarangays = async (params?: PaginationQueryParams): Promise<PaginatedResponse<BarangayAccountData>> => {
   try {
-    return await barangayApi.get("/all");
+    const queryString = buildQueryString(params || {});
+    return await barangayApi.get(`/all?${queryString}`);
   } catch (error) {
     console.error("Error fetching barangays:", error);
     throw error;

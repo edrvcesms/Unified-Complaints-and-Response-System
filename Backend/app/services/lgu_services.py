@@ -28,16 +28,21 @@ from app.constants.complaint_status import ComplaintStatus
 from typing import List
 from app.services.complaint_services import log_status_change
 from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
 
-async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession):
+async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
     try:
-        forwarded_incidents_cache = await get_cache(f"forwarded_barangay_incidents:{barangay_id}")
+        cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), barangay_id=barangay_id, view="lgu_forwarded")
+        forwarded_incidents_cache = await get_cache(cache_key)
         if forwarded_incidents_cache is not None:
             logger.info(f"Cache hit for forwarded incidents of barangay ID: {barangay_id}")
-            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in forwarded_incidents_cache]
+            return PaginatedResponse[IncidentData].model_validate(forwarded_incidents_cache)
         
-        result = await db.execute(
+        statement = (
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
@@ -55,11 +60,10 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         )
         logger.info(f"Executed query to get forwarded incidents for barangay ID: {barangay_id}")
         
-        incidents = result.scalars().all()
-        logger.info(f"Found {len(incidents)} forwarded incidents for barangay ID: {barangay_id}")
-        incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
-        await set_cache(f"forwarded_barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
-        return incidents_list
+        page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[IncidentData].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
       
     except HTTPException:
         raise
@@ -68,14 +72,15 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
       
       
-async def get_all_forwarded_incidents(db: AsyncSession):
+async def get_all_forwarded_incidents(db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
     try:
-        forwarded_incidents = await get_cache("all_forwarded_incidents")
+        cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), view="lgu_forwarded")
+        forwarded_incidents = await get_cache(cache_key)
         if forwarded_incidents is not None:
             logger.info("Cache hit for all forwarded incidents")
-            return [IncidentData.model_validate_json(incident) if isinstance(incident, str) else IncidentData.model_validate(incident, from_attributes=True) for incident in forwarded_incidents]
+            return PaginatedResponse[IncidentData].model_validate(forwarded_incidents)
         
-        result = await db.execute(
+        statement = (
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
@@ -88,11 +93,10 @@ async def get_all_forwarded_incidents(db: AsyncSession):
             .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info("Executed query to get all forwarded incidents")
-        incidents = result.scalars().all()
-        logger.info(f"Found {len(incidents)} total forwarded incidents")
-        incidents_list = [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
-        await set_cache("all_forwarded_incidents", [i.model_dump_json() for i in incidents_list], expiration=3600)
-        return incidents_list
+        page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[IncidentData].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
     
     except HTTPException:
         raise

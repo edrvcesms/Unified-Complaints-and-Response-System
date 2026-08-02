@@ -7,7 +7,7 @@ import { useCreateEvent, useDeleteEvent, useEvents, useUpdateEvent } from "../..
 import { validateDescription, validateTitle } from "../../../utils/validators";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import type { Event } from "../../../types/general/event";
-import { Calendar, Edit, FileImage, FileVideo, MapPin, Plus, Trash2, Upload, X } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Edit, FileImage, FileVideo, ImageIcon, MapPin, Plus, Trash2, Upload, Video, X } from "lucide-react";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -24,6 +24,11 @@ interface EventFormErrors {
   date?: string;
   location?: string;
   files?: string;
+}
+
+interface QueryMeta {
+  page: number;
+  page_size: number;
 }
 
 const defaultFormState: EventForm = {
@@ -64,6 +69,65 @@ const EventMediaPreview: React.FC<{ mediaUrl: string; mediaType: string; classNa
   return <img src={mediaUrl} alt="Event media" className={`w-full h-full object-cover ${className}`} loading="lazy" />;
 };
 
+// Fullscreen viewer opened by the "View media" button — keeps the card itself
+// free of thumbnails so the grid stays compact and evenly aligned.
+const MediaLightbox: React.FC<{
+  media: { url: string; type: string }[];
+  index: number;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}> = ({ media, index, onClose, onNavigate }) => {
+  const current = media[index];
+  if (!current) return null;
+  const isVideo = current.type?.startsWith("video");
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <button type="button" onClick={onClose} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white transition-colors" aria-label="Close">
+        <X className="w-6 h-6" />
+      </button>
+
+      {media.length > 1 && index > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate(index - 1);
+          }}
+          className="absolute left-4 p-2 text-white/80 hover:text-white transition-colors"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="w-8 h-8" />
+        </button>
+      )}
+
+      <div className="max-w-3xl max-h-[85vh] w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        {isVideo ? (
+          <video src={current.url} controls autoPlay className="max-w-full max-h-[85vh] rounded-lg" />
+        ) : (
+          <img src={current.url} alt="Event media" className="max-w-full max-h-[85vh] rounded-lg object-contain" />
+        )}
+      </div>
+
+      {media.length > 1 && index < media.length - 1 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate(index + 1);
+          }}
+          className="absolute right-4 p-2 text-white/80 hover:text-white transition-colors"
+          aria-label="Next"
+        >
+          <ChevronRight className="w-8 h-8" />
+        </button>
+      )}
+
+      {media.length > 1 && <div className="absolute bottom-4 text-sm text-white/70">{index + 1} / {media.length}</div>}
+    </div>
+  );
+};
+
 const getMediaList = (media: Event["media"] | undefined | null) => (Array.isArray(media) ? media : []);
 
 export const EventsPage: React.FC = () => {
@@ -77,9 +141,12 @@ export const EventsPage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: "", message: "" });
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
+  const [queryMeta, setQueryMeta] = useState<QueryMeta>({ page: 1, page_size: 10 });
+  // Which event's media is open in the lightbox, and at what index.
+  const [lightbox, setLightbox] = useState<{ eventId: number; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { events, isLoading, refetch } = useEvents();
+  const { events, pagination, isLoading, refetch } = useEvents(queryMeta);
   const createEventMutation = useCreateEvent();
   const updateEventMutation = useUpdateEvent();
   const deleteEventMutation = useDeleteEvent();
@@ -88,6 +155,12 @@ export const EventsPage: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const handlePageChange = (newPage: number) => {
+    // Changing queryMeta.page changes the query key, so react-query
+    // refetches automatically — no need to call refetch() here.
+    setQueryMeta((prev) => ({ ...prev, page: newPage }));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,6 +296,15 @@ export const EventsPage: React.FC = () => {
         message: t("events.success.deletedMessage"),
       });
       setDeleteConfirm(null);
+
+      // If we just deleted the last item on this page, and there's
+      // a previous page, step back so the user isn't stuck looking
+      // at an empty page.
+      if (events.length === 1 && pagination?.has_previous) {
+        setQueryMeta((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }));
+      } else {
+        refetch();
+      }
     } catch (error: any) {
       setErrorModal({
         isOpen: true,
@@ -243,6 +325,9 @@ export const EventsPage: React.FC = () => {
 
   const isMutating = createEventMutation.isPending || updateEventMutation.isPending;
 
+  // The event whose media is currently open in the lightbox, if any.
+  const lightboxEvent = lightbox ? events?.find((e) => e.id === lightbox.eventId) : undefined;
+
   return (
     <div className="space-y-6">
       <PageHeader title={t("events.title")} description={t("events.description")} />
@@ -260,8 +345,8 @@ export const EventsPage: React.FC = () => {
           >
             <Edit className="w-4 h-4" />
             {t("events.manageTab")}
-            {!!events?.length && (
-              <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 text-primary-600 rounded-full">{events.length}</span>
+            {typeof pagination?.total_items === "number" && pagination.total_items > 0 && (
+              <span className="px-2 py-0.5 text-xs font-semibold bg-primary-100 text-primary-600 rounded-full">{pagination.total_items}</span>
             )}
           </button>
           <button
@@ -282,87 +367,130 @@ export const EventsPage: React.FC = () => {
                 <LoadingIndicator />
               </div>
             ) : events && events.length > 0 ? (
-              <div className="space-y-4">
-                {events.map((event) => {
-                  const eventMedia = getMediaList(event.media);
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+                  {events.map((event) => {
+                    const eventMedia = getMediaList(event.media);
 
-                  return (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-sm transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-900">{event.event_name}</h3>
-                    {event.description && <p className="text-sm text-gray-600 mt-2 line-clamp-3">{event.description}</p>}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(event.date)}
-                      </div>
-                      {!!event.location && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4" />
-                          {event.location}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <FileImage className="w-4 h-4" />
-                        {eventMedia.length} {t("events.list.mediaCount")}
-                      </div>
-                    </div>
-
-                    {eventMedia.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {eventMedia.slice(0, 4).map((media) => (
-                          <div key={media.id} className="relative w-48 h-48 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                            <EventMediaPreview mediaUrl={media.media_url} mediaType={media.media_type} />
+                    return (
+                      <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">{event.event_name}</h3>
+                          {/* Compact inline actions instead of a separate footer row */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleEdit(event)}
+                              className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                              aria-label={t("events.list.edit")}
+                              title={t("events.list.edit")}
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(event.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              aria-label={t("events.list.delete")}
+                              title={t("events.list.delete")}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                        ))}
-                        {eventMedia.length > 4 && (
-                          <div className="w-48 h-48 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600">+{eventMedia.length - 4}</span>
+                        </div>
+
+                        {event.description && <p className="text-sm text-gray-600 mt-1 line-clamp-2">{event.description}</p>}
+
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {formatDate(event.date)}
+                          </div>
+                          {!!event.location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5" />
+                              {event.location}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Single compact trigger instead of an inline thumbnail grid — keeps the card small */}
+                        {eventMedia.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setLightbox({ eventId: event.id, index: 0 })}
+                            className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+                          >
+                            {eventMedia.some((m) => m.media_type?.startsWith("video")) ? (
+                              <Video className="w-3.5 h-3.5" />
+                            ) : (
+                              <ImageIcon className="w-3.5 h-3.5" />
+                            )}
+                            {eventMedia.length === 1
+                              ? t("events.list.viewMedia", "View media")
+                              : t("events.list.viewMediaCount", `View media (${eventMedia.length})`)}
+                          </button>
+                        )}
+
+                        {deleteConfirm === event.id && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm text-red-700 mb-3">{t("events.list.deleteConfirm")}</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDelete(event.id)}
+                                disabled={deleteEventMutation.isPending}
+                                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                              >
+                                {deleteEventMutation.isPending ? t("modal.processing") : t("events.list.confirmDelete")}
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                              >
+                                {t("events.list.cancelDelete")}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
 
-                    <div className="flex items-center gap-2 pt-3 mt-3 border-t border-gray-200">
+                {/* Pagination Controls */}
+                {pagination && pagination.total_pages > 1 && (
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500">
+                      {t('pagination.pageOf', {
+                        defaultValue: `Page ${pagination.page} of ${pagination.total_pages}`,
+                        page: pagination.page,
+                        totalPages: pagination.total_pages,
+                      })}
+                      {typeof pagination.total_items === "number" && (
+                        <span> &middot; {pagination.total_items} total</span>
+                      )}
+                    </p>
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleEdit(event)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        type="button"
+                        onClick={() => handlePageChange(queryMeta.page - 1)}
+                        disabled={!pagination.has_previous}
+                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Edit className="w-4 h-4" />
-                        {t("events.list.edit")}
+                        <ChevronLeft className="w-4 h-4" />
+                        {t('pagination.previous', 'Previous')}
                       </button>
                       <button
-                        onClick={() => setDeleteConfirm(event.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        type="button"
+                        onClick={() => handlePageChange(queryMeta.page + 1)}
+                        disabled={!pagination.has_next}
+                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="w-4 h-4" />
-                        {t("events.list.delete")}
+                        {t('pagination.next', 'Next')}
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
-
-                    {deleteConfirm === event.id && (
-                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-700 mb-3">{t("events.list.deleteConfirm")}</p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDelete(event.id)}
-                            disabled={deleteEventMutation.isPending}
-                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                          >
-                            {deleteEventMutation.isPending ? t("modal.processing") : t("events.list.confirmDelete")}
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(null)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            {t("events.list.cancelDelete")}
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                )})}
-              </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-2">{t("events.list.noEvents")}</p>
@@ -576,6 +704,16 @@ export const EventsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Full-size media viewer, triggered by clicking "View media" above */}
+      {lightbox && lightboxEvent && (
+        <MediaLightbox
+          media={getMediaList(lightboxEvent.media).map((m) => ({ url: m.media_url, type: m.media_type }))}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onNavigate={(index) => setLightbox({ eventId: lightbox.eventId, index })}
+        />
+      )}
 
       <SuccessModal
         isOpen={successModal.isOpen}

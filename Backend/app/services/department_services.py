@@ -16,13 +16,16 @@ from app.utils.caching import set_cache, get_cache
 from app.services.complaint_services import log_status_change
 from app.models.response import Response
 from app.models.complaint_logs import ComplaintLogs
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
 
 
-async def get_all_departments(db: AsyncSession):
+async def get_all_departments(db: AsyncSession, params: ListParams) -> PaginatedResponse[DepartmentWithUserData]:
     try:
-        result = await db.execute(select(Department).options(selectinload(Department.department_account).selectinload(DepartmentAccount.user)))
-        departments = result.scalars().all()
-        return [DepartmentWithUserData.model_validate(dept, from_attributes=True) for dept in departments]
+        statement = select(Department).options(selectinload(Department.department_account).selectinload(DepartmentAccount.user))
+        page = await paginate(db, statement, params, mapper=lambda item: DepartmentWithUserData.model_validate(item, from_attributes=True))
+        return PaginatedResponse[DepartmentWithUserData].model_validate(page)
     
     except HTTPException:
         raise
@@ -60,9 +63,9 @@ async def get_department_account(user_id: int, db: AsyncSession) -> DepartmentWi
         logger.exception(f"Error in get_department_account: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
   
-async def get_department_forwarded_incidents(department_account_id: int, db: AsyncSession):
+async def get_department_forwarded_incidents(department_account_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
     try:
-        result = await db.execute(
+        statement = (
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
@@ -95,9 +98,8 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
         )
         logger.info(f"Executed query to get forwarded incidents for department account ID: {department_account_id}")
         
-        incidents = result.scalars().all()
-        logger.info(f"Found {len(incidents)} forwarded incidents for department account ID: {department_account_id}")
-        return [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
+        return PaginatedResponse[IncidentData].model_validate(page)
       
     except HTTPException:
         raise
@@ -106,9 +108,9 @@ async def get_department_forwarded_incidents(department_account_id: int, db: Asy
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
 
-async def forwarded_dept_incident_by_barangay(department_account_id: int, barangay_id: int, db: AsyncSession):
+async def forwarded_dept_incident_by_barangay(department_account_id: int, barangay_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
     try:
-        result = await db.execute(
+        statement = (
             select(IncidentModel)
             .join(IncidentModel.complaint_clusters)
             .join(IncidentComplaintModel.complaint)
@@ -142,10 +144,8 @@ async def forwarded_dept_incident_by_barangay(department_account_id: int, barang
         )
         logger.info(f"Executed query to get forwarded incidents for department account ID: {department_account_id} and barangay ID: {barangay_id}")
         
-        incidents = result.scalars().all()
-        logger.info(f"Found {len(incidents)} forwarded incidents for department account ID: {department_account_id} and barangay ID: {barangay_id}")
-        
-        return [IncidentData.model_validate(incident, from_attributes=True) for incident in incidents]
+        page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
+        return PaginatedResponse[IncidentData].model_validate(page)
     
     except HTTPException:
         raise

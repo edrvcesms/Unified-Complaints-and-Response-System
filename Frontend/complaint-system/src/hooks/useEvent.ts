@@ -1,16 +1,20 @@
 import { getEventById, getEvents, deleteEvent, createEvent, updateEvent } from "../services/event/event";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { queryClient } from "../main";
 import type { Event } from "../types/general/event";
+import type { PaginatedResponse, PaginationQueryParams } from "../types/general/pagination";
 
-export const useEvents = () => {
-  const { data: events, isLoading, error, refetch } = useQuery<Event[]> ({
-    queryKey: ["events"],
-    queryFn: getEvents,
+export const useEvents = (params: PaginationQueryParams) => {
+  const { data, isLoading, error, refetch } = useQuery<PaginatedResponse<Event>>({
+    queryKey: ["events", params.page, params.page_size, params.search],
+    queryFn: () => getEvents(params),
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   return {
-    events,
+    events: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
     refetch,

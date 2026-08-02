@@ -41,6 +41,7 @@ class User(Base):
     is_restricted_until = Column(DateTime(timezone=True), nullable=True)
 
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
+    events = relationship("Event", back_populates="uploader", cascade="all, delete-orphan")
     department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)
     complaint = relationship("Complaint", back_populates="user", cascade="all, delete-orphan")
     attachment = relationship("Attachment", back_populates="uploader", cascade="all, delete-orphan")
@@ -61,3 +62,4 @@ class User(Base):
     back_populates="resolver",
     foreign_keys="[IncidentModel.resolver_id]"
 )
+    

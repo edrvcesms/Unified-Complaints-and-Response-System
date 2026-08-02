@@ -5,6 +5,7 @@ from app.dependencies.auth_dependency import get_current_user
 from app.services.notification_services import get_user_notifications, mark_notification_as_read, mark_all_notifications_as_read
 from app.models.user import User
 from app.dependencies.db_dependency import get_async_db
+from app.core.pagination_params import ListParams
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.sse_manager import sse_manager
@@ -16,8 +17,8 @@ router = APIRouter()
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_notifications(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
-    return await get_user_notifications(current_user.id, db)
+async def get_notifications(params: ListParams = Depends(), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
+    return await get_user_notifications(current_user.id, db, params)
 
 @router.post("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_as_read(notification_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):

@@ -10,14 +10,15 @@ from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.models.user import User
 from fastapi.requests import Request
+from app.core.pagination_params import ListParams, PaginationParams
 
 router = APIRouter()
 
 @router.get("/all", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
-async def list_all_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def list_all_complaints(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    return await get_all_complaints(db, barangay_id=current_user.barangay_account.barangay_id)
+    return await get_all_complaints(db, params, barangay_id=current_user.barangay_account.barangay_id)
 
 @router.get("/weekly", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")

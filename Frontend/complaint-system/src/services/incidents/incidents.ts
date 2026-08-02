@@ -1,20 +1,35 @@
 import { incidentsApi } from "../axios/apiServices";
 import { buildIncidentActionFormData } from "./incidentActionFormData";
 import type { Incident } from "../../types/complaints/incident";
-import type { Complaint } from "../../types/complaints/complaint";
+import type { Complaint, StatusFilter } from "../../types/complaints/complaint";
+import type { PaginatedResponse, PaginationQueryParams } from "../../types/general/pagination";
+import { buildQueryString } from "../../utils/buildQuery";
 
-export const getIncidents = async (): Promise<Incident[]> => {
+export interface IncidentQueryParams extends PaginationQueryParams {
+  sort?: "priority" | "first_reported_at" | "last_reported_at";
+  order?: "asc" | "desc";
+  severity_level?: Exclude<StatusFilter, "all">;
+  severity_score_min?: number;
+  severity_score_max?: number;
+  complaint_status?: string;
+  date_from?: string; // YYYY-MM-DD
+  date_to?: string;   // YYYY-MM-DD
+}
+
+export const getIncidents = async (params?: IncidentQueryParams): Promise<PaginatedResponse<Incident>> => {
   try {
-    return await incidentsApi.get("/");
+    const queryString = buildQueryString(params || {});
+    return await incidentsApi.get(`/?${queryString}`);
   } catch (error) {
     console.error("Error fetching incidents:", error);
     throw error;
   };
 };
 
-export const getAllIncidents = async (): Promise<Incident[]> => {
+export const getAllIncidents = async (params?: IncidentQueryParams): Promise<PaginatedResponse<Incident>> => {
   try {
-    return await incidentsApi.get("/archive/");
+    const queryString = buildQueryString(params || {});
+    return await incidentsApi.get(`/archive?${queryString}`);
   } catch (error) {
     console.error("Error fetching all incidents:", error);
     throw error;
@@ -30,9 +45,12 @@ export const getIncidentById = async (incidentId: number): Promise<Incident> => 
   };
 };
 
-export const getComplaintsByIncidentId = async (incidentId: number): Promise<Complaint[]> => {
+export const getComplaintsByIncidentId = async (incidentId: number, params: PaginationQueryParams): Promise<PaginatedResponse<Complaint[]>> => {
   try {
-    return await incidentsApi.get(`/${incidentId}/complaints`);
+    const queryString = buildQueryString(params || {});
+    
+    return await incidentsApi.get(`/${incidentId}/complaints?${queryString}`);
+    
   } catch (error) {
     console.error("Error fetching complaints for incident:", error);
     throw error;

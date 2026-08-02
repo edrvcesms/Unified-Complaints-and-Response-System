@@ -24,7 +24,15 @@ from app.services.complaint_services import log_status_change
 from app.constants.roles import UserRole
 from app.utils.query_optimization import QueryOptions, BatchLoader
 from app.utils.cache_invalidator_optimized import CacheInvalidator
-
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
+from sqlalchemy import select, update, or_, case, cast, String, func
+from app.core.pagination_params import IncidentListParams
+from app.models.category import Category
+from app.models.barangay import Barangay
+from app.utils.incident_filter import _apply_incident_filters_and_sort, PRIORITY_SCORE
 
 def _active_statuses_by_role(role: str) -> set[str]:
     if role == UserRole.BARANGAY_OFFICIAL:
@@ -48,77 +56,86 @@ def _active_statuses_by_role(role: str) -> set[str]:
     return set()
 
 
-async def get_all_incidents_by_barangay(barangay_id: int, db: AsyncSession):
+
+async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentOut]:
     try:
-        all_incidents_cache = await get_cache(f"all_incidents: barangay_id:{barangay_id}")
-        if all_incidents_cache is not None:
-            logger.info("Cache hit for all incidents")
-            return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in all_incidents_cache]
-        
-        result = await db.execute(
-            select(IncidentModel)
-            .options(*QueryOptions.incident_list())
-            .order_by(IncidentModel.first_reported_at.asc())
-            .where(IncidentModel.barangay_id == barangay_id)
-        )
-
-        incidents = result.scalars().all()
-        incidents_data =  [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
-        await set_cache(f"all_incidents: barangay_id:{barangay_id}", [i.model_dump_json() for i in incidents_data], expiration=3600)
-        return incidents_data
-    
-    except HTTPException:
-        raise
-    
-    except Exception:
-        logger.exception("Error in get_all_incidents")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-
-async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession):
-    try:
-        incidents_cache = await get_cache(f"barangay_incidents:{barangay_id}")
+        cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), barangay_id=barangay_id, view="active")
+        incidents_cache = await get_cache(cache_key)
         if incidents_cache is not None:
             logger.info(f"Cache hit for barangay ID: {barangay_id}")
-            return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents_cache]
-        
+            return PaginatedResponse[IncidentOut].model_validate(incidents_cache)
+
+        active_statuses = [ComplaintStatus.SUBMITTED.value, ComplaintStatus.REVIEWED_BY_BARANGAY.value]
+
         subq = (
             select(IncidentComplaintModel.incident_id)
             .join(IncidentComplaintModel.complaint)
-            .where(
-                IncidentComplaintModel.incident_id == IncidentModel.id,
-                Complaint.status.in_([
-                    ComplaintStatus.SUBMITTED.value,
-                    ComplaintStatus.REVIEWED_BY_BARANGAY.value
-                ])
-            )
+            .where(IncidentComplaintModel.incident_id == IncidentModel.id, Complaint.status.in_(active_statuses))
             .exists()
         )
 
-        result = await db.execute(
+        statement = (
             select(IncidentModel)
-            .where(
-                IncidentModel.barangay_id == barangay_id,
-                subq
-            )
+            .where(IncidentModel.barangay_id == barangay_id, subq)
             .options(*QueryOptions.incident_full())
-            .order_by(IncidentModel.first_reported_at.asc())
         )
 
-        incidents = result.scalars().all()
-        logger.info(f"Found {len(incidents)} incidents for barangay ID: {barangay_id}")
-        incidents_list = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
-        await set_cache(f"barangay_incidents:{barangay_id}", [i.model_dump_json() for i in incidents_list], expiration=3600)
-        return incidents_list
-      
+        # --- Filters ---
+        if params.severity_level:
+            statement = statement.where(IncidentModel.severity_level == params.severity_level)
+
+        if params.severity_score_min is not None:
+            statement = statement.where(IncidentModel.severity_score >= params.severity_score_min)
+
+        if params.severity_score_max is not None:
+            # Buckets are half-open ("4.0-5.9" == [4.0, 6.0)), so max is exclusive
+            statement = statement.where(IncidentModel.severity_score < params.severity_score_max)
+
+        if params.date_from:
+            statement = statement.where(func.date(IncidentModel.first_reported_at) >= params.date_from)
+
+        if params.date_to:
+            statement = statement.where(func.date(IncidentModel.first_reported_at) <= params.date_to)
+
+        if params.complaint_status:
+            complaint_status_filter = (
+                select(IncidentComplaintModel.incident_id)
+                .join(IncidentComplaintModel.complaint)
+                .where(IncidentComplaintModel.incident_id == IncidentModel.id, Complaint.status == params.complaint_status)
+                .exists()
+            )
+            statement = statement.where(complaint_status_filter)
+
+        if params.search:
+            term = f"%{params.search}%"
+            statement = statement.where(or_(
+                IncidentModel.title.ilike(term),
+                cast(IncidentModel.id, String).ilike(term),
+                select(Category.id).where(Category.id == IncidentModel.category_id, Category.category_name.ilike(term)).exists(),
+                select(Barangay.id).where(Barangay.id == IncidentModel.barangay_id, Barangay.barangay_name.ilike(term)).exists(),
+            ))
+
+        # --- Sort ---
+        sort_column = {
+            "first_reported_at": IncidentModel.first_reported_at,
+            "last_reported_at": IncidentModel.last_reported_at,
+            "priority": PRIORITY_SCORE,
+        }.get(params.sort, IncidentModel.first_reported_at)
+        # Preserve old default (oldest-first) when no sort is specified
+        default_order = "asc" if not params.sort else params.order
+        statement = statement.order_by(sort_column.asc() if default_order == "asc" else sort_column.desc())
+
+        page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[IncidentOut].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
+
     except HTTPException:
         raise
     except Exception:
         logger.exception("Error in get_incidents_by_barangay")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error"
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
     
 async def get_incident_by_id(incident_id: int, db: AsyncSession):
     try:
@@ -322,7 +339,7 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-async def get_all_incidents(current_user: User, db: AsyncSession):
+async def get_all_incidents(current_user: User, db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentOut]:
     try:
         role = current_user.role
         active_statuses = _active_statuses_by_role(role)
@@ -334,13 +351,6 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay account not found for current user")
 
             barangay_id = barangay_account.barangay_id
-            cache_key = f"archive_incidents:barangay:{barangay_id}"
-
-            cached = await get_cache(cache_key)
-            if cached is not None:
-                logger.info(f"Cache hit for archive incidents of barangay ID: {barangay_id}")
-                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
-
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
                 .join(IncidentComplaintModel.complaint)
@@ -351,29 +361,19 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                 .exists()
             )
 
-            result = await db.execute(
+            statement = (
                 select(IncidentModel)
                 .where(
                     IncidentModel.barangay_id == barangay_id,
                     archive_filter,
                 )
                 .options(*QueryOptions.incident_minimal())
-                .order_by(IncidentModel.first_reported_at.asc())
             )
-
-            incidents = result.scalars().all()
-            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
-            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=360)
-            return incidents_data
+            statement = _apply_incident_filters_and_sort(statement, params)
+            page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))
+            return PaginatedResponse[IncidentOut].model_validate(page)
 
         if role == UserRole.LGU_OFFICIAL:
-            cache_key = "archive_incidents:lgu"
-
-            cached = await get_cache(cache_key)
-            if cached is not None:
-                logger.info("Cache hit for archive incidents of LGU")
-                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
-
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
                 .join(IncidentComplaintModel.complaint)
@@ -384,17 +384,14 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                 .exists()
             )
 
-            result = await db.execute(
+            statement = (
                 select(IncidentModel)
                 .where(archive_filter)
                 .options(*QueryOptions.incident_minimal())
-                .order_by(IncidentModel.first_reported_at.asc())
             )
-
-            incidents = result.scalars().all()
-            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
-            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
-            return incidents_data
+            statement = _apply_incident_filters_and_sort(statement, params)
+            page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))
+            return PaginatedResponse[IncidentOut].model_validate(page)
 
         if role == UserRole.DEPARTMENT_STAFF:
             department_account = getattr(current_user, "department_account", None)
@@ -402,13 +399,6 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department account not found for current user")
 
             department_account_id = department_account.id
-            cache_key = f"archive_incidents:department:{department_account_id}"
-
-            cached = await get_cache(cache_key)
-            if cached is not None:
-                logger.info(f"Cache hit for archive incidents of department account ID: {department_account_id}")
-                return [IncidentOut.model_validate_json(incident) if isinstance(incident, str) else IncidentOut.model_validate(incident, from_attributes=True) for incident in cached]
-
             archive_filter = (
                 select(IncidentComplaintModel.incident_id)
                 .join(IncidentComplaintModel.complaint)
@@ -419,20 +409,17 @@ async def get_all_incidents(current_user: User, db: AsyncSession):
                 .exists()
             )
 
-            result = await db.execute(
+            statement = (
                 select(IncidentModel)
                 .where(
                     IncidentModel.department_account_id == department_account_id,
                     archive_filter,
                 )
                 .options(*QueryOptions.incident_list())
-                .order_by(IncidentModel.first_reported_at.asc())
             )
-
-            incidents = result.scalars().all()
-            incidents_data = [IncidentOut.model_validate(incident, from_attributes=True) for incident in incidents]
-            await set_cache(cache_key, [i.model_dump_json() for i in incidents_data], expiration=3600)
-            return incidents_data
+            statement = _apply_incident_filters_and_sort(statement, params)
+            page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))
+            return PaginatedResponse[IncidentOut].model_validate(page)
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
 

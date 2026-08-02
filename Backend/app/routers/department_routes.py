@@ -8,27 +8,30 @@ from app.schemas.incident_schema import IncidentData
 from app.models.user import User  
 from typing import List
 from app.utils.logger import logger
+from app.core.pagination_params import ListParams
 
 router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_departments(db: AsyncSession = Depends(get_async_db), current_user: DepartmentWithUserData = Depends(get_current_user)):
-    return await get_all_departments(db)
+async def get_departments(params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: DepartmentWithUserData = Depends(get_current_user)):
+    return await get_all_departments(db, params)
 
 @router.get("/forwarded-incidents", status_code=status.HTTP_200_OK)
 async def get_forwarded_incidents_for_department(
     current_user: DepartmentWithUserData = Depends(get_current_user),
+    params: ListParams = Depends(),
     db: AsyncSession = Depends(get_async_db)
-) -> List[IncidentData]:
-    return await get_department_forwarded_incidents(current_user.department_account.id, db)
+):
+    return await get_department_forwarded_incidents(current_user.department_account.id, db, params)
   
 @router.get("/forwarded-incidents/{barangay_id}", status_code=status.HTTP_200_OK)
 async def get_forwarded_incidents_for_barangay(
     barangay_id: int,
     current_user: DepartmentWithUserData = Depends(get_current_user),
+    params: ListParams = Depends(),
     db: AsyncSession = Depends(get_async_db)
-) -> List[IncidentData]:
-    return await forwarded_dept_incident_by_barangay(current_user.department_account.id, barangay_id, db)
+):
+    return await forwarded_dept_incident_by_barangay(current_user.department_account.id, barangay_id, db, params)
   
 @router.get("/weekly-stats", status_code=status.HTTP_200_OK)
 async def get_weekly_forwarded_incidents_stats(

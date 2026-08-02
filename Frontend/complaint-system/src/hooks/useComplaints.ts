@@ -1,10 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getComplaintById,
   getComplaints,
   getWeeklyComplaintStats,
 } from "../services/complaints/complaints";
 import type { Complaint, WeeklyComplaintStats } from "../types/complaints/complaint";
+import type { PaginatedResponse } from "../types/general/pagination";
+import type { PaginationQueryParams } from "../types/general/pagination";
+
+const DEFAULT_COMPLAINT_PARAMS: PaginationQueryParams = {
+  page: 1,
+  page_size: 10,
+};
 
 export const COMPLAINT_KEYS = {
   all:        ["complaints", "all"]         as const,
@@ -25,13 +32,15 @@ export const useComplaintDetails = (complaintId: number) => {
   };
 }
 
-export const useComplaints = () => {
-  const { data, isLoading, error } = useQuery<Complaint[]>({
-    queryKey: COMPLAINT_KEYS.all,
-    queryFn: getComplaints,
+export const useComplaints = (params: PaginationQueryParams = DEFAULT_COMPLAINT_PARAMS) => {
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Complaint>>({
+    queryKey: ["complaints", params.page, params.page_size, params.search],
+    queryFn: () => getComplaints(params),
+    placeholderData: keepPreviousData,
   });
   return {
-    complaints: data,
+    complaints: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
   };

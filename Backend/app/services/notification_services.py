@@ -6,6 +6,10 @@ from sqlalchemy import select
 from app.utils.logger import logger
 from datetime import datetime, timezone
 from app.utils.caching import get_cache, set_cache, delete_cache
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
+from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key, delete_cache_prefix
 
 async def create_notification(notification_data: NotificationCreateData, db: AsyncSession):
     try:
@@ -24,6 +28,7 @@ async def create_notification(notification_data: NotificationCreateData, db: Asy
         await db.refresh(new_notification)
         logger.info(f"Created notification for user ID {notification_data.user_id}: {notification_data.message}")
         await delete_cache(f"user_notifications:{notification_data.user_id}")
+        await delete_cache_prefix("notifications")
         return NotificationData.model_validate(new_notification, from_attributes=True)
       
     except HTTPException:
@@ -34,20 +39,18 @@ async def create_notification(notification_data: NotificationCreateData, db: Asy
         logger.exception(f"Error in create_notification: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-async def get_user_notifications(user_id: int, db: AsyncSession):
+async def get_user_notifications(user_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[NotificationData]:
     try:
-        notification_cache = await get_cache(f"user_notifications:{user_id}")
-        if notification_cache:
+        cache_key = build_list_cache_key("notifications", params.model_dump(mode="json"), user_id=user_id)
+        notification_cache = await get_cache(cache_key)
+        if notification_cache is not None:
             logger.info(f"Cache hit for notifications of user ID {user_id}")
-            return [NotificationData.model_validate_json(n) if isinstance(n, str) else NotificationData.model_validate(n, from_attributes=True) for n in notification_cache]
-        result = await db.execute(
-            select(Notification).where(Notification.user_id == user_id).order_by(Notification.sent_at.desc())
-        )
-        notifications = result.scalars().all()
-        logger.info(f"Fetched notifications for user ID {user_id}: {len(notifications)} notifications found")
-        notification_list = [NotificationData.model_validate(notification, from_attributes=True) for notification in notifications]
-        await set_cache(f"user_notifications:{user_id}", [n.model_dump_json() for n in notification_list], expiration=300)
-        return notification_list
+            return PaginatedResponse[NotificationData].model_validate(notification_cache)
+        statement = select(Notification).where(Notification.user_id == user_id).order_by(Notification.sent_at.desc())
+        page = await paginate(db, statement, params, mapper=lambda item: NotificationData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[NotificationData].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
       
     except HTTPException:
         raise
@@ -71,6 +74,7 @@ async def mark_notification_as_read(notification_id: int, user_id: int, db: Asyn
         await db.commit()
         logger.info(f"Marked notification ID {notification_id} as read for user ID {user_id}")
         await delete_cache(f"user_notifications:{user_id}")
+        await delete_cache_prefix("notifications")
         return {"message": "Notification marked as read"}
       
     except HTTPException:
@@ -94,6 +98,7 @@ async def mark_all_notifications_as_read(user_id: int, db: AsyncSession):
         await db.commit()
         logger.info(f"Marked all notifications as read for user ID {user_id}")
         await delete_cache(f"user_notifications:{user_id}")
+        await delete_cache_prefix("notifications")
         return {"message": "All notifications marked as read"}
       
     except HTTPException:

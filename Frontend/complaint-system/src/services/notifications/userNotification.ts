@@ -1,10 +1,14 @@
 import { notificationApi } from "../axios/apiServices";
 import type { Notification } from "../../types/notifications/notification";
+import type { PaginatedResponse } from "../../types/general/pagination";
+import type { PaginationQueryParams } from "../../types/general/pagination";
+import { buildQueryString } from "../../utils/buildQuery";
 
-export const getUserNotifications = async (): Promise<Notification[]> => {
+export const getUserNotifications = async (params?: PaginationQueryParams): Promise<PaginatedResponse<Notification>> => {
   try {
-    return await notificationApi.get("/")
-} catch (error) {
+    const queryString = buildQueryString(params || {});
+    return await notificationApi.get(`/?${queryString}`);
+  } catch (error) {
     console.error("Error fetching notifications:", error);
     throw error;
   }

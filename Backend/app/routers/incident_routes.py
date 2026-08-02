@@ -14,6 +14,7 @@ from app.constants.roles import UserRole
 from app.schemas.response_schema import ResponseCreateSchema, RejectComplaintSchema
 from app.models.user import User
 from app.utils.logger import logger
+from app.core.pagination_params import IncidentListParams, ListParams, PaginationParams
 
 router = APIRouter()
 
@@ -52,21 +53,21 @@ def parse_response_data(
     
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_incidents(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def get_incidents(params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await get_incidents_by_barangay(current_user.barangay_account.barangay_id, db)
+    return await get_incidents_by_barangay(current_user.barangay_account.barangay_id, db, params)
 
-@router.get("/archive/", status_code=status.HTTP_200_OK)
-async def get_all_incidents_endpoint(db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+@router.get("/archive", status_code=status.HTTP_200_OK)
+async def get_all_incidents_endpoint(params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
 
-    return await get_all_incidents(current_user, db)
+    return await get_all_incidents(current_user, db, params)
 
 @router.get("/{incident_id}", status_code=status.HTTP_200_OK)
 async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
@@ -78,13 +79,13 @@ async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db
     return await get_incident_by_id(incident_id, db)
     
 @router.get("/{incident_id}/complaints", status_code=status.HTTP_200_OK)
-async def get_incident_complaints(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def get_incident_complaints(incident_id: int, params: PaginationParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await get_complaints_by_incident(incident_id, db)
+    return await get_complaints_by_incident(incident_id, db, params)
 
 @router.patch("/{incident_id}/resolve", status_code=status.HTTP_200_OK)
 async def resolve_incident_complaints(

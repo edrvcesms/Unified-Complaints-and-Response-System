@@ -7,6 +7,12 @@ import { Pagination } from "../../barangay/components/Pagination";
 
 const FEEDBACKS_PER_PAGE = 6;
 
+interface PaginationQueryParams {
+  page: number;
+  page_size: number;
+  search?: string;
+}
+
 const getDisplayName = (firstName?: string | null, lastName?: string | null) => {
   const fullName = `${firstName || ""} ${lastName || ""}`.trim();
   return fullName;
@@ -51,11 +57,15 @@ const renderStars = (rating: number) => {
 
 export const FeedbacksPage: React.FC = () => {
   const { t } = useTranslation();
-  const { feedbacks, isLoading, error } = useFeedbacks();
+  const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: FEEDBACKS_PER_PAGE });
+  const { feedbacks, isLoading, error } = useFeedbacks({ page: metaData.page, page_size: metaData.page_size });
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalFeedbacks = feedbacks?.length || 0;
   const totalPages = Math.max(1, Math.ceil(totalFeedbacks / FEEDBACKS_PER_PAGE));
+  const handlePageChange = (page: number) => {
+    setMetaData((prev) => ({ ...prev, page }));
+  }
 
   useEffect(() => {
     setCurrentPage(1);
@@ -170,7 +180,7 @@ export const FeedbacksPage: React.FC = () => {
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                onPageChange={handlePageChange}
               />
             </div>
           )}

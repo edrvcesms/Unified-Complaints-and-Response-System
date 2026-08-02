@@ -1,11 +1,14 @@
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useAllIncidents } from "../../hooks/useIncidents";
-import { useComplaintsFilter } from "../../hooks/useFilter";
 import { SearchInput } from "./SearchInput";
 import { ErrorMessage } from "./ErrorMessage";
 import { PageHeader } from "./PageHeader";
 import { ComplaintStatusFilterDropdown, SortDropdown, DateFilter } from "../barangay/components/Filters";
 import { ArchivedIncidentsTable } from "./ArchivedIncidentsTable";
+import type { ComplaintStatusFilter } from "../../types/complaints/complaint";
+import type { SortOption } from "../../hooks/useFilter";
+import type { IncidentQueryParams } from "../../services/incidents/incidents";
 
 interface ArchivedIncidentsPageProps {
   title: string;
@@ -14,33 +17,66 @@ interface ArchivedIncidentsPageProps {
   emptyMessage?: string;
 }
 
+const SORT_MAP: Record<Exclude<SortOption, "none">, Pick<IncidentQueryParams, "sort" | "order">> = {
+  priority_high_to_low: { sort: "priority", order: "desc" },
+  priority_low_to_high: { sort: "priority", order: "asc" },
+  date_newest_first: { sort: "first_reported_at", order: "desc" },
+  date_oldest_first: { sort: "first_reported_at", order: "asc" },
+  date_newest_last: { sort: "last_reported_at", order: "desc" },
+  date_oldest_last: { sort: "last_reported_at", order: "asc" },
+};
+
+const PAGE_SIZE = 8;
+
 export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
   title,
   description,
   detailPathBase,
   emptyMessage,
 }) => {
-  const { incidents, isLoading, error: isError } = useAllIncidents();
   const { t } = useTranslation();
-  const {
-    search,
-    filterComplaintStatus,
-    sortBy,
-    dateFrom,
-    dateTo,
-    minDate,
-    maxDate,
-    currentPage,
-    paginated,
-    totalPages,
-    handleSearch,
-    handleComplaintStatusFilterChange,
-    handleSortChange,
-    handleDateFromChange,
-    handleDateToChange,
-    handleClearDateFilter,
-    setCurrentPage,
-  } = useComplaintsFilter(incidents || [], true);
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("none");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(id);
+  }, [search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterComplaintStatus, sortBy, dateFrom, dateTo]);
+
+  const queryParams: IncidentQueryParams = useMemo(() => {
+    const params: IncidentQueryParams = {
+      page: currentPage,
+      page_size: PAGE_SIZE,
+    };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (filterComplaintStatus !== "all") params.complaint_status = filterComplaintStatus;
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    if (sortBy !== "none") Object.assign(params, SORT_MAP[sortBy]);
+    return params;
+  }, [currentPage, debouncedSearch, filterComplaintStatus, dateFrom, dateTo, sortBy]);
+
+  const { incidents, pagination, isLoading, error: isError } = useAllIncidents(queryParams);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value);
+  const handleComplaintStatusFilterChange = (status: ComplaintStatusFilter) => setFilterComplaintStatus(status);
+  const handleSortChange = (sort: SortOption) => setSortBy(sort);
+  const handleDateFromChange = (e: React.ChangeEvent<HTMLInputElement>) => setDateFrom(e.target.value);
+  const handleDateToChange = (e: React.ChangeEvent<HTMLInputElement>) => setDateTo(e.target.value);
+  const handleClearDateFilter = () => {
+    setDateFrom("");
+    setDateTo("");
+  };
 
   if (isError) {
     return <ErrorMessage message={t('frontend.incidents.loadIncidentsFailed')} />;
@@ -71,8 +107,6 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
           <DateFilter
             dateFrom={dateFrom}
             dateTo={dateTo}
-            minDate={minDate}
-            maxDate={maxDate}
             onDateFromChange={handleDateFromChange}
             onDateToChange={handleDateToChange}
             onClear={handleClearDateFilter}
@@ -81,10 +115,10 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
       </div>
 
       <ArchivedIncidentsTable
-        incidents={paginated}
+        incidents={incidents}
         isLoading={isLoading}
-        currentPage={currentPage}
-        totalPages={totalPages}
+        currentPage={pagination?.page ?? 1}
+        totalPages={pagination?.total_pages ?? 1}
         onPageChange={setCurrentPage}
         detailPathBase={detailPathBase}
         emptyMessage={emptyMessage}

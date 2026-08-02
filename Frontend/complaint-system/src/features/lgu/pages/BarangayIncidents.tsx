@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import { useForwardedIncidents } from "../../../hooks/useIncidents";
 import { useBarangayById, useMarkBarangayViewed } from "../../../hooks/useBarangays";
@@ -8,15 +8,20 @@ import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { useTranslation } from "react-i18next";
 import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { ErrorMessage, BackButton } from "../../general";
+import type { IncidentQueryParams } from "../../../services/incidents/incidents";
 
 export const BarangayIncidents: React.FC = () => {
   const { barangayId } = useParams<{ barangayId: string }>();
   const navigate = useNavigate();
   const barangayIdNum = Number(barangayId);
+  const [metaData, setMetaData] = useState<IncidentQueryParams>({ page: 1, page_size: 10 });
 
-  const { incidents, isLoading: incidentsLoading, error: incidentsError } = useForwardedIncidents(barangayIdNum);
+  const { incidents, isLoading: incidentsLoading, error: incidentsError, pagination } = useForwardedIncidents(barangayIdNum, metaData);
   const { barangay, isLoading: barangayLoading } = useBarangayById(barangayIdNum);
   const markViewedMutation = useMarkBarangayViewed();
+  const handlePageChange = (page: number) => {
+    setMetaData((prev) => ({ ...prev, page }));
+  }
   const { t } = useTranslation();
 
   // Mark incidents as viewed when page loads
@@ -101,9 +106,9 @@ export const BarangayIncidents: React.FC = () => {
       <LguIncidentsTable
         incidents={paginated}
         isLoading={incidentsLoading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        currentPage={pagination?.page || 1}
+        totalPages={pagination?.total_pages || 1}
+        onPageChange={handlePageChange}
       />
     </div>
   );

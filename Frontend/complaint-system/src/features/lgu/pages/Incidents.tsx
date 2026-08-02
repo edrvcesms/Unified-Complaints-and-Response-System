@@ -5,10 +5,16 @@ import { SearchInput } from "../../general";
 import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { useTranslation } from "react-i18next";
 import { ErrorMessage, PageHeader } from "../../general";
+import type { IncidentQueryParams } from "../../../services/incidents/incidents";
+import { useState } from "react";
 
 export const LguIncidents: React.FC = () => {
-  const { incidents, isLoading, error: isError } = useAllForwardedIncidents();
+  const [metaData, setMetaData] = useState<IncidentQueryParams>({ page: 1, page_size: 10 });
+  const { incidents, isLoading, error: isError, pagination } = useAllForwardedIncidents(metaData);
   const { t } = useTranslation();
+  const handlePageChange = (page: number) => {
+    setMetaData((prev) => ({ ...prev, page }));
+  }
   const manageIncidents = (incidents || []).filter((incident) => {
     return Boolean(incident);
   });
@@ -82,9 +88,9 @@ export const LguIncidents: React.FC = () => {
       <LguIncidentsTable
         incidents={paginated}
         isLoading={isLoading}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        currentPage={pagination?.page ?? 1}
+        totalPages={pagination?.total_pages ?? 1}
+        onPageChange={handlePageChange}
       />
     </div>
   );

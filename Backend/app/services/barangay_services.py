@@ -21,6 +21,9 @@ from app.utils.logger import logger
 import asyncio
 from typing import List, Optional, Dict
 from datetime import datetime, timezone
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
 
 async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
@@ -89,42 +92,23 @@ async def get_barangay_by_id(barangay_id: int, db: AsyncSession) -> BarangayWith
 
 async def get_all_barangays(
     db: AsyncSession,
+    params: ListParams,
     user_id: Optional[int] = None,
-) -> List[BarangayWithUserData]:
+) -> PaginatedResponse[BarangayWithUserData]:
 
     try:
-        cached_barangays = await get_cache("all_barangays")
-
-        if cached_barangays:
-            logger.debug("Barangays from cache")
-            all_barangays = [
-                BarangayWithUserData.model_validate_json(b)
-                for b in cached_barangays
-            ]
-        else:
-            result = await db.execute(
-                select(Barangay)
-                .options(
-                    selectinload(Barangay.barangay_account)
-                )
-                .where(Barangay.barangay_account.has())
-            )
-
-            barangays = result.scalars().all()
-
-            all_barangays = [
-                BarangayWithUserData.model_validate(b, from_attributes=True)
-                for b in barangays
-            ]
-
-            await set_cache(
-                "all_barangays",
-                [b.model_dump_json() for b in all_barangays],
-                expiration=360
-            )
+        statement = (
+            select(Barangay)
+            .options(selectinload(Barangay.barangay_account))
+            .where(Barangay.barangay_account.has())
+            .order_by(Barangay.barangay_name.asc())
+        )
+        page = await paginate(db, statement, params, mapper=lambda item: BarangayWithUserData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[BarangayWithUserData].model_validate(page)
+        all_barangays = response.data
 
         if not all_barangays:
-            return []
+            return response
 
         barangay_ids = [b.id for b in all_barangays]
 
@@ -214,7 +198,7 @@ async def get_all_barangays(
             for b in all_barangays:
                 b.new_forwarded_incident_count = 0
 
-        return all_barangays
+        return response
 
     except HTTPException:
         raise

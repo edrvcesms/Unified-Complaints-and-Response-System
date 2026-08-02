@@ -2,12 +2,14 @@ import { getIncidents, getAllIncidents, getIncidentById, getComplaintsByIncident
 import { endorseIncidentToLgu } from "../services/endorsement/incidentEndorsement";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { fetchRejectionCategories } from "../services/category/rejectionCategory";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { queryClient } from "../main";
 import type { Incident } from "../types/complaints/incident";
 import type { Complaint } from "../types/complaints/complaint";
 import { markHearingAsSuccessful, rescheduleHearing } from "../services/incidents/incidents";
 import type { RejectionCategory } from "../types/general/category";
+import type { PaginatedResponse, PaginationQueryParams } from "../types/general/pagination";
+import type { IncidentQueryParams } from "../services/incidents/incidents";
 
 type ReviewIncidentPayload = {
   actions_taken: string;
@@ -15,27 +17,48 @@ type ReviewIncidentPayload = {
   signal?: AbortSignal;
 };
 
-export const useIncidents = () => {
-  const { data, isLoading, error } = useQuery<Incident[]>({
-    queryKey: ["incidents"],
-    queryFn: getIncidents,
+export const useIncidents = (params: IncidentQueryParams) => {
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Incident>>({
+    queryKey: ["incidents", params.page,
+      params.page_size,
+      params.search,
+      params.sort,
+      params.order,
+      params.severity_level,
+      params.date_from,
+      params.date_to,],
+    queryFn: () => getIncidents(params),
+    placeholderData: keepPreviousData,
   });
 
   return {
-    incidents: data,
+    incidents: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
   };
 };
 
-export const useAllIncidents = () => {
-  const { data, isLoading, error } = useQuery<Incident[]>({
-    queryKey: ["archiveIncidents"],
-    queryFn: getAllIncidents,
+export const useAllIncidents = (params: IncidentQueryParams) => {
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Incident>>({
+    queryKey: [
+      "archiveIncidents",
+      params.page,
+      params.page_size,
+      params.search,
+      params.sort,
+      params.order,
+      params.complaint_status,
+      params.date_from,
+      params.date_to,
+    ],
+    queryFn: () => getAllIncidents(params),
+    placeholderData: keepPreviousData,
   });
 
   return {
-    incidents: data,
+    incidents: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
   };
@@ -54,15 +77,16 @@ export const useIncidentDetails = (incidentId: number) => {
   };
 };
 
-export const useIncidentComplaints = (incidentId: number, enabled: boolean = false) => {
-  const { data, isLoading, error, refetch } = useQuery<Complaint[]>({
+export const useIncidentComplaints = (incidentId: number, enabled: boolean = false, params: PaginationQueryParams) => {
+  const { data, isLoading, error, refetch } = useQuery<PaginatedResponse<Complaint[]>>({
     queryKey: ["incidents", incidentId, "complaints"],
-    queryFn: () => getComplaintsByIncidentId(incidentId),
+    queryFn: () => getComplaintsByIncidentId(incidentId, params),
     enabled: enabled, 
   });
 
   return {
-    complaints: data,
+    complaints: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
     refetch,
@@ -151,28 +175,32 @@ export const useRejectionCategories = () => {
   };
 };
 
-export const useForwardedIncidents = (barangayId: number) => {
-  const { data, isLoading, error } = useQuery<Incident[]>({
-    queryKey: ["forwardedIncidents", barangayId],
-    queryFn: () => getForwardedIncidents(barangayId),
+export const useForwardedIncidents = (barangayId: number, params: PaginationQueryParams) => {
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Incident>>({
+    queryKey: ["forwardedIncidents", barangayId, params.page, params.page_size, params.search],
+    queryFn: () => getForwardedIncidents(barangayId, params),
+    placeholderData: keepPreviousData,
     enabled: !!barangayId,
   });
 
   return {
-    incidents: data,
+    incidents: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
   };
 };
 
-export const useAllForwardedIncidents = () => {
-  const { data, isLoading, error } = useQuery<Incident[]>({
-    queryKey: ["allForwardedIncidents"],
-    queryFn: getAllForwardedIncidents,
+export const useAllForwardedIncidents = (params: PaginationQueryParams) => {
+  const { data, isLoading, error } = useQuery<PaginatedResponse<Incident>>({
+    queryKey: ["allForwardedIncidents", params.page, params.page_size, params.search],
+    queryFn: () => getAllForwardedIncidents(params),
+    placeholderData: keepPreviousData,
   });
 
   return {
-    incidents: data,
+    incidents: data?.data ?? [],
+    pagination: data?.pagination,
     isLoading,
     error,
   };

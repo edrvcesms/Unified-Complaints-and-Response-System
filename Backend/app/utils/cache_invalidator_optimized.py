@@ -9,6 +9,7 @@ from typing import List, Optional, Set
 from datetime import datetime, timezone
 from app.utils.logger import logger
 from app.core.redis import redis_client
+from app.utils.caching import delete_cache_prefix
 
 
 class CacheInvalidator:
@@ -24,6 +25,7 @@ class CacheInvalidator:
         announcement_uploader_id: Optional[int] = None,
         announcement_id: Optional[int] = None,
         event_ids: Optional[List[int]] = None,
+        event_uploader_id: Optional[int] = None,
         response_id: Optional[int] = None,
         include_global: bool = False,
     ) -> None:
@@ -49,6 +51,10 @@ class CacheInvalidator:
                 tasks.add(f"event:{event_id}")
             tasks.add("events_cache")
             logger.info(f"Event caches added for event_ids: {event_ids}")
+            
+        if event_uploader_id:
+            tasks.add(f"my_events:uploader:{event_uploader_id}")
+            logger.info(f"My events cache added for uploader_id: {event_uploader_id}")
 
         if include_global:
             tasks.update({
@@ -128,6 +134,25 @@ class CacheInvalidator:
         else:
             logger.debug("No cache keys to invalidate")
 
+        # Paginated variants are deliberately namespaced by resource.  Remove
+        # all pages after a mutation, while leaving other resource caches intact.
+        resources: set[str] = set()
+        if complaint_ids:
+            resources.add("complaints")
+        if incident_ids or barangay_id or department_account_id:
+            resources.add("incidents")
+        if user_ids:
+            resources.add("users")
+        if announcement_id or announcement_uploader_id:
+            resources.add("announcements")
+        if event_ids:
+            resources.add("events")
+        if event_uploader_id:
+            resources.add("my_events")
+
+        for resource in resources:
+            await delete_cache_prefix(resource)
+
     @staticmethod
     async def _batch_delete_keys(keys: List[str]) -> None:
         """Delete multiple keys using Redis pipeline (atomic & fast).
@@ -187,6 +212,7 @@ async def invalidate_cache(
     announcement_uploader_id: Optional[int] = None,
     announcement_id: Optional[int] = None,
     event_ids: Optional[List[int]] = None,
+    event_uploader_id: Optional[int] = None,
     response_id: Optional[int] = None,
     include_global: bool = False,
 ) -> None:
@@ -201,5 +227,6 @@ async def invalidate_cache(
         announcement_id=announcement_id,
         event_ids=event_ids,
         response_id=response_id,
+        event_uploader_id=event_uploader_id,
         include_global=include_global,
     )

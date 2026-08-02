@@ -7,6 +7,7 @@ from app.services.announcement_services import create_announcement, get_all_anno
 from app.schemas.announcement_schema import AnnouncementCreate
 from app.dependencies.rate_limiter import limiter
 from app.models.user import User
+from app.core.pagination_params import ListParams
 
 router = APIRouter()
 
@@ -18,8 +19,8 @@ async def read_announcements(request: Request, db: AsyncSession = Depends(get_as
 
 @router.get("/my-announcements", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def read_my_announcements(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_announcement_by_uploader(current_user.id, db)
+async def read_my_announcements(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_announcement_by_uploader(current_user.id, db, params)
 
 @router.get("/{announcement_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

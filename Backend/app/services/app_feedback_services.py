@@ -14,7 +14,10 @@ from sqlalchemy.orm import selectinload, load_only
 from app.schemas.app_feedback_schema import AppFeedbackCreate, AppFeedbackResponse, PostIncidentFeedbackCreate, PostIncidentFeedbackResponse
 from datetime import datetime, timezone
 from app.utils.logger import logger
-from app.utils.caching import delete_cache
+from app.utils.caching import delete_cache, delete_cache_prefix
+from app.core.pagination import paginate
+from app.core.pagination_params import ListParams
+from app.core.pagination_response import PaginatedResponse
 async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db: AsyncSession) -> AppFeedbackResponse:
     
     try:
@@ -38,6 +41,7 @@ async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db:
         
         db.add(new_feedback)
         await db.commit()
+        await delete_cache_prefix("app_feedback")
         return AppFeedbackResponse.model_validate(new_feedback)
       
     except HTTPException: 
@@ -50,9 +54,9 @@ async def submit_app_feedback(feedbackData: AppFeedbackCreate, user_id: int, db:
           detail=f"Error submitting app feedback: {str(e)}"
       )
       
-async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
+async def get_all_app_feedback(db: AsyncSession, params: ListParams) -> PaginatedResponse[AppFeedbackResponse]:
     try:
-        result = await db.execute(
+        statement = (
             select(AppFeedback)
             .options(
                 selectinload(AppFeedback.user).load_only(
@@ -64,8 +68,8 @@ async def get_all_app_feedback(db: AsyncSession) -> list[AppFeedbackResponse]:
             )
             .order_by(AppFeedback.created_at.desc())
         )
-        feedbacks = result.scalars().all()
-        return [AppFeedbackResponse.model_validate(feedback) for feedback in feedbacks]
+        page = await paginate(db, statement, params, mapper=lambda item: AppFeedbackResponse.model_validate(item, from_attributes=True))
+        return PaginatedResponse[AppFeedbackResponse].model_validate(page)
     
     except HTTPException:
         raise
@@ -127,6 +131,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         db.add(new_feedback)
         
         await delete_cache(f"complaint:{feedbackData.complaint_id}")
+        await delete_cache_prefix("post_incident_feedback")
         await db.commit()
         
         return JSONResponse(
@@ -144,9 +149,9 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
             detail=f"Error submitting post-incident feedback: {str(e)}"
         )
         
-async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> list[PostIncidentFeedbackResponse]:
+async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[PostIncidentFeedbackResponse]:
     try:
-        result = await db.execute(
+        statement = (
             select(PostIncidentFeedback)
             .options(
                 selectinload(PostIncidentFeedback.user).load_only(
@@ -163,8 +168,8 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
             .where(PostIncidentFeedback.incident_id == incident_id)
             .order_by(PostIncidentFeedback.created_at.desc())
         )
-        feedbacks = result.scalars().all()
-        return [PostIncidentFeedbackResponse.model_validate(feedback) for feedback in feedbacks]
+        page = await paginate(db, statement, params, mapper=lambda item: PostIncidentFeedbackResponse.model_validate(item, from_attributes=True))
+        return PaginatedResponse[PostIncidentFeedbackResponse].model_validate(page)
     
     except HTTPException:
         raise
@@ -176,9 +181,9 @@ async def get_all_post_incident_feedback(incident_id: int, db: AsyncSession) -> 
             detail=f"Error retrieving post-incident feedback: {str(e)}"
         )
         
-async def get_resolver_feedbacks(user_id: int, db: AsyncSession) -> list[PostIncidentFeedbackResponse]:
+async def get_resolver_feedbacks(user_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[PostIncidentFeedbackResponse]:
     try:
-        result = await db.execute(
+        statement = (
             select(PostIncidentFeedback)
             .options(
                 selectinload(PostIncidentFeedback.user).load_only(
@@ -196,8 +201,8 @@ async def get_resolver_feedbacks(user_id: int, db: AsyncSession) -> list[PostInc
             .where(IncidentModel.resolver_id == user_id)
             .order_by(PostIncidentFeedback.created_at.desc())
         )
-        feedbacks = result.scalars().all()
-        return [PostIncidentFeedbackResponse.model_validate(feedback) for feedback in feedbacks]
+        page = await paginate(db, statement, params, mapper=lambda item: PostIncidentFeedbackResponse.model_validate(item, from_attributes=True))
+        return PaginatedResponse[PostIncidentFeedbackResponse].model_validate(page)
     
     except HTTPException:
         raise

@@ -13,6 +13,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+from app.core.redis import redis_client as _redis
 
 from app.domain.entities.complaint_cluster import ComplaintClusterEntity
 from app.domain.entities.incident import IncidentEntity
@@ -22,6 +23,8 @@ from app.domain.interfaces.i_incident_verifier import IIncidentVerifier
 from app.domain.interfaces.i_vector_repository import IVectorRepository
 from app.domain.value_objects.severity_level import SeverityLevel
 from app.utils.embedding_translate import translate_to_english
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +78,9 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     d_lam = math.radians(lon2 - lon1)
     a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lam / 2) ** 2
     return R * 2 * math.asin(math.sqrt(a))
+
+def _cluster_lock_key(barangay_id: int, category_id: int) -> str:
+    return f"cluster_lock:barangay:{barangay_id}:category:{category_id}"
 
 
 class ClusterComplaintUseCase:
@@ -137,263 +143,296 @@ class ClusterComplaintUseCase:
         logger.info(f"  Translated  : '{translated_description[:120]}'")
         embedding = await self._embedding_svc.generate(translated_description)
         created_at_unix = data.created_at.timestamp()
+        
+        lock_key = _cluster_lock_key(data.barangay_id, data.category_id)
+        logger.info(f"Acquiring Redis lock for clustering: {lock_key}")
+        lock = _redis.lock(lock_key, timeout=20, blocking_timeout=15)
+        logger.info(f"Waiting to acquire lock for clustering: {lock_key}")
+        await lock.acquire()
+        logger.info(f"Acquired Redis lock for clustering: {lock_key}")
+        
+        try:
+            # Step 1 — Query Postgres for active incidents in same barangay+category+window
+            active_incidents = await self._incident_repo.get_active_incidents_in_window(
+                barangay_id=data.barangay_id,
+                category_id=data.category_id,
+                time_window_hours=data.category_time_window_hours
+            )
+            
+            logger.info(f"Found {len(active_incidents)} active incident(s) in window")
 
-        # Step 1 — Query Postgres for active incidents in same barangay+category+window
-        active_incidents = await self._incident_repo.get_active_incidents_in_window(
-            barangay_id=data.barangay_id,
-            category_id=data.category_id,
-            time_window_hours=data.category_time_window_hours,
-        )
-        logger.info(f"Found {len(active_incidents)} active incident(s) in window")
+            # Step 2 — Score each candidate using hybrid semantic + spatial scoring
+            best_incident = None
+            best_hybrid_score = 0.0
+            best_semantic_score = 0.0
 
-        # Step 2 — Score each candidate using hybrid semantic + spatial scoring
-        best_incident = None
-        best_hybrid_score = 0.0
-        best_semantic_score = 0.0
+            for incident in active_incidents:
 
-        for incident in active_incidents:
-
-            # --- Spatial gate ---
-            if incident.latitude is None or incident.longitude is None:
-                logger.warning(
-                    f"Incident {incident.id} has no location — skipping spatial gate, "
-                    f"falling back to semantic-only"
-                )
-                spatial_score = 0.0
-                distance_km = None
-            else:
-                distance_km = _haversine_km(
-                    data.latitude, data.longitude,
-                    incident.latitude, incident.longitude,
-                )
-                if distance_km > data.category_radius_km:
-                    logger.info(
-                        f"DISQUALIFIED incident_id={incident.id}: "
-                        f"distance={distance_km:.4f} km > radius={data.category_radius_km:.2f} km"
-                    )
-                    continue  # FIX: skip this incident entirely, do not score it
-
-                spatial_score = 1.0 - (distance_km / data.category_radius_km)
-
-            # --- Semantic score with retry ---
-            incident_vector = None
-            for attempt in range(_VECTOR_FETCH_RETRIES):
-                incident_vector = await self._vector_repo.fetch_incident_vector(
-                    incident_id=incident.id,
-                )
-                if incident_vector:
-                    break
-                if attempt < _VECTOR_FETCH_RETRIES - 1:
+                # --- Spatial gate ---
+                if incident.latitude is None or incident.longitude is None:
                     logger.warning(
-                        f"Vector not found for incident_id={incident.id}, "
-                        f"retrying in {_VECTOR_FETCH_RETRY_DELAY_S}s "
-                        f"(attempt {attempt + 1}/{_VECTOR_FETCH_RETRIES})..."
+                        f"Incident {incident.id} has no location — skipping spatial gate, "
+                        f"falling back to semantic-only"
                     )
-                    await asyncio.sleep(_VECTOR_FETCH_RETRY_DELAY_S)
+                    spatial_score = 0.0
+                    distance_km = None
+                else:
+                    distance_km = _haversine_km(
+                        data.latitude, data.longitude,
+                        incident.latitude, incident.longitude,
+                    )
+                    if distance_km > data.category_radius_km:
+                        logger.info(
+                            f"DISQUALIFIED incident_id={incident.id}: "
+                            f"distance={distance_km:.4f} km > radius={data.category_radius_km:.2f} km"
+                        )
+                        continue  # FIX: skip this incident entirely, do not score it
 
-            if not incident_vector:
-                logger.warning(
-                    f"No vector found for incident_id={incident.id} "
-                    f"after {_VECTOR_FETCH_RETRIES} attempts, skipping"
-                )
-                continue
+                    spatial_score = 1.0 - (distance_km / data.category_radius_km)
 
-            semantic_score = self._vector_repo.compute_similarity(embedding, incident_vector)
+                # --- Semantic score with retry ---
+                incident_vector = None
+                for attempt in range(_VECTOR_FETCH_RETRIES):
+                    incident_vector = await self._vector_repo.fetch_incident_vector(
+                        incident_id=incident.id,
+                    )
+                    if incident_vector:
+                        break
+                    if attempt < _VECTOR_FETCH_RETRIES - 1:
+                        logger.warning(
+                            f"Vector not found for incident_id={incident.id}, "
+                            f"retrying in {_VECTOR_FETCH_RETRY_DELAY_S}s "
+                            f"(attempt {attempt + 1}/{_VECTOR_FETCH_RETRIES})..."
+                        )
+                        await asyncio.sleep(_VECTOR_FETCH_RETRY_DELAY_S)
 
-            # --- Hybrid score ---
-            hybrid_score = (_SEMANTIC_WEIGHT * semantic_score) + (_SPATIAL_WEIGHT * spatial_score)
+                if not incident_vector:
+                    logger.warning(
+                        f"No vector found for incident_id={incident.id} "
+                        f"after {_VECTOR_FETCH_RETRIES} attempts, skipping"
+                    )
+                    continue
 
-            logger.info(
-                f"Hybrid score for incident_id={incident.id}:\n"
-                f"  Complaint   : '{data.description[:100]}'\n"
-                f"  Incident    : '{incident.description[:100]}'\n"
-                f"  Semantic    : {semantic_score:.4f} (×{_SEMANTIC_WEIGHT})\n"
-                f"  Spatial     : {spatial_score:.4f} (×{_SPATIAL_WEIGHT})"
-                + (f" [dist={distance_km:.4f} km]" if distance_km is not None else " [no location]") + "\n"
-                f"  Hybrid      : {hybrid_score:.4f} "
-                f"(threshold={data.similarity_threshold:.2f}, high={data.similarity_threshold + 0.10:.2f})"
-            )
+                semantic_score = self._vector_repo.compute_similarity(embedding, incident_vector)
 
-            if hybrid_score > best_hybrid_score:
-                best_hybrid_score = hybrid_score
-                best_semantic_score = semantic_score
-                best_incident = incident
+                # --- Hybrid score ---
+                hybrid_score = (_SEMANTIC_WEIGHT * semantic_score) + (_SPATIAL_WEIGHT * spatial_score)
 
-        if best_incident:
-            logger.info(
-                f"Best candidate → incident_id={best_incident.id}, "
-                f"hybrid_score={best_hybrid_score:.4f}"
-            )
-        else:
-            logger.info("No candidate passed spatial gate or scoring — will create new incident")
-
-        # Step 3 — Confidence band decision (driven by hybrid score)
-        # is_match and is_emergency are initialised here.
-        # is_emergency is only overwritten by LLM calls below — never reset to False after being set.
-        high_confidence_threshold = data.similarity_threshold + 0.10
-        ambiguous_threshold = data.similarity_threshold
-        is_match = False
-        is_emergency = False
-
-        if best_incident is not None:
-            if best_hybrid_score >= high_confidence_threshold:
                 logger.info(
-                    f"HIGH confidence (hybrid={best_hybrid_score:.4f} >= {high_confidence_threshold:.2f}) — calling LLM\n"
-                    f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
-                    f"  B (new complaint): '{data.description[:120]}'"
-                )
-                # FIX: run is_same_incident and detect_emergency concurrently
-                verification, emergency_check = await asyncio.gather(
-                    self._verifier.is_same_incident(
-                        complaint_a=best_incident.description,
-                        complaint_b=data.description,
-                    ),
-                    self._verifier.detect_emergency(complaint=data.description),
-                )
-                is_match = verification.is_same_incident
-                is_emergency = emergency_check.is_emergency
-                logger.info(
-                    f"LLM verdict (HIGH): "
-                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
-                    f"Emergency: {is_emergency}"
+                    f"Hybrid score for incident_id={incident.id}:\n"
+                    f"  Complaint   : '{data.description[:100]}'\n"
+                    f"  Incident    : '{incident.description[:100]}'\n"
+                    f"  Semantic    : {semantic_score:.4f} (×{_SEMANTIC_WEIGHT})\n"
+                    f"  Spatial     : {spatial_score:.4f} (×{_SPATIAL_WEIGHT})"
+                    + (f" [dist={distance_km:.4f} km]" if distance_km is not None else " [no location]") + "\n"
+                    f"  Hybrid      : {hybrid_score:.4f} "
+                    f"(threshold={data.similarity_threshold:.2f}, high={data.similarity_threshold + 0.10:.2f})"
                 )
 
-            elif best_hybrid_score >= ambiguous_threshold:
+                if hybrid_score > best_hybrid_score:
+                    best_hybrid_score = hybrid_score
+                    best_semantic_score = semantic_score
+                    best_incident = incident
+
+            if best_incident:
                 logger.info(
-                    f"AMBIGUOUS (hybrid={best_hybrid_score:.4f} >= {ambiguous_threshold:.2f}) — calling LLM\n"
-                    f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
-                    f"  B (new complaint): '{data.description[:120]}'"
+                    f"Best candidate → incident_id={best_incident.id}, "
+                    f"hybrid_score={best_hybrid_score:.4f}"
                 )
-                # FIX: run is_same_incident and detect_emergency concurrently
-                verification, emergency_check = await asyncio.gather(
-                    self._verifier.is_same_incident(
-                        complaint_a=best_incident.description,
-                        complaint_b=data.description,
-                    ),
-                    self._verifier.detect_emergency(complaint=data.description),
-                )
-                is_match = verification.is_same_incident
-                is_emergency = emergency_check.is_emergency
-                logger.info(
-                    f"LLM verdict (AMBIGUOUS): "
-                    f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
-                    f"Emergency: {is_emergency}"
-                )
+            else:
+                logger.info("No candidate passed spatial gate or scoring — will create new incident")
+
+            # Step 3 — Confidence band decision (driven by hybrid score)
+            # is_match and is_emergency are initialised here.
+            # is_emergency is only overwritten by LLM calls below — never reset to False after being set.
+            high_confidence_threshold = data.similarity_threshold + 0.10
+            ambiguous_threshold = data.similarity_threshold
+            is_match = False
+            is_emergency = False
+
+            if best_incident is not None:
+                if best_hybrid_score >= high_confidence_threshold:
+                    logger.info(
+                        f"HIGH confidence (hybrid={best_hybrid_score:.4f} >= {high_confidence_threshold:.2f}) — calling LLM\n"
+                        f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
+                        f"  B (new complaint): '{data.description[:120]}'"
+                    )
+                    # FIX: run is_same_incident and detect_emergency concurrently
+                    verification, emergency_check = await asyncio.gather(
+                        self._verifier.is_same_incident(
+                            complaint_a=best_incident.description,
+                            complaint_b=data.description,
+                        ),
+                        self._verifier.detect_emergency(complaint=data.description),
+                    )
+                    is_match = verification.is_same_incident
+                    is_emergency = emergency_check.is_emergency
+                    logger.info(
+                        f"LLM verdict (HIGH): "
+                        f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
+                        f"Emergency: {is_emergency}"
+                    )
+
+                elif best_hybrid_score >= ambiguous_threshold:
+                    logger.info(
+                        f"AMBIGUOUS (hybrid={best_hybrid_score:.4f} >= {ambiguous_threshold:.2f}) — calling LLM\n"
+                        f"  A (incident {best_incident.id}): '{best_incident.description[:120]}'\n"
+                        f"  B (new complaint): '{data.description[:120]}'"
+                    )
+                    # FIX: run is_same_incident and detect_emergency concurrently
+                    verification, emergency_check = await asyncio.gather(
+                        self._verifier.is_same_incident(
+                            complaint_a=best_incident.description,
+                            complaint_b=data.description,
+                        ),
+                        self._verifier.detect_emergency(complaint=data.description),
+                    )
+                    is_match = verification.is_same_incident
+                    is_emergency = emergency_check.is_emergency
+                    logger.info(
+                        f"LLM verdict (AMBIGUOUS): "
+                        f"{'✓ MERGE → incident_id=' + str(best_incident.id) if is_match else '✗ NEW INCIDENT'} | "
+                        f"Emergency: {is_emergency}"
+                    )
+
+                else:
+                    # Below threshold — no merge possible but still detect emergency
+                    logger.info(
+                        f"AUTO-REJECT: hybrid={best_hybrid_score:.4f} < threshold={ambiguous_threshold:.2f} "
+                        f"— skipping merge, running standalone emergency detection"
+                    )
+                    emergency_check = await self._verifier.detect_emergency(
+                        complaint=data.description,
+                    )
+                    is_emergency = emergency_check.is_emergency
+                    logger.info(
+                        f"Emergency detection (AUTO-REJECT path): is_emergency={is_emergency} "
+                        f"| complaint='{data.description[:120]}'"
+                    )
+
+                logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
 
             else:
-                # Below threshold — no merge possible but still detect emergency
+                # No candidates at all — still detect emergency before creating new incident
                 logger.info(
-                    f"AUTO-REJECT: hybrid={best_hybrid_score:.4f} < threshold={ambiguous_threshold:.2f} "
-                    f"— skipping merge, running standalone emergency detection"
+                    f"No candidates — running standalone emergency detection "
+                    f"| complaint='{data.description[:120]}'"
                 )
                 emergency_check = await self._verifier.detect_emergency(
                     complaint=data.description,
                 )
                 is_emergency = emergency_check.is_emergency
                 logger.info(
-                    f"Emergency detection (AUTO-REJECT path): is_emergency={is_emergency} "
+                    f"Emergency detection (NO CANDIDATES path): is_emergency={is_emergency} "
                     f"| complaint='{data.description[:120]}'"
                 )
 
-            logger.info(f"LLM decision: {'MERGE' if is_match else 'NEW INCIDENT'}")
+            # Initialize default values
+            existing_status = "submitted"
+            message = "A new incident has been created for your complaint."
 
-        else:
-            # No candidates at all — still detect emergency before creating new incident
-            logger.info(
-                f"No candidates — running standalone emergency detection "
-                f"| complaint='{data.description[:120]}'"
-            )
-            emergency_check = await self._verifier.detect_emergency(
-                complaint=data.description,
-            )
-            is_emergency = emergency_check.is_emergency
-            logger.info(
-                f"Emergency detection (NO CANDIDATES path): is_emergency={is_emergency} "
-                f"| complaint='{data.description[:120]}'"
-            )
+            if is_match:
+                # Check existing complaint statuses before merging
+                statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)
+                logger.info(f"Existing incident {best_incident.id} has complaint statuses: {statuses}")
 
-        # Initialize default values
-        existing_status = "submitted"
-        message = "A new incident has been created for your complaint."
+                if "under_review" in statuses:
+                    existing_status = "under_review"
+                    message = "This incident is already under review by the barangay admin."
+                elif "forwarded_to_lgu" in statuses:
+                    existing_status = "forwarded_to_lgu"
+                    message = "This incident has already been forwarded to the LGU for action."
+                elif "forwarded_to_department" in statuses:
+                    existing_status = "forwarded_to_department"
+                    message = "This incident has already been forwarded to the department for action."
+                elif "resolved" in statuses:
+                    existing_status = "resolved"
+                    message = "This incident has already been resolved."
+                elif len(statuses) > 0 and all(s == "submitted" for s in statuses):
+                    existing_status = "submitted"
+                    message = "Similar complaints have already been submitted for this incident."
+                else:
+                    existing_status = statuses[0] if statuses else "submitted"
+                    message = "This complaint has been merged with an existing incident."
 
-        if is_match:
-            # Check existing complaint statuses before merging
-            statuses = await self._incident_repo.get_incident_complaint_statuses(best_incident.id)
-            logger.info(f"Existing incident {best_incident.id} has complaint statuses: {statuses}")
-
-            if "under_review" in statuses:
-                existing_status = "under_review"
-                message = "This incident is already under review by the barangay admin."
-            elif "forwarded_to_lgu" in statuses:
-                existing_status = "forwarded_to_lgu"
-                message = "This incident has already been forwarded to the LGU for action."
-            elif "forwarded_to_department" in statuses:
-                existing_status = "forwarded_to_department"
-                message = "This incident has already been forwarded to the department for action."
-            elif "resolved" in statuses:
-                existing_status = "resolved"
-                message = "This incident has already been resolved."
-            elif len(statuses) > 0 and all(s == "submitted" for s in statuses):
-                existing_status = "submitted"
-                message = "Similar complaints have already been submitted for this incident."
-            else:
-                existing_status = statuses[0] if statuses else "submitted"
-                message = "This complaint has been merged with an existing incident."
-
-            incident, similarity_score = await self._merge_into_existing(
-                data=data,
-                incident_id=best_incident.id,
-                similarity_score=best_hybrid_score,
-            )
-
-            # Step 4a — Upsert merged complaint vector with resolved incident_id
-            try:
-                await self._vector_repo.upsert(
-                    complaint_id=data.complaint_id,
-                    embedding=embedding,
-                    barangay_id=data.barangay_id,
-                    category_id=data.category_id,
-                    incident_id=incident.id,
-                    status="ACTIVE",
-                    created_at_unix=created_at_unix,
+                incident, similarity_score = await self._merge_into_existing(
+                    data=data,
+                    incident_id=best_incident.id,
+                    similarity_score=best_hybrid_score,
                 )
+                
+                await self._incident_repo.change_emergency_status(incident.id, is_emergency)
                 logger.info(
-                    f"Upserted vector for merged complaint_id={data.complaint_id} "
-                    f"linked to incident_id={incident.id}"
+                    f"Updated emergency status for incident_id={incident.id} to {is_emergency}"
                 )
-            except Exception as e:
-                logger.exception(
-                    f"Failed to upsert vector for complaint_id={data.complaint_id} "
-                    f"after merging into incident_id={incident.id}: {str(e)}"
-                )
+                ## will change the severity score of the incident if the new complaint is an emergency and the incident is not already an emergency
+                if is_emergency:
+                    if not incident.is_emergency:
+                        incident.change_emergency_status(True)
+                        # Recalculate severity score to ensure it's at least HIGH (6.0)
+                        new_severity_score = max(incident.severity_score, 6.0)
+                        incident.update_severity(new_severity_score)
+                        await self._incident_repo.update(incident)
+                        logger.info(
+                            f"Incident {incident.id} upgraded to emergency. "
+                            f"New severity score: {incident.severity_score}, "
+                            f"severity level: {incident.severity_level.value}"
+                        )
+                    
+                
 
-        else:
-            # Step 4b — Create new incident AND upsert seed vector immediately.
-            # is_emergency is passed here — only new incidents get flagged.
-            # Merged complaints rely on the existing incident's is_emergency flag,
-            # which was set when that incident was first created.
+                # Step 4a — Upsert merged complaint vector with resolved incident_id
+                try:
+                    await self._vector_repo.upsert(
+                        complaint_id=data.complaint_id,
+                        embedding=embedding,
+                        barangay_id=data.barangay_id,
+                        category_id=data.category_id,
+                        incident_id=incident.id,
+                        status="ACTIVE",
+                        created_at_unix=created_at_unix,
+                    )
+                    logger.info(
+                        f"Upserted vector for merged complaint_id={data.complaint_id} "
+                        f"linked to incident_id={incident.id}"
+                    )
+                except Exception as e:
+                    logger.exception(
+                        f"Failed to upsert vector for complaint_id={data.complaint_id} "
+                        f"after merging into incident_id={incident.id}: {str(e)}"
+                    )
+
+            else:
+                # Step 4b — Create new incident AND upsert seed vector immediately.
+                # is_emergency is passed here — only new incidents get flagged.
+                # Merged complaints rely on the existing incident's is_emergency flag,
+                # which was set when that incident was first created.
+                logger.info(
+                    f"Creating new incident | "
+                    f"complaint_id={data.complaint_id} | "
+                    f"is_emergency={is_emergency}"
+                )
+                incident = await self._create_new_incident(
+                    data=data,
+                    embedding=embedding,
+                    created_at_unix=created_at_unix,
+                    is_emergency=is_emergency,
+                )
+                similarity_score = 1.0
+
             logger.info(
-                f"Creating new incident | "
-                f"complaint_id={data.complaint_id} | "
-                f"is_emergency={is_emergency}"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Clustering complete for complaint_id={data.complaint_id}\n"
+                f"  Result      : {'MERGED' if is_match else 'NEW INCIDENT'}\n"
+                f"  Incident ID : {incident.id}\n"
+                f"  Score       : {similarity_score:.4f}\n"
+                f"  Emergency   : {is_emergency}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             )
-            incident = await self._create_new_incident(
-                data=data,
-                embedding=embedding,
-                created_at_unix=created_at_unix,
-                is_emergency=is_emergency,
-            )
-            similarity_score = 1.0
-
-        logger.info(
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Clustering complete for complaint_id={data.complaint_id}\n"
-            f"  Result      : {'MERGED' if is_match else 'NEW INCIDENT'}\n"
-            f"  Incident ID : {incident.id}\n"
-            f"  Score       : {similarity_score:.4f}\n"
-            f"  Emergency   : {is_emergency}\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        )
+        
+        finally:
+            await lock.release()
+            logger.info(f"Released Redis lock for clustering: {lock_key}")
 
         return ClusterComplaintResult(
             incident_id=incident.id,
@@ -500,3 +539,9 @@ class ClusterComplaintUseCase:
             f"— seed vector upserted immediately | emergency={is_emergency}"
         )
         return created
+    
+    async def change_emergency_status(self, incident_id: int, is_emergency: bool) -> None:
+        """
+        Change the emergency status of an incident if new complaints are an emergency.
+        """
+        await self._incident_repo.change_emergency_status(incident_id, is_emergency)

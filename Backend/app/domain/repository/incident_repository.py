@@ -197,3 +197,19 @@ class IncidentRepository(IIncidentRepository):
         )
         statuses = result.scalars().all()
         return list(set(statuses))  # Return unique statuses
+    
+        
+    async def change_emergency_status(self, incident_id: int, is_emergency: bool) -> None:
+        """
+        Change the emergency status of an incident.
+        Only upgrades to emergency — never downgrades an incident that's
+        already flagged, since a later non-emergency complaint merging in
+        shouldn't erase an earlier confirmed emergency.
+        """
+        incident = await self.get_by_id(incident_id)
+        if not incident:
+            raise ValueError(f"Incident {incident_id} not found")
+
+        if is_emergency and not incident.is_emergency:
+            incident.change_emergency_status(True) 
+            await self.update(incident)         

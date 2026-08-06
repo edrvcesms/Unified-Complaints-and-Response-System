@@ -37,7 +37,8 @@ class IncidentEntity:
         self.last_reported_at = datetime.utcnow()
         self.has_new_complaints = True
         self.new_complaint_count += 1
-
+    def change_emergency_status(self, is_emergency: bool) -> None:
+        self.is_emergency = is_emergency
     def update_severity(self, new_score: float) -> None:
         self.severity_score = round(min(max(new_score, 1.0), 10.0), 2)
         self.severity_level = SeverityLevel.from_score(self.severity_score)

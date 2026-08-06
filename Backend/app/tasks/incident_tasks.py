@@ -177,6 +177,7 @@ def cluster_complaint_task(self, complaint_data: dict):
             hearing_email_payload = None
             hearing_notification_payload = None
             rejection_warning_notification_payload = None
+            is_emergency = result.is_emergency
 
             if result.is_new_incident:
                 complaint_for_barangay_notification = (
@@ -187,7 +188,6 @@ def cluster_complaint_task(self, complaint_data: dict):
                     )
                 ).scalars().first()
                 
-                is_emergency = result.is_emergency
                 logger.info(f"New incident created with ID {result.incident_id} for complaint {cluster_data.complaint_id}. Emergency status: {is_emergency}")
 
                 if (
@@ -206,6 +206,8 @@ def cluster_complaint_task(self, complaint_data: dict):
                     }
 
             if not result.is_new_incident and result.existing_incident_status:
+                
+                logger.info(f"Existing incident {result.incident_id} updated for complaint {cluster_data.complaint_id}. Emergency status: {is_emergency}")
 
                 complaint_result = await db.execute(
                     select(Complaint)
@@ -223,12 +225,12 @@ def cluster_complaint_task(self, complaint_data: dict):
 
                     barangay_notification_payload = {
                         "user_id": complaint.barangay_account.user_id,
-                        "title": "Incident Update",
+                        "title": "Emergency!" if is_emergency else "Update on Complaint",
                         "message": f"A new complaint has been submitted similar to an existing incident.",
                         "complaint_id": complaint.id,
                         "incident_id": result.incident_id,
-                        "notification_type": "info",
-                        "event": "new_complaint",
+                        "notification_type": "info" if not is_emergency else "emergency",
+                        "event": "new_complaint" if not is_emergency else "emergency",
                     }
 
                 if complaint:

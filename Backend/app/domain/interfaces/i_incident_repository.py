@@ -57,3 +57,11 @@ class IIncidentRepository(ABC):
         Used to check if the incident is already under review.
         """
         ...  
+        
+    @abstractmethod
+    async def change_emergency_status(self, incident_id: int, is_emergency: bool) -> None:
+        """
+        Change the emergency status of an incident.
+        """
+        ...
+        

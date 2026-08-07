@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.utils.logger import logger
-from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
+from app.schemas.user_auth_schema import LoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
 from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token, is_token_revoked, revoke_token_jti
 from datetime import datetime, timezone
@@ -22,7 +22,8 @@ from app.services.department_services import get_department_account
 from app.services.barangay_services import get_barangay_account
 from app.services.sse_manager import sse_manager
 from app.utils.attachments import validate_upload_files
-
+from app.core.clerk.clerk_client import verify_clerk_token
+from app.core.clerk.clerk_users import get_clerk_user_email, get_or_create_user_from_clerk
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
     
@@ -501,3 +502,30 @@ async def logout_user(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during logout. Please try again later."
         )
+        
+        
+
+
+async def login_with_google(clerk_token: str, db: AsyncSession) -> LoginResponse:
+    # Verify Clerk JWT
+    claims = verify_clerk_token(clerk_token)
+    clerk_user_id = claims["sub"]
+
+    # Get email from Clerk
+    email = get_clerk_user_email(clerk_user_id)
+
+    # Find or create local user
+    user = await get_or_create_user_from_clerk(
+        db=db,
+        clerk_user_id=clerk_user_id,
+        email=email,
+    )
+
+    # Generate JWTs
+    access_token = create_access_token(data={"user_id": user.id})
+    refresh_token = create_refresh_token(data={"user_id": user.id})
+
+    return LoginResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )

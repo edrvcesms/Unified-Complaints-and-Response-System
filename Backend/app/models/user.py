@@ -39,7 +39,7 @@ class User(Base):
     can_submit_complaints = Column(Boolean, default=True)
     reject_counter = Column(Integer, default=0)
     is_restricted_until = Column(DateTime(timezone=True), nullable=True)
-
+    clerk_user_id = Column(String(255), unique=True, nullable=True)
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
     events = relationship("Event", back_populates="uploader", cascade="all, delete-orphan")
     department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)

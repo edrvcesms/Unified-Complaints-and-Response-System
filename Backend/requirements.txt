@@ -28,3 +28,5 @@ exponent-server-sdk
 pdfplumber
 numpy
 shapely
+clerk-backend-api
+pyjwt 

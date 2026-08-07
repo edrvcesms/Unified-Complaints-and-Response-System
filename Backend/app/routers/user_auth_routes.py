@@ -3,8 +3,8 @@ from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from app.dependencies.db_dependency import   get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.logger import logger
-from app.schemas.user_auth_schema import LoginData, RegisterData, OTPVerificationData, ResendOtpData
-from app.services.user_auth_services import logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code
+from app.schemas.user_auth_schema import ClerkLoginRequest, LoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
+from app.services.user_auth_services import login_with_google, logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code
 from slowapi.errors import RateLimitExceeded
 from app.utils.turnstile import verify_turnstile
 from fastapi.requests import Request
@@ -55,3 +55,11 @@ async def logout(request: Request, db: AsyncSession = Depends(get_async_db)):
 @limiter.limit("100/minute")
 async def refresh_token(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await refresh_access_token(request, db)
+
+
+
+@router.post("/login/google", response_model=LoginResponse)
+async def login_google(payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
+    
+    return await login_with_google(payload.clerk_token, db)
+ 

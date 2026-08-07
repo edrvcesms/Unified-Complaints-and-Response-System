@@ -22,5 +22,12 @@ class LoginData(UserAuthModel):
     password: str
     turnstile_token: str | None = None
 
-
+class ClerkLoginRequest(BaseModel):
+    clerk_token: str
+ 
+ 
+class LoginResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
 

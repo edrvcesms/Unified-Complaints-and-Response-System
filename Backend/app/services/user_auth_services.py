@@ -165,6 +165,54 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             detail="An error occurred during OTP verification. Please try again later."
         )
         
+async def upload_id_images(user_id: int, id_type: str, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
+    try:
+        
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+        
+        if not user:
+            logger.warning(f"ID image upload attempt for non-existent user_id: {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+            
+        if not front_id or not back_id or not selfie_with_id:
+            logger.warning(f"ID image upload failed for user_id: {user_id}: Missing ID images.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="All ID images (front, back, selfie with ID) are required."
+            )
+        images = [front_id, back_id, selfie_with_id]
+        await validate_upload_files(images)
+        image_urls = await upload_multiple_files_to_cloudinary(images, folder="ucrs/id_verification")
+        logger.info(f"ID images uploaded to Cloudinary for {user.email}: {image_urls}")
+        
+        user.id_type = id_type
+        user.front_id = image_urls[0]
+        user.back_id = image_urls[1]
+        user.selfie_with_id = image_urls[2]
+        
+        await db.commit()
+        await db.refresh(user)
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "ID images uploaded successfully."}
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error during ID image upload for id_type: {id_type}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during ID image upload. Please try again later."
+        )
+        
 async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
     try:
         await delete_cache(f"otp:{email.email}")

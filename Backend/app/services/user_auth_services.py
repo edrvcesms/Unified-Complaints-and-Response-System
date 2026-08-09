@@ -165,7 +165,7 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             detail="An error occurred during OTP verification. Please try again later."
         )
         
-async def upload_id_images(user_id: int, id_type: str, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
+async def upload_id_images(user_id: int, id_type: str, id_number: str, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
     try:
         
         result = await db.execute(select(User).where(User.id == user_id))
@@ -177,7 +177,14 @@ async def upload_id_images(user_id: int, id_type: str, front_id: UploadFile, bac
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
-            
+
+        if not id_number or not id_number.strip():
+            logger.warning(f"ID image upload failed for user_id: {user_id}: Missing ID number.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ID number is required."
+            )
+
         if not front_id or not back_id or not selfie_with_id:
             logger.warning(f"ID image upload failed for user_id: {user_id}: Missing ID images.")
             raise HTTPException(
@@ -190,12 +197,15 @@ async def upload_id_images(user_id: int, id_type: str, front_id: UploadFile, bac
         logger.info(f"ID images uploaded to Cloudinary for {user.email}: {image_urls}")
         
         user.id_type = id_type
+        user.id_number = id_number
         user.front_id = image_urls[0]
         user.back_id = image_urls[1]
         user.selfie_with_id = image_urls[2]
+        delete_cache(f"user_data:{user_id}")
         
         await db.commit()
         await db.refresh(user)
+        await delete_cache(f"user_profile:{user_id}")
         
         return JSONResponse(
             status_code=status.HTTP_200_OK,
@@ -212,7 +222,6 @@ async def upload_id_images(user_id: int, id_type: str, front_id: UploadFile, bac
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during ID image upload. Please try again later."
         )
-        
 async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
     try:
         await delete_cache(f"otp:{email.email}")

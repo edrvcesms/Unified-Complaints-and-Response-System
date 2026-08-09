@@ -57,10 +57,20 @@ async def logout(request: Request, db: AsyncSession = Depends(get_async_db)):
 async def refresh_token(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await refresh_access_token(request, db)
 
+
 @router.patch("/id-verification", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def id_verification(request: Request, id_type:str = Form(...), front_id: UploadFile = None, back_id: UploadFile = None, selfie_with_id: UploadFile = None, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await upload_id_images(current_user.id, id_type, front_id, back_id, selfie_with_id, db)
+async def id_verification(
+    request: Request,
+    id_type: str = Form(...),
+    id_number: str = Form(...),
+    front_id: UploadFile = None,
+    back_id: UploadFile = None,
+    selfie_with_id: UploadFile = None,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await upload_id_images(current_user.id, id_type, id_number, front_id, back_id, selfie_with_id, db)
 
 
 @router.post("/login/google", response_model=LoginResponse)

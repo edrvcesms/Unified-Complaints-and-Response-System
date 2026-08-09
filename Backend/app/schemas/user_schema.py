@@ -44,6 +44,7 @@ class UserData(UserBase):
     longitude: Optional[str] = None
     id_type: Optional[str] = None
     id_number: Optional[str] = None
+    clerk_user_id: Optional[str] = None
     front_id: Optional[str] = None
     back_id: Optional[str] = None
     selfie_with_id: Optional[str] = None

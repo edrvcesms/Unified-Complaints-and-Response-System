@@ -24,6 +24,16 @@ from app.services.sse_manager import sse_manager
 from app.utils.attachments import validate_upload_files
 from app.core.clerk.clerk_client import verify_clerk_token
 from app.core.clerk.clerk_users import get_clerk_user_email, get_or_create_user_from_clerk
+from app.utils.base64_decoder import data_uri_to_upload_file
+
+import base64, re
+
+def decode_data_uri(data_uri: str) -> bytes:
+    match = re.match(r'^data:image/\w+;base64,(.+)$', data_uri)
+    if not match:
+        raise HTTPException(status_code=400, detail="Invalid image data.")
+    return base64.b64decode(match.group(1))
+
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
     
@@ -165,12 +175,11 @@ async def verify_otp_and_register(otp: str, user_data: OTPVerificationData, fron
             detail="An error occurred during OTP verification. Please try again later."
         )
         
-async def upload_id_images(user_id: int, id_type: str, id_number: str, front_id: UploadFile, back_id: UploadFile, selfie_with_id: UploadFile, db: AsyncSession):
+async def upload_id_images(user_id: int, id_type: str, id_number: str, front_id: str, back_id: str, selfie_with_id: str, db: AsyncSession):
     try:
-        
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalars().first()
-        
+
         if not user:
             logger.warning(f"ID image upload attempt for non-existent user_id: {user_id}")
             raise HTTPException(
@@ -191,22 +200,28 @@ async def upload_id_images(user_id: int, id_type: str, id_number: str, front_id:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="All ID images (front, back, selfie with ID) are required."
             )
-        images = [front_id, back_id, selfie_with_id]
+
+        # Decode base64 data URIs into UploadFile-compatible objects
+        front_id_file = data_uri_to_upload_file(front_id, "front_id")
+        back_id_file = data_uri_to_upload_file(back_id, "back_id")
+        selfie_file = data_uri_to_upload_file(selfie_with_id, "selfie_with_id")
+
+        images = [front_id_file, back_id_file, selfie_file]
         await validate_upload_files(images)
         image_urls = await upload_multiple_files_to_cloudinary(images, folder="ucrs/id_verification")
         logger.info(f"ID images uploaded to Cloudinary for {user.email}: {image_urls}")
-        
+
         user.id_type = id_type
         user.id_number = id_number
         user.front_id = image_urls[0]
         user.back_id = image_urls[1]
         user.selfie_with_id = image_urls[2]
-        delete_cache(f"user_data:{user_id}")
-        
+        await delete_cache(f"user_data:{user_id}")
+
         await db.commit()
         await db.refresh(user)
         await delete_cache(f"user_profile:{user_id}")
-        
+
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={"message": "ID images uploaded successfully."}
@@ -222,6 +237,7 @@ async def upload_id_images(user_id: int, id_type: str, id_number: str, front_id:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during ID image upload. Please try again later."
         )
+        
 async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
     try:
         await delete_cache(f"otp:{email.email}")

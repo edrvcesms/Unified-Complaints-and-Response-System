@@ -14,9 +14,13 @@ export interface EmergencyAlertProps {
   onDismissAll: () => void;
 }
 
+const MAX_VISIBLE_ITEMS = 5;
+
 export const EmergencyAlert: React.FC<EmergencyAlertProps> = ({ items, onViewAll, onDismissAll }) => {
   const { t } = useTranslation();
   const count = items.length;
+  const visibleItems = items.slice(0, MAX_VISIBLE_ITEMS);
+  const remainingCount = count - visibleItems.length;
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/35 px-4">
@@ -42,7 +46,7 @@ export const EmergencyAlert: React.FC<EmergencyAlertProps> = ({ items, onViewAll
           </div>
 
           <div className="mt-5 space-y-2">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3.5 py-2.5"
@@ -58,6 +62,15 @@ export const EmergencyAlert: React.FC<EmergencyAlertProps> = ({ items, onViewAll
                 </span>
               </div>
             ))}
+
+            {remainingCount > 0 && (
+              <button
+                onClick={onViewAll}
+                className="w-full rounded-lg border border-dashed border-gray-200 py-2 text-center text-xs font-medium text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
+              >
+                +{remainingCount} more
+              </button>
+            )}
           </div>
 
           <div className="mt-5 flex gap-2">

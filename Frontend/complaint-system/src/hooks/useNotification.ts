@@ -7,7 +7,7 @@ import type { PaginatedResponse, PaginationQueryParams } from "../types/general/
 
 const DEFAULT_NOTIFICATION_PARAMS: PaginationQueryParams = {
   page: 1,
-  page_size: 5,
+  page_size: 10,
 };
 
 export const useNotifications = (params: PaginationQueryParams = DEFAULT_NOTIFICATION_PARAMS) => {

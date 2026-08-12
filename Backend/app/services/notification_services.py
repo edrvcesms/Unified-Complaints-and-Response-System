@@ -27,8 +27,8 @@ async def create_notification(notification_data: NotificationCreateData, db: Asy
         await db.commit()
         await db.refresh(new_notification)
         logger.info(f"Created notification for user ID {notification_data.user_id}: {notification_data.message}")
-        await delete_cache(f"user_notifications:{notification_data.user_id}")
         await delete_cache_prefix("notifications")
+        await delete_cache(f"user_notifications:{notification_data.user_id}")
         return NotificationData.model_validate(new_notification, from_attributes=True)
       
     except HTTPException:
@@ -73,8 +73,10 @@ async def mark_notification_as_read(notification_id: int, user_id: int, db: Asyn
         notification.is_read = True
         await db.commit()
         logger.info(f"Marked notification ID {notification_id} as read for user ID {user_id}")
-        await delete_cache(f"user_notifications:{user_id}")
         await delete_cache_prefix("notifications")
+        logger.info(f"Cache prefix 'notifications' invalidated")
+        await delete_cache(f"user_notifications:{user_id}")
+        logger.info(f"Cache for user_notifications:{user_id} invalidated")
         return {"message": "Notification marked as read"}
       
     except HTTPException:
@@ -97,8 +99,8 @@ async def mark_all_notifications_as_read(user_id: int, db: AsyncSession):
         
         await db.commit()
         logger.info(f"Marked all notifications as read for user ID {user_id}")
-        await delete_cache(f"user_notifications:{user_id}")
         await delete_cache_prefix("notifications")
+        await delete_cache(f"user_notifications:{user_id}")
         return {"message": "All notifications marked as read"}
       
     except HTTPException:

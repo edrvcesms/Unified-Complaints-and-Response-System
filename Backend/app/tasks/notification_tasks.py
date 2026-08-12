@@ -6,7 +6,9 @@ from app.models.notification import Notification
 from app.database.database import AsyncSessionLocal
 from datetime import datetime, timezone
 from app.utils.caching import delete_cache
+from app.utils.caching import delete_cache_prefix
 from app.utils.redis_pub import publish_sse_event
+from app.services.emergency_queue import add_emergency
 
 
 
@@ -70,8 +72,10 @@ def send_notifications_task(
             db.add(notification)
             await db.commit()
             logger.info(f"Notification saved to DB for user_id={user_id}, complaint_id={complaint_id}")
-
+            await delete_cache_prefix("notifications")
+            logger.info(f"Cache prefix 'notifications' invalidated")
             await delete_cache(f"user_notifications:{user_id}")
+            logger.info(f"Cache for user_notifications:{user_id} invalidated")
             await publish_sse_event(
                 "sse:user",
                 {
@@ -88,6 +92,14 @@ def send_notifications_task(
                     },
                 },
             )
+            if notification_type == "emergency" and incident_id is not None:
+                await add_emergency(user_id, incident_id, {
+                    "title": title,
+                    "message": message,
+                    "severityLevel": "HIGH",
+                    "receivedAt": notification.sent_at.isoformat(),
+                    "complaintId": complaint_id,
+                })
 
     try:
         run_async(_run())

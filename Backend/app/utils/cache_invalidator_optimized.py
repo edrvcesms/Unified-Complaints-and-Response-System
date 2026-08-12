@@ -143,6 +143,7 @@ class CacheInvalidator:
             resources.add("incidents")
         if user_ids:
             resources.add("users")
+            resources.add("notifications")
         if announcement_id or announcement_uploader_id:
             resources.add("announcements")
         if event_ids:

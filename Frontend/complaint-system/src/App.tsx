@@ -30,6 +30,7 @@ import { BarangayIncidents } from "./features/lgu/pages/BarangayIncidents"
 import { LguArchiveIncidents } from "./features/lgu/pages/ArchiveIncidents"
 import { LguAnnouncements } from "./features/lgu/pages/Announcements"
 import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayReports"
+import { EmergencyIncidentsPage } from "./features/barangay/pages/EmergencyIncidents"
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminResidentAccountManagement, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
@@ -84,6 +85,7 @@ function App() {
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
+              <Route path="emergency-incidents" element={<EmergencyIncidentsPage />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="events" element={<EventsPage />} />
               <Route path="feedbacks" element={<FeedbacksPage />} />

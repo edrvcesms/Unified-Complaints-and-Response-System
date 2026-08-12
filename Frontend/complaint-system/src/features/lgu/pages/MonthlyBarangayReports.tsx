@@ -8,7 +8,7 @@ import { FileText } from "lucide-react";
 import { Pagination } from "../../barangay/components/Pagination";
 
 export const MonthlyBarangayReports: React.FC = () => {
-  const { barangays, isLoading, error } = useAllBarangays();
+  const { barangays, isLoading, error } = useAllBarangays({ page: 1, page_size: 30, search: "" });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");

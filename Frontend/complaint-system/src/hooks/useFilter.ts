@@ -49,7 +49,7 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [filterStatus, setFilterStatus] = useState<StatusFilter>(() => {
     const severityParam = searchParams.get("severity");
-    return isStatusFilter(severityParam?.toUpperCase() ?? null) ? severityParam.toUpperCase() as StatusFilter : "all";
+    return isStatusFilter(severityParam?.toUpperCase() ?? null) ? severityParam?.toUpperCase() as StatusFilter : "all";
   });
   const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
@@ -64,7 +64,7 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   useEffect(() => {
     const severityParam = searchParams.get("severity");
     if (isStatusFilter(severityParam?.toUpperCase() ?? null)) {
-      setFilterStatus(severityParam.toUpperCase() as StatusFilter);
+      setFilterStatus(severityParam?.toUpperCase() as StatusFilter);
       setCurrentPage(1);
     }
 

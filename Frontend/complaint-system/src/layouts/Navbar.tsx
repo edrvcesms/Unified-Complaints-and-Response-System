@@ -11,7 +11,7 @@ import { useNotifications as useNotificationData } from "../hooks/useNotificatio
 import { useToast } from "../hooks/useToast";
 import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
-import { formatDateTime, formatTimeAgo } from "../utils/dateUtils";
+import { formatTimeAgo } from "../utils/dateUtils";
 
 
 interface NavbarProps {
@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
   const confirmationModal = useConfirmationModal();
-  const { notifications, isLoading, markAsRead, markAllAsRead, refetch } = useNotificationData();
+  const { notifications, isLoading, markAsRead, markAllAsRead } = useNotificationData();
   const { toasts } = useToast();
 
   const dropdownRef = useRef<HTMLDivElement>(null);

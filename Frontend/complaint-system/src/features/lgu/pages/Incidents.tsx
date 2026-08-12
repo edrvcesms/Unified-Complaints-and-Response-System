@@ -26,17 +26,14 @@ export const LguIncidents: React.FC = () => {
     dateTo,
     minDate,
     maxDate,
-    currentPage,
     paginated,
     filtered,
-    totalPages,
     handleSearch,
     handleFilterChange,
     handleSortChange,
     handleDateFromChange,
     handleDateToChange,
     handleClearDateFilter,
-    setCurrentPage,
   } = useComplaintsFilter(manageIncidents);
 
   if (isError) {

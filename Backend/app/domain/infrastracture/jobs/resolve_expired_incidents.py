@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 RESOLVED_STATUSES = {
     ComplaintStatus.RESOLVED_BY_BARANGAY.value,
     ComplaintStatus.RESOLVED_BY_LGU.value,
-    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
 }
 
 async def resolve_expired_incidents(db: AsyncSession) -> None:

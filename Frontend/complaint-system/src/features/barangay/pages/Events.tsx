@@ -5,7 +5,7 @@ import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { useCreateEvent, useDeleteEvent, useEvents, useUpdateEvent } from "../../../hooks/useEvent";
 import { validateDescription, validateTitle } from "../../../utils/validators";
-import LoadingIndicator from "../../general/LoadingIndicator";
+import { GridCardSkeleton } from "../components/Skeletons";
 import type { Event } from "../../../types/general/event";
 import { Calendar, ChevronLeft, ChevronRight, Edit, FileImage, FileVideo, ImageIcon, MapPin, Plus, Trash2, Upload, Video, X } from "lucide-react";
 
@@ -146,7 +146,7 @@ export const EventsPage: React.FC = () => {
   const [lightbox, setLightbox] = useState<{ eventId: number; index: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { events, pagination, isLoading, refetch } = useEvents(queryMeta);
+  const { events, pagination, isLoading, isFetching, refetch } = useEvents(queryMeta);
   const createEventMutation = useCreateEvent();
   const updateEventMutation = useUpdateEvent();
   const deleteEventMutation = useDeleteEvent();
@@ -362,10 +362,8 @@ export const EventsPage: React.FC = () => {
 
         {activeTab === "manage" && (
           <div className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <LoadingIndicator />
-              </div>
+            {isLoading || isFetching ? (
+              <GridCardSkeleton count={3} />
             ) : events && events.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">

@@ -42,7 +42,6 @@ class User(Base):
     clerk_user_id = Column(String(255), unique=True, nullable=True)
     barangay_account = relationship("BarangayAccount", back_populates="user", uselist=False)
     events = relationship("Event", back_populates="uploader", cascade="all, delete-orphan")
-    department_account = relationship("DepartmentAccount", back_populates="user", uselist=False)
     complaint = relationship("Complaint", back_populates="user", cascade="all, delete-orphan")
     attachment = relationship("Attachment", back_populates="uploader", cascade="all, delete-orphan")
     feedback = relationship("Feedback", back_populates="user")

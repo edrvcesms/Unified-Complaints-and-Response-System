@@ -18,7 +18,7 @@ import {
   useComplaintCountsByBarangayCategory,
 } from "../../../hooks/useStats";
 import { SkeletonCard } from "../../barangay/components/Skeletons";
-import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
+import { PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartJsTooltip, ChartJsLegend);
@@ -255,13 +255,6 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     };
   }, [PERIOD_DATA, incidents]);
 
-  const forwardedToDepartment = useMemo(
-    () =>
-      incidents.filter(
-        (i) => i.complaint_clusters[0]?.complaint?.status?.toLowerCase() === "forwarded_to_department"
-      ).length,
-    [incidents]
-  );
 
   const CATEGORY_COLORS = [
     "#0ea5e9",

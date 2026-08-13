@@ -4,7 +4,6 @@ import type { BarangayAccountData } from "../../types/barangay/barangayAccount";
 export const refreshToken = async (): Promise<{ 
   access_token: string, 
   barangayAccountData?: BarangayAccountData | null,
-  departmentAccountData?: any | null,
   role?: string
 } | null> => {
   try {

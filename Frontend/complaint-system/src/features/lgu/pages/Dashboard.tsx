@@ -3,7 +3,7 @@ import { LguDashboardPage } from "../components/LguDashboardPage";
 import { useTranslation } from "react-i18next";
 
 export const LguDashboard: React.FC = () => {
-  const { incidents, isLoading, error: isError, pagination } = useAllForwardedIncidents({ page: 1, page_size: 10 });
+  const { incidents, isLoading, error: isError } = useAllForwardedIncidents({ page: 1, page_size: 10 });
   const { t } = useTranslation();
 
   return (

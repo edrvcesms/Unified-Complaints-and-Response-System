@@ -3,7 +3,6 @@ import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import type { UserRole } from "../types/auth/userRole";
 import { refreshToken } from "../services/authentication/token";
 import { logoutBarangayAccount } from "../services/authentication/auth";
-import type { DepartmentAccount } from "../types/department/departmentAccount";
 
 let refreshAccessTokenPromise: Promise<void> | null = null;
 
@@ -14,8 +13,6 @@ interface AuthState {
     setIsCheckingAuth: (checking: boolean) => void;
     barangayAccountData: BarangayAccountData | null;
     setBarangayAccountData: (data: BarangayAccountData | null) => void;
-    departmentAccountData: DepartmentAccount | null;
-    setDepartmentAccountData: (data: DepartmentAccount | null) => void;
     userRole: UserRole | null;
     setUserRole: (role: UserRole | null) => void;
     isLoading: boolean;
@@ -32,8 +29,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     setAccessToken: (token) => set({ accessToken: token }),
     barangayAccountData: null,
     setBarangayAccountData: (data) => set({ barangayAccountData: data }),
-    departmentAccountData: null,
-    setDepartmentAccountData: (data) => set({ departmentAccountData: data }),
     userRole: null,
     setUserRole: (role) => set({ userRole: role }),
     isCheckingAuth: true,
@@ -45,22 +40,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         
         let role = data.role || null;
         let barangayData = null;
-        let departmentData = null;
 
         if (data.barangayAccountData) {
             barangayData = data.barangayAccountData;
         }
         
-        if (data.departmentAccountData) {
-            departmentData = data.departmentAccountData;
-        }
 
-        const validRoles: UserRole[] = ['barangay_official', 'lgu_official', 'department_staff', 'superadmin'];
+        const validRoles: UserRole[] = ['barangay_official', 'lgu_official', 'superadmin'];
         const isValidRole = role && validRoles.includes(role);
 
         set({
             barangayAccountData: barangayData,
-            departmentAccountData: departmentData,
             userRole: role,
             isAuthenticated: isValidRole
         });
@@ -75,7 +65,6 @@ export const useAuthStore = create<AuthState>((set) => ({
             set({
                 accessToken: null,
                 barangayAccountData: null,
-                departmentAccountData: null,
                 userRole: null,
                 isAuthenticated: false,
                 isLoading: false
@@ -86,7 +75,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({
             accessToken: null,
             barangayAccountData: null,
-            departmentAccountData: null,
             userRole: null,
             isAuthenticated: false,
             isLoading: false
@@ -115,7 +103,6 @@ export const useAuthStore = create<AuthState>((set) => ({
                     set({
                         accessToken: null,
                         barangayAccountData: null,
-                        departmentAccountData: null,
                         userRole: null,
                         isAuthenticated: false
                     });
@@ -124,7 +111,6 @@ export const useAuthStore = create<AuthState>((set) => ({
                 set({
                     accessToken: null,
                     barangayAccountData: null,
-                    departmentAccountData: null,
                     userRole: null,
                     isAuthenticated: false
                 });

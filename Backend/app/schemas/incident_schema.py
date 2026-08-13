@@ -12,7 +12,6 @@ class IncidentBaseModel(BaseModel):
     description: str
     barangay_id: int
     category_id: int
-    department_id: Optional[int] = None
     status: Optional[str] = None
     complaint_count: int
     severity_level: str
@@ -56,7 +55,6 @@ class IncidentOut(BaseModel):
     barangay_id: int
     barangay: Optional[BarangayModel] = None
     category_id: int
-    department_id: Optional[int] = None
     status: Optional[str] = None
     complaint_count: int
     severity_level: str

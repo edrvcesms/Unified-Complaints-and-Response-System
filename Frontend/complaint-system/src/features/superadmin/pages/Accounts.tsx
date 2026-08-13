@@ -6,7 +6,7 @@ import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateEmail, validatePassword, validateTitle } from "../../../utils/validators";
 import type { LoginRequestData } from "../../../types/auth/login";
-import { Building2, Landmark, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Landmark, ShieldCheck, type LucideIcon } from "lucide-react";
 
 interface BarangayFormData {
   barangay_name: string;
@@ -18,19 +18,12 @@ interface BarangayFormData {
   longitude: string;
 }
 
-interface DepartmentFormData {
-  department_name: string;
-  description: string;
-  email: string;
-  password: string;
-}
-
 interface LguFormData {
   email: string;
   password: string;
 }
 
-type AccountType = "barangay" | "department" | "lgu";
+type AccountType = "barangay" | "lgu";
 
 const buildEmailValidator = (email: string) =>
   validateEmail({ email, password: "", role: "official" } as LoginRequestData);
@@ -94,14 +87,6 @@ export const SuperAdminAccounts: React.FC = () => {
   });
   const [barangayErrors, setBarangayErrors] = useState<Record<string, string>>({});
 
-  const [departmentData, setDepartmentData] = useState<DepartmentFormData>({
-    department_name: "",
-    description: "",
-    email: "",
-    password: "",
-  });
-  const [departmentErrors, setDepartmentErrors] = useState<Record<string, string>>({});
-
   const [lguData, setLguData] = useState<LguFormData>({
     email: "",
     password: "",
@@ -152,44 +137,6 @@ export const SuperAdminAccounts: React.FC = () => {
     },
   });
 
-  const departmentMutation = useSubmitForm({
-    endpoint: "/create-department",
-    axiosInstance: superAdminInstance,
-    validators: [
-      (data: any) => {
-        const errors: Record<string, string> = {};
-        const nameError = validateTitle(data.department_name, "Department name");
-        if (nameError) errors.department_name = nameError;
-        const emailError = buildEmailValidator(data.email);
-        if (emailError?.email) errors.email = emailError.email;
-        const passwordError = buildPasswordValidator(data.password);
-        if (passwordError?.password) errors.password = passwordError.password;
-        return Object.keys(errors).length > 0 ? errors : null;
-      },
-    ],
-    onSuccess: () => {
-      setDepartmentData({
-        department_name: "",
-        description: "",
-        email: "",
-        password: "",
-      });
-      setDepartmentErrors({});
-      setSuccessModal({
-        isOpen: true,
-        title: "Department created",
-        message: "The department account has been saved successfully.",
-      });
-    },
-    onError: (error) => {
-      setDepartmentErrors(error.errors || {});
-      setErrorModal({
-        isOpen: true,
-        title: "Unable to create department",
-        message: error.general || "Please check the form and try again.",
-      });
-    },
-  });
 
   const lguMutation = useSubmitForm({
     endpoint: "/create-lgu-account",
@@ -239,16 +186,6 @@ export const SuperAdminAccounts: React.FC = () => {
     await barangayMutation.mutateAsync(payload as any);
   };
 
-  const handleDepartmentSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    await departmentMutation.mutateAsync({
-      department_name: departmentData.department_name,
-      description: departmentData.description || undefined,
-      email: departmentData.email,
-      password: departmentData.password,
-    } as any);
-  };
-
   const handleLguSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     await lguMutation.mutateAsync(lguData as any);
@@ -258,11 +195,11 @@ export const SuperAdminAccounts: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Accounts"
-        description="Create and manage accounts for barangays, departments, and LGU officials."
+        description="Create and manage accounts for barangays and LGU officials."
       />
 
       {!selectedAccountType && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <AccountTypeCard
             title="Create Barangay Account"
             description="Set up a barangay profile with contact details and login credentials."
@@ -270,14 +207,6 @@ export const SuperAdminAccounts: React.FC = () => {
             iconWrapperClassName="bg-green-100"
             iconClassName="text-green-700"
             onClick={() => setSelectedAccountType("barangay")}
-          />
-          <AccountTypeCard
-            title="Create Department Account"
-            description="Register a department and assign its official account credentials."
-            icon={Building2}
-            iconWrapperClassName="bg-blue-100"
-            iconClassName="text-blue-700"
-            onClick={() => setSelectedAccountType("department")}
           />
           <AccountTypeCard
             title="Create LGU Account"
@@ -413,77 +342,6 @@ export const SuperAdminAccounts: React.FC = () => {
             </SectionCard>
           )}
 
-          {selectedAccountType === "department" && (
-            <SectionCard
-              title="Create Department Account"
-              description="Add a department and staff login credentials."
-            >
-              <form onSubmit={handleDepartmentSubmit} className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Department name</label>
-                  <input
-                    name="department_name"
-                    value={departmentData.department_name}
-                    onChange={(e) => {
-                      setDepartmentData((prev) => ({ ...prev, department_name: e.target.value }));
-                      setDepartmentErrors((prev) => ({ ...prev, department_name: "" }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                    placeholder="Department name"
-                  />
-                  <FieldError message={departmentErrors.department_name} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Description (optional)</label>
-                  <textarea
-                    name="description"
-                    value={departmentData.description}
-                    onChange={(e) => setDepartmentData((prev) => ({ ...prev, description: e.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                    rows={3}
-                    placeholder="Department responsibilities"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={departmentData.email}
-                    onChange={(e) => {
-                      setDepartmentData((prev) => ({ ...prev, email: e.target.value }));
-                      setDepartmentErrors((prev) => ({ ...prev, email: "" }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                    placeholder="department@email.com"
-                  />
-                  <FieldError message={departmentErrors.email} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={departmentData.password}
-                    onChange={(e) => {
-                      setDepartmentData((prev) => ({ ...prev, password: e.target.value }));
-                      setDepartmentErrors((prev) => ({ ...prev, password: "" }));
-                    }}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
-                    placeholder="At least 6 characters"
-                  />
-                  <FieldError message={departmentErrors.password} />
-                </div>
-                <button
-                  type="submit"
-                  disabled={departmentMutation.isPending}
-                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition disabled:opacity-60"
-                >
-                  {departmentMutation.isPending ? "Creating..." : "Create department"}
-                </button>
-              </form>
-            </SectionCard>
-          )}
 
           {selectedAccountType === "lgu" && (
             <SectionCard

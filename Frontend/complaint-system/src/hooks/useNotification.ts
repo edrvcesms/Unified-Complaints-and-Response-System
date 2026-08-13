@@ -11,7 +11,7 @@ const DEFAULT_NOTIFICATION_PARAMS: PaginationQueryParams = {
 };
 
 export const useNotifications = (params: PaginationQueryParams = DEFAULT_NOTIFICATION_PARAMS) => {
-  const { data, isLoading, error, refetch } = useQuery<PaginatedResponse<Notification>, Error>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<PaginatedResponse<Notification>, Error>({
     queryKey: ['notifications', params.page, params.page_size, params.search],
     queryFn: () => getUserNotifications(params),
     placeholderData: keepPreviousData,
@@ -83,6 +83,7 @@ export const useNotifications = (params: PaginationQueryParams = DEFAULT_NOTIFIC
     notifications: data?.data ?? [],
     pagination: data?.pagination,
     isLoading,
+    isFetching,
     error,
     refetch,
     markAsRead: markAsReadMutation.mutate,

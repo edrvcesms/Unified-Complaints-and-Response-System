@@ -10,7 +10,6 @@ from app.tasks.response_tasks import save_response_task
 from fastapi.responses import JSONResponse
 from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount
-from app.models.department_account import DepartmentAccount
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.constants.complaint_status import ComplaintStatus
@@ -220,89 +219,4 @@ async def mark_barangay_incidents_viewed(user_id: int, barangay_id: int):
     except Exception:
         logger.exception("Error marking barangay as viewed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-    
-async def assign_incident_to_department(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, department_account_id: int, db: AsyncSession):
-    try:
-        incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
-        incident = incident_result.scalars().first()
-        
-        if not incident:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found")
-        
-        barangay_id = incident.barangay_id
-        
-        result = await db.execute(select(IncidentComplaintModel.complaint_id).where(IncidentComplaintModel.incident_id == incident_id))
-        complaint_ids = result.scalars().all()
-        
-        if not complaint_ids:
-            return {"message": "No complaints found for this incident"}
-        
-        await db.execute(
-            update(Complaint)
-            .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.FORWARDED_TO_DEPARTMENT.value, department_account_id=department_account_id)
-        )
-        await db.execute(
-            update(IncidentModel)
-            .where(IncidentModel.id == incident_id)
-            .values(department_account_id=department_account_id)
-        )
-        await db.commit()
-        
-        complaints_result = await db.execute(select(Complaint).where(Complaint.id.in_(complaint_ids)))
-        complaints = complaints_result.scalars().all()
-
-        for complaint in complaints:
-            send_notifications_task.delay(
-                user_id=complaint.user_id,
-                incident_id=incident_id,
-                title="Complaint Forwarded to Department",
-                message="Your complaint has been forwarded to the department for further processing.",
-                complaint_id=complaint.id,
-                notification_type="update"
-            )
-                
-        save_response_task.delay(
-            incident_id=incident_id,
-            responder_id=responder_id,
-            actions_taken=response_data.actions_taken
-        )
-        result = await db.execute(
-            select(IncidentModel)
-            .options(
-                selectinload(IncidentModel.department_account).selectinload(DepartmentAccount.user)
-            ).where(IncidentModel.id == incident_id)
-        )
-        incident = result.scalars().first()
-        if incident and incident.department_account and incident.department_account.user:
-            send_notifications_task.delay(
-                user_id=incident.department_account.user.id,
-                title="New Incident Assigned",
-                message=f"A new incident with ID {incident.id} has been forwarded to your department.",
-                incident_id=incident_id,
-                complaint_id=None,
-                notification_type="update"
-            )
-            
-        await invalidate_cache(
-            complaint_ids=complaint_ids,
-            user_ids=[complaint.user_id for complaint in complaints],
-            barangay_id=barangay_id,
-            incident_ids=[incident_id],
-            department_account_id=department_account_id,
-            include_global=True
-        )
-        logger.info(f"Cache invalidated for complaints: {complaint_ids}, users: {[complaint.user_id for complaint in complaints]}, barangay: {barangay_id}, incident: {incident_id}, department_account: {department_account_id}")
-            
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={"message": "All complaints under this incident have been forwarded to the department"}
-        )
-    
-    except HTTPException:
-        raise
-    
-    except Exception:
-        await db.rollback()
-        logger.exception("Error in assign_incident_to_department")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+   

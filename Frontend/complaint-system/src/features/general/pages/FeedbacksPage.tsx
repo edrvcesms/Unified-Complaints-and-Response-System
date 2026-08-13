@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ErrorMessage } from "../ErrorMessage";
 import { useFeedbacks } from "../../../hooks/useFeedbacks";
 import { Pagination } from "../../barangay/components/Pagination";
+import { GridCardSkeleton } from "../../barangay/components/Skeletons";
 
 const FEEDBACKS_PER_PAGE = 6;
 
@@ -58,7 +59,7 @@ const renderStars = (rating: number) => {
 export const FeedbacksPage: React.FC = () => {
   const { t } = useTranslation();
   const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: FEEDBACKS_PER_PAGE });
-  const { feedbacks, isLoading, error } = useFeedbacks({ page: metaData.page, page_size: metaData.page_size });
+  const { feedbacks, isLoading, isFetching, error } = useFeedbacks({ page: metaData.page, page_size: metaData.page_size });
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalFeedbacks = feedbacks?.length || 0;
@@ -107,20 +108,8 @@ export const FeedbacksPage: React.FC = () => {
         </div>
       </header>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-4">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div className="h-4 w-40 rounded bg-slate-200" />
-                <div className="h-4 w-24 rounded bg-slate-200" />
-              </div>
-              <div className="mt-3 h-3 w-56 rounded bg-slate-100" />
-              <div className="mt-4 h-3 w-full rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-11/12 rounded bg-slate-100" />
-            </div>
-          ))}
-        </div>
+      {isLoading || isFetching ? (
+        <GridCardSkeleton count={3} />
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {totalFeedbacks === 0 ? (

@@ -20,7 +20,6 @@ export const IncidentComplaints: React.FC = () => {
     complaints,
     isLoading: complaintsLoading,
     error: complaintsError,
-    pagination,
   } = useIncidentComplaints(Number(incidentId), true, { page: 1, page_size: ITEMS_PER_PAGE });
   
   const markAsViewed = useMarkIncidentAsViewed();

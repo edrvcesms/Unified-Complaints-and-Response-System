@@ -13,18 +13,15 @@ export const getStatusColor = (status: string, _userRole?: string): string => {
   
   const statusMap: Record<string, string> = {
     resolved: "bg-green-100 text-green-800",
-    resolved_by_department: "bg-green-100 text-green-800",
     resolved_by_barangay: "bg-green-100 text-green-800",
     resolved_by_lgu: "bg-green-100 text-green-800",
     under_review: "bg-primary-100 text-primary-800",
-    reviewed_by_department: "bg-primary-100 text-primary-800",
     reviewed_by_barangay: "bg-primary-100 text-primary-800",
     reviewed_by_lgu: "bg-yellow-100 text-yellow-800",
     submitted: "bg-yellow-100 text-yellow-800",
     in_progress: "bg-orange-100 text-orange-800",
     pending: "bg-gray-100 text-gray-800",
     forwarded_to_lgu: "bg-blue-100 text-blue-800",
-    forwarded_to_department: "bg-orange-100 text-orange-800",
     rejected: "bg-red-100 text-red-800",
   };
   return statusMap[lowerStatus] || "bg-gray-100 text-gray-800";

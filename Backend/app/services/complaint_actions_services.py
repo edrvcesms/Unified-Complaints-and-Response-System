@@ -53,7 +53,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         result = await db.execute(select(User).where(User.id == responder_id))
         reviewer = result.scalars().first()
         for complaint in complaints:
-            if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_DEPARTMENT.value, ComplaintStatus.REVIEWED_BY_LGU.value]:
+            if complaint.status in [ComplaintStatus.REVIEWED_BY_BARANGAY.value,ComplaintStatus.REVIEWED_BY_LGU.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="This incident is already under review"
@@ -62,12 +62,12 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value if reviewer.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.REVIEWED_BY_LGU.value)
+            .values(status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_LGU.value)
         )
         
         await log_status_change(
             complaint_ids=complaint_ids,
-            new_status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_DEPARTMENT.value if reviewer.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.REVIEWED_BY_LGU.value,
+            new_status=ComplaintStatus.REVIEWED_BY_BARANGAY.value if reviewer.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.REVIEWED_BY_LGU.value,
             changed_by_user_id=responder_id,
             db=db
         )
@@ -89,7 +89,6 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
-        department_account_id = first_complaint.department_account_id if first_complaint else None
         
         # Batch load all users to avoid N+1 queries
         user_ids = [c.user_id for c in complaints]
@@ -119,7 +118,6 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
             user_ids=[complaint.user_id for complaint in complaints],
             barangay_id=barangay_id,
             incident_ids=[incident_id],
-            department_account_id=department_account_id,
             include_global=True
         )
 
@@ -163,7 +161,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         )
         complaints = complaints.scalars().all()
         for complaint in complaints:
-            if complaint.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value, ComplaintStatus.RESOLVED_BY_LGU.value]:
+            if complaint.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_LGU.value]:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This incident is already resolved"
@@ -178,12 +176,12 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         await db.execute(
             update(Complaint)
             .where(Complaint.id.in_(complaint_ids))
-            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.now(timezone.utc))
+            .values(status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_LGU.value, resolved_at=datetime.now(timezone.utc))
         )
         
         await log_status_change(
             complaint_ids=complaint_ids,
-            new_status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_DEPARTMENT.value if resolver.role == UserRole.DEPARTMENT_STAFF else ComplaintStatus.RESOLVED_BY_LGU.value,
+            new_status=ComplaintStatus.RESOLVED_BY_BARANGAY.value if resolver.role == UserRole.BARANGAY_OFFICIAL else ComplaintStatus.RESOLVED_BY_LGU.value,
             changed_by_user_id=responder_id,
             db=db
         )
@@ -205,7 +203,6 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
-        department_account_id = first_complaint.department_account_id if first_complaint else None
         
         # Batch load all users to avoid N+1 queries
         user_ids = [c.user_id for c in complaints]
@@ -236,7 +233,6 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
             user_ids=[complaint.user_id for complaint in complaints],
             barangay_id=barangay_id,
             incident_ids=[incident_id],
-            department_account_id=department_account_id,
             include_global=True
         )
 
@@ -293,7 +289,6 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 "user_id": complaint.user_id,
                 "title": complaint.title,
                 "barangay_id": complaint.barangay_id,
-                "department_account_id": complaint.department_account_id,
             }
             for complaint in complaints
         ]
@@ -301,19 +296,9 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         
         if rejector.role == UserRole.LGU_OFFICIAL:
             notification_type = "rejected_by_lgu"
-        elif rejector.role == UserRole.DEPARTMENT_STAFF:
-           notification_type = "rejected_by_department"
         else:
            notification_type = "rejected_by_barangay"
         
-        if rejector.role in [UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
-
-            for complaint in complaints:
-                if complaint.is_rejected_by_lgu:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the LGU")
-                if complaint.is_rejected_by_department:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the department")
-
         if rejector.role == UserRole.LGU_OFFICIAL:
             await db.execute(
                 update(Complaint)
@@ -335,16 +320,6 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 notification_type=notification_type,
                 event="reject"
             )
-        elif rejector.role == UserRole.DEPARTMENT_STAFF:
-            await db.execute(
-                update(Complaint)
-                .where(Complaint.id.in_(complaint_ids))
-                .values(
-                    is_rejected_by_department=True,
-                    status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                    forwarded_at=datetime.now(timezone.utc)
-                )
-            )
             await log_status_change(
                 complaint_ids=complaint_ids,
                 new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
@@ -356,15 +331,6 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 )
             lgu = lgu.scalars().first()
             logger.info(f"LGU user found for notification: {lgu.id if lgu else 'No LGU user found'}")
-            send_notifications_task.delay(
-                user_id=lgu.id if lgu else None,
-                title="The department has rejected the complaints under this incident",
-                message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
-                incident_id=incident_id,
-                complaint_id=complaints[0].id if complaints else None,
-                notification_type=notification_type,
-                event="reject"
-            )
             
         else:
             await db.execute(
@@ -394,7 +360,6 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         
         first_complaint = complaint_snapshots[0] if complaint_snapshots else None
         barangay_id = first_complaint["barangay_id"] if first_complaint else None
-        department_account_id = first_complaint["department_account_id"] if first_complaint else None
             
         # Batch load all users to avoid N+1 queries
         user_ids = [c["user_id"] for c in complaint_snapshots]
@@ -522,7 +487,6 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
             user_ids=[complaint["user_id"] for complaint in complaint_snapshots],
             barangay_id=barangay_id,
             incident_ids=[incident_id],
-            department_account_id=department_account_id,
             include_global=True
         )
         return JSONResponse(
@@ -579,7 +543,6 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
                 "user_id": complaint.user_id,
                 "title": complaint.title,
                 "barangay_id": complaint.barangay_id,
-                "department_account_id": complaint.department_account_id,
             }
             for complaint in complaints
         ]
@@ -587,18 +550,14 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
         
         if rejector.role == UserRole.LGU_OFFICIAL:
             notification_type = "rejected_by_lgu"
-        elif rejector.role == UserRole.DEPARTMENT_STAFF:
-           notification_type = "rejected_by_department"
         else:
            notification_type = "rejected_by_barangay"
         
-        if rejector.role in [UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
+        if rejector.role in [UserRole.LGU_OFFICIAL]:
 
             for complaint in complaints:
                 if complaint.is_rejected_by_lgu:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the LGU")
-                if complaint.is_rejected_by_department:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This incident has already been rejected by the department")
 
         if rejector.role == UserRole.LGU_OFFICIAL:
             await db.execute(
@@ -616,36 +575,6 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
                 user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
                 title="The LGU has rejected the complaints under this incident",
                 message=f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
-                incident_id=incident_id,
-                complaint_id=complaints[0].id if complaints else None,
-                notification_type=notification_type,
-                event="reject"
-            )
-        elif rejector.role == UserRole.DEPARTMENT_STAFF:
-            await db.execute(
-                update(Complaint)
-                .where(Complaint.id.in_(complaint_ids))
-                .values(
-                    is_rejected_by_department=True,
-                    status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                    forwarded_at=datetime.now(timezone.utc)
-                )
-            )
-            await log_status_change(
-                complaint_ids=complaint_ids,
-                new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
-                changed_by_user_id=rejector_id,
-                db=db
-            )
-            lgu = await db.execute(
-                select(User).where(User.role == UserRole.LGU_OFFICIAL)
-                )
-            lgu = lgu.scalars().first()
-            logger.info(f"LGU user found for notification: {lgu.id if lgu else 'No LGU user found'}")
-            send_notifications_task.delay(
-                user_id=lgu.id if lgu else None,
-                title="The department has rejected the complaints under this incident",
-                message=f"The department has rejected the complaints under the incident '{complaints[0].title if complaints else 'N/A'}' and forwarded it back to the LGU.",
                 incident_id=incident_id,
                 complaint_id=complaints[0].id if complaints else None,
                 notification_type=notification_type,
@@ -680,7 +609,6 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
         
         first_complaint = complaint_snapshots[0] if complaint_snapshots else None
         barangay_id = first_complaint["barangay_id"] if first_complaint else None
-        department_account_id = first_complaint["department_account_id"] if first_complaint else None
             
         # Batch load all users to avoid N+1 queries
         user_ids = [c["user_id"] for c in complaint_snapshots]
@@ -703,7 +631,6 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
             user_ids=[complaint["user_id"] for complaint in complaint_snapshots],
             barangay_id=barangay_id,
             incident_ids=[incident_id],
-            department_account_id=department_account_id,
             include_global=True
         )
         return JSONResponse(

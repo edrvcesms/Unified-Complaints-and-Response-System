@@ -9,7 +9,7 @@ import {
 import { PageHeader } from "../../general";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
-import LoadingIndicator from "../../general/LoadingIndicator";
+import { GridCardSkeleton } from "../components/Skeletons";
 import { 
   Upload, 
   X, 
@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { validateTitle, validateDescription } from "../../../utils/validators";
 import type { Announcement } from "../../../types/general/announcement";
-import type { PaginationQueryParams } from "../../../types/general/pagination";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -220,7 +219,7 @@ export const AnnouncementsPage: React.FC = () => {
   // Lightbox state: which announcement's media is open, and at what index.
   const [lightbox, setLightbox] = useState<{ announcementId: number; index: number } | null>(null);
 
-  const { announcements, isLoading, refetch, pagination } = useMyAnnouncements({
+  const { announcements, isLoading, isFetching, refetch, pagination } = useMyAnnouncements({
     page: meta.page,
     page_size: meta.page_size,
   });
@@ -461,10 +460,8 @@ export const AnnouncementsPage: React.FC = () => {
         {/* Manage Tab - Show announcements list */}
         {activeTab === "manage" && (
           <div className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <LoadingIndicator />
-              </div>
+            {isLoading || isFetching ? (
+              <GridCardSkeleton count={3} />
             ) : announcements && announcements.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">

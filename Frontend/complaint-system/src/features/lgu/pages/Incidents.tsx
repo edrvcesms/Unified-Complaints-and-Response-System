@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export const LguIncidents: React.FC = () => {
   const [metaData, setMetaData] = useState<IncidentQueryParams>({ page: 1, page_size: 10 });
-  const { incidents, isLoading, error: isError, pagination } = useAllForwardedIncidents(metaData);
+  const { incidents, isLoading, isFetching, error: isError, pagination } = useAllForwardedIncidents(metaData);
   const { t } = useTranslation();
   const handlePageChange = (page: number) => {
     setMetaData((prev) => ({ ...prev, page }));
@@ -85,6 +85,7 @@ export const LguIncidents: React.FC = () => {
       <LguIncidentsTable
         incidents={paginated}
         isLoading={isLoading}
+        isFetching={isFetching}
         currentPage={pagination?.page ?? 1}
         totalPages={pagination?.total_pages ?? 1}
         onPageChange={handlePageChange}

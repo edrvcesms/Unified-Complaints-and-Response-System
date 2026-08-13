@@ -105,7 +105,6 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
                 Complaint.id == feedbackData.complaint_id,
                 Complaint.status.in_([
                     ComplaintStatus.RESOLVED_BY_BARANGAY.value,
-                    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
                     ComplaintStatus.RESOLVED_BY_LGU.value,
                 ]),
                 Complaint.has_feedback == False

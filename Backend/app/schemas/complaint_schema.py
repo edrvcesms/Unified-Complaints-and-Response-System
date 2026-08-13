@@ -35,7 +35,6 @@ class ComplaintBaseModel(BaseModel):
     barangay_account_id: Optional[int] = None
     category_id: int
     is_rejected_by_lgu: Optional[bool] = None
-    is_rejected_by_department: Optional[bool] = None
 
 class ComplaintCreateData(ComplaintBaseModel):
     pass
@@ -71,14 +70,6 @@ class CategoryInfo(BaseModel):
         from_attributes = True
         
 
-class DepartmentInfo(BaseModel):
-    id: int
-    department_name: str
-    description: str | None
-
-    class Config:
-        from_attributes = True
-
 class MyComplaintData(BaseModel):
     id: int
     title: str
@@ -89,7 +80,6 @@ class MyComplaintData(BaseModel):
     barangay: BarangayInfo | None
     category: CategoryInfo | None
     is_rejected_by_lgu: Optional[bool] = None
-    is_rejected_by_department: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -105,7 +95,6 @@ class ComplaintWithUserData(ComplaintBaseModel):
     attachment: List[ComplaintAttachmentData] = []
     incident_links: Optional[List[IncidentLinkData]] = None
     is_rejected_by_lgu: Optional[bool] = None
-    is_rejected_by_department: Optional[bool] = None
     hearing_date: Optional[datetime] = None
     has_feedback: Optional[bool] = None
     
@@ -119,7 +108,6 @@ class ComplaintOut(BaseModel):
     location_details: str | None
     status: str | None
     is_rejected_by_lgu: Optional[bool] = None
-    is_rejected_by_department: Optional[bool] = None
     created_at: datetime
 
     class Config:

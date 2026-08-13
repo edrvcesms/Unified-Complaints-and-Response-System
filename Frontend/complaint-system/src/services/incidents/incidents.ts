@@ -45,12 +45,12 @@ export const getIncidentById = async (incidentId: number): Promise<Incident> => 
   };
 };
 
-export const getComplaintsByIncidentId = async (incidentId: number, params: PaginationQueryParams): Promise<PaginatedResponse<Complaint[]>> => {
+export const getComplaintsByIncidentId = async (incidentId: number, params: PaginationQueryParams): Promise<PaginatedResponse<Complaint>> => {
   try {
     const queryString = buildQueryString(params || {});
-    
+
     return await incidentsApi.get(`/${incidentId}/complaints?${queryString}`);
-    
+
   } catch (error) {
     console.error("Error fetching complaints for incident:", error);
     throw error;

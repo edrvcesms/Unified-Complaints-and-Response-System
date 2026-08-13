@@ -26,7 +26,6 @@ class IncidentModel(Base):
     description = Column(Text, nullable=False)
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
-    department_account_id = Column(Integer, ForeignKey("department_account.id"), nullable=True, index=True)
     lgu_account_id = Column(Integer, ForeignKey("user.id"), nullable=True, index=True)
     resolver_id = Column(Integer, ForeignKey("user.id"), nullable=True, index=True)
     latitude = Column(Float, nullable=True)
@@ -73,7 +72,6 @@ class IncidentModel(Base):
     complaint_clusters = relationship("IncidentComplaintModel", back_populates="incident", cascade="all, delete-orphan")
     barangay = relationship("Barangay", back_populates="incidents")
     category = relationship("Category", back_populates="incidents")
-    department_account = relationship("DepartmentAccount", back_populates="incidents")
     post_incident_feedbacks = relationship("PostIncidentFeedback", back_populates="incident", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="incident", cascade="all, delete-orphan")
     __table_args__ = (

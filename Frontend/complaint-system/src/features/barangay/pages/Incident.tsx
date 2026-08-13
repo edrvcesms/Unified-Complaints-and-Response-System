@@ -54,7 +54,7 @@ export const IncidentPage: React.FC = () => {
     return params;
   }, [currentPage, debouncedSearch, filterStatus, dateFrom, dateTo, sortBy]);
 
-  const { incidents, pagination, isLoading, error: isError } = useIncidents(queryParams);
+  const { incidents, pagination, isLoading, isFetching, error: isError } = useIncidents(queryParams);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value);
   const handleFilterChange = (status: StatusFilter) => setFilterStatus(status);
@@ -114,6 +114,7 @@ export const IncidentPage: React.FC = () => {
       <IncidentsTable
         incidents={incidents}
         isLoading={isLoading}
+        isFetching={isFetching}
         currentPage={pagination?.page ?? 1}
         totalPages={pagination?.total_pages ?? 1}
         onPageChange={setCurrentPage}

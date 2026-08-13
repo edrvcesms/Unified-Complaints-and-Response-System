@@ -2,18 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
 import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, Send, CalendarIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users} from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useState, useEffect } from "react";
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
 import { useActionsTakenModal } from "../../../hooks/useActionsTakenModal";
-import { useReviewIncident, useResolveIncident, useRejectIncident, useNotifyHearing } from '../../../hooks/useIncidents';
+import { useReviewIncident, useResolveIncident, useRejectIncident } from '../../../hooks/useIncidents';
 import { useToast } from "../../../hooks/useToast";
 import { ToastContainer } from "../../../components/Toast";
 import { isAbortError } from "../../../utils/axiosException";
-import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateAttachments } from '../../../utils/attachmentHelper';
@@ -25,14 +24,11 @@ export const LguIncidentDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
-  const { toasts, showToast } = useToast();
+  const { toasts } = useToast();
 
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const rejectIncidentMutation = useRejectIncident(Number(incidentId));
-  const notifyHearingMutation = useNotifyHearing();
-  const [hearingDate, setHearingDate] = useState('');
-  const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
   const [successModal, setSuccessModal] = useState<{ isOpen: boolean; title: string; message: string }>(
     { isOpen: false, title: '', message: '' }
   );
@@ -210,47 +206,6 @@ export const LguIncidentDetails: React.FC = () => {
     });
   };
 
-  // Hearing modal is opened via UI; toolbar is currently disabled in this view.
-
-  const handleNotifyHearing = async () => {
-    if (!hearingDate) {
-      showToast({
-        type: 'error',
-        message: 'Please select a hearing date and time before notifying users.',
-        title: 'Missing Hearing Date'
-      });
-      return;
-    }
-
-    const hearingDateFormData = new FormData();
-    hearingDateFormData.append("hearing_date", hearingDate);
-
-    try {
-      await notifyHearingMutation.mutateAsync({
-        incidentId: Number(incidentId),
-        hearingDate: hearingDateFormData,
-      });
-      setIsHearingModalOpen(false);
-      setHearingDate('');
-      showToast({
-        type: 'success',
-        message: 'Users have been notified for the hearing successfully.',
-        title: ''
-      });
-    } catch (err) {
-      console.error(err);
-      showToast({
-        type: 'error',
-        message: 'Failed to notify users for hearing. Please try again.',
-        title: ''
-      });
-    }
-  };
-
-  const isForwardedIncident = incident?.complaint_clusters?.some(
-    cluster => cluster.complaint.status === "forwarded_to_lgu"
-  );
-
   if (isLoading) {
     return (
       <LoadingIndicator />
@@ -266,25 +221,22 @@ export const LguIncidentDetails: React.FC = () => {
     );
   }
   
-  const incidentStatus = incident.complaint_clusters[0]?.complaint.status as ComplaintStatus;
+  const incidentStatus = incident.complaint_clusters[0]?.complaint?.status ?? "submitted";
   const isSubmitted = incidentStatus === "submitted";
   const isUnderReviewByBarangay = incidentStatus === "reviewed_by_barangay";
   const isUnderReviewByLgu = incidentStatus === "reviewed_by_lgu";
   const isResolved = incidentStatus === "resolved_by_barangay" || incidentStatus === "resolved_by_lgu";
-  const isRejected = incidentStatus === "rejected";
   const isRejectedByLgu = incident.complaint_clusters[0]?.complaint?.is_rejected_by_lgu === true;
+  const isRejected = incidentStatus === "rejected" || incidentStatus === "rejected_by_lgu" || isRejectedByLgu;
   const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
-  const isForwardedToDepartment = incidentStatus === "forwarded_to_department";
-  const shouldShowHearingControls = !isResolved && !isRejected;
 
-  const hasScheduledHearingDate = Boolean((incident as any)?.hearing_date ?? (incident as any)?.hearingDate ?? null);
   const titleStatusBadge = isResolved
     ? { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-200', dotClassName: 'bg-green-600' }
     : isRejected || isRejectedByLgu
       ? { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200', dotClassName: 'bg-red-600' }
       : isUnderReviewByBarangay || isUnderReviewByLgu
         ? { label: 'Under Review', className: 'bg-yellow-50 text-yellow-700 border-yellow-200', dotClassName: 'bg-yellow-600' }
-        : isForwardedToLgu || isForwardedToDepartment
+        : isForwardedToLgu
           ? { label: 'Forwarded', className: 'bg-blue-50 text-blue-700 border-blue-200', dotClassName: 'bg-blue-600' }
           : null;
 
@@ -473,23 +425,12 @@ export const LguIncidentDetails: React.FC = () => {
                 View all the related complaints in this incident.
               </p>
             </div>
-
-            {isForwardedIncident && (
-              <div className="border-t pt-6 mt-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
-                  Assignment Actions
-                </h3>
-                <p className="text-sm text-gray-600 mt-2">
-                  Department assignment actions are temporarily disabled.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        {isResolved || isRejected ? null : (
+        {isForwardedToLgu && (
           <>
             <button
               onClick={handleReview}
@@ -515,113 +456,6 @@ export const LguIncidentDetails: React.FC = () => {
           </>
         )}
       </div>
-
-      
-      {/* Toolbar */}
-      {/* {shouldShowHearingControls && (
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {hasScheduledHearingDate && (
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
-              Hearing Date scheduled
-            </div>
-          )}
-
-          <button
-            onClick={() => setIsHearingModalOpen(true)}
-            disabled={notifyHearingMutation.isPending || isSubmitted || isResolved || isRejected}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <CalendarIcon className="w-4 h-4 text-primary-200" />
-            {notifyHearingMutation.isPending
-              ? "Notifying..."
-              : hasScheduledHearingDate
-                ? "Reschedule Hearing Date"
-                : "Notify Complainants for Hearing"}
-          </button>
-        </div>
-      )} */}
-
-      {/* Modal */}
-      {/*isHearingModalOpen && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black bg-opacity-50"
-          onClick={(e) => e.target === e.currentTarget && setIsHearingModalOpen(false)}
-        >
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm w-full max-w-sm overflow-hidden">
-
-            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-medium text-gray-900">
-                  {hasScheduledHearingDate ? "Reschedule Hearing Date" : "Notify Complainants for Hearing"}
-                </h3>
-                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                  Select a date and time to notify all complainants.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsHearingModalOpen(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors text-sm"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="px-6 pt-5 pb-6">
-              <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-primary-700 mb-2.5">
-                <CalendarIcon className="w-3.5 h-3.5" />
-                Date &amp; Time
-              </label>
-
-              <div className="mb-4">
-                <CustomDateTimePicker
-                  value={hearingDate ? new Date(hearingDate) : null}
-                  onChange={(date) => setHearingDate(format(date, "yyyy-MM-dd'T'HH:mm"))}
-                  minDate={startOfTomorrow()}
-                />
-              </div>
-
-              {hearingDate && (
-                <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-50 rounded-full text-xs text-primary-800 mb-5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0" />
-                  {new Date(hearingDate).toLocaleDateString("en-US", {
-                    weekday: "short", month: "short", day: "numeric", year: "numeric"
-                  }) + " · " + new Date(hearingDate).toLocaleTimeString("en-US", {
-                    hour: "numeric", minute: "2-digit"
-                  })}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsHearingModalOpen(false)}
-                  disabled={notifyHearingMutation.isPending}
-                  className="px-4 py-2.5 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNotifyHearing}
-                  disabled={notifyHearingMutation.isPending || !hearingDate}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <span className="w-4 h-4 rounded-full border border-primary-300 flex items-center justify-center text-[9px]">✓</span>
-                  {notifyHearingMutation.isPending
-                    ? "Notifying..."
-                    : hasScheduledHearingDate
-                      ? "Confirm & Reschedule"
-                      : "Confirm & Notify"}
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* DepartmentSelectionModal temporarily disabled. */}
 
       <ActionsTakenModal
         isOpen={actionsTakenModal.isOpen}

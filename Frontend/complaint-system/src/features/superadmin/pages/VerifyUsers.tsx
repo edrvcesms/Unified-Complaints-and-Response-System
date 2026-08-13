@@ -9,6 +9,7 @@ import { ConfirmationModal } from "../../general/ConfirmationModal";
 import { ErrorMessage } from "../../general/ErrorMessage";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { Pagination } from "../../barangay/components/Pagination";
+import { TableSkeleton } from "../../barangay/components/Skeletons";
 
 interface UnverifiedUser {
   id: number;
@@ -41,6 +42,7 @@ export const SuperAdminVerifyUsers: React.FC = () => {
   const {
     data,
     isLoading,
+    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -182,7 +184,25 @@ export const SuperAdminVerifyUsers: React.FC = () => {
             </div>
           </div>
 
-          {users.length === 0 ? (
+          {isLoading || isFetching ? (
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <table className="w-full min-w-[740px]">
+                <thead className="bg-gray-50 border-y border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined At</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  <TableSkeleton columns={6} rows={5} />
+                </tbody>
+              </table>
+            </div>
+          ) : users.length === 0 ? (
             <div className="px-6 py-10 text-sm text-gray-500">
               {verificationFilter === "unverified" && "No unverified users found."}
               {verificationFilter === "verified" && "No verified users found."}

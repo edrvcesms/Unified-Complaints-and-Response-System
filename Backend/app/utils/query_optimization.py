@@ -12,7 +12,6 @@ from sqlalchemy.orm import selectinload, joinedload, load_only
 from sqlalchemy import func, select, cast, Date, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.department_account import DepartmentAccount
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.complaint import Complaint
@@ -96,7 +95,6 @@ class QueryOptions:
                 Complaint.location_details,
                 Complaint.status,
                 Complaint.is_rejected_by_lgu,
-                Complaint.is_rejected_by_department,
                 Complaint.created_at,
             )
         )
@@ -149,7 +147,6 @@ class QueryOptions:
                 Complaint.location_details,
                 Complaint.status,
                 Complaint.is_rejected_by_lgu,
-                Complaint.is_rejected_by_department,
                 Complaint.created_at,
                 Complaint.user_id,
                 Complaint.barangay_id,
@@ -193,7 +190,6 @@ class QueryOptions:
                 Complaint.location_details,
                 Complaint.status,
                 Complaint.is_rejected_by_lgu,
-                Complaint.is_rejected_by_department,
                 Complaint.created_at,
                 Complaint.user_id,
                 Complaint.barangay_id,
@@ -268,13 +264,11 @@ class QueryOptions:
     # User with related accounts
     @staticmethod
     def user_with_accounts():
-        """User with barangay and department accounts."""
+        """User with barangay accounts."""
         from app.models.barangay_account import BarangayAccount
-        from app.models.department_account import DepartmentAccount
         
         return (
             selectinload(User.barangay_account).selectinload(BarangayAccount.barangay),
-            selectinload(User.department_account).selectinload(DepartmentAccount.department),
         )
 
 
@@ -574,7 +568,7 @@ class StatisticsHelper:
             date_str, status_val, count = row
             if status_val == 'submitted':
                 status_totals['submitted'] += count
-            elif status_val == 'resolved_by_barangay' or status_val == 'resolved_by_department':
+            elif status_val == 'resolved_by_barangay' or status_val == 'resolved_by_lgu':
                 status_totals['resolved'] += count
             elif status_val == 'forwarded_to_lgu':
                 status_totals['forwarded'] += count

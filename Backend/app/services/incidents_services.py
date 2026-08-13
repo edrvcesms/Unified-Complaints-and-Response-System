@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
-from app.models.department_account import DepartmentAccount
 from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
@@ -45,12 +44,6 @@ def _active_statuses_by_role(role: str) -> set[str]:
         return {
             ComplaintStatus.FORWARDED_TO_LGU.value,
             ComplaintStatus.REVIEWED_BY_LGU.value,
-        }
-
-    if role == UserRole.DEPARTMENT_STAFF:
-        return {
-            ComplaintStatus.FORWARDED_TO_DEPARTMENT.value,
-            ComplaintStatus.REVIEWED_BY_DEPARTMENT.value,
         }
 
     return set()
@@ -316,7 +309,6 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         await CacheInvalidator.invalidate_cache(
             incident_ids=[incident_id],
             barangay_id=incident.barangay_id,
-            department_account_id=incident.department_account_id,
             include_global=True
         )
         
@@ -388,34 +380,6 @@ async def get_all_incidents(current_user: User, db: AsyncSession, params: Incide
                 select(IncidentModel)
                 .where(archive_filter)
                 .options(*QueryOptions.incident_minimal())
-            )
-            statement = _apply_incident_filters_and_sort(statement, params)
-            page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))
-            return PaginatedResponse[IncidentOut].model_validate(page)
-
-        if role == UserRole.DEPARTMENT_STAFF:
-            department_account = getattr(current_user, "department_account", None)
-            if not department_account:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department account not found for current user")
-
-            department_account_id = department_account.id
-            archive_filter = (
-                select(IncidentComplaintModel.incident_id)
-                .join(IncidentComplaintModel.complaint)
-                .where(
-                    IncidentComplaintModel.incident_id == IncidentModel.id,
-                    Complaint.status.in_([s.value for s in archive_statuses]),
-                )
-                .exists()
-            )
-
-            statement = (
-                select(IncidentModel)
-                .where(
-                    IncidentModel.department_account_id == department_account_id,
-                    archive_filter,
-                )
-                .options(*QueryOptions.incident_list())
             )
             statement = _apply_incident_filters_and_sort(statement, params)
             page = await paginate(db, statement, params, mapper=lambda item: IncidentOut.model_validate(item, from_attributes=True))

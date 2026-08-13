@@ -248,7 +248,6 @@ def cluster_complaint_task(self, complaint_data: dict):
 
                         if result.existing_incident_status in [
                             "forwarded_to_lgu",
-                            "forwarded_to_department",
                         ] and not complaint.forwarded_at:
                             complaint.forwarded_at = datetime.now(timezone.utc)
 

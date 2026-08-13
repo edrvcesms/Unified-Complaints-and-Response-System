@@ -55,7 +55,7 @@ def parse_response_data(
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_incidents(params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -63,7 +63,7 @@ async def get_incidents(params: IncidentListParams = Depends(), db: AsyncSession
 
 @router.get("/archive", status_code=status.HTTP_200_OK)
 async def get_all_incidents_endpoint(params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
 
@@ -72,7 +72,7 @@ async def get_all_incidents_endpoint(params: IncidentListParams = Depends(), db:
 @router.get("/{incident_id}", status_code=status.HTTP_200_OK)
 async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -81,7 +81,7 @@ async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db
 @router.get("/{incident_id}/complaints", status_code=status.HTTP_200_OK)
 async def get_incident_complaints(incident_id: int, params: PaginationParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -97,7 +97,7 @@ async def resolve_incident_complaints(
     current_user: User = Depends(get_current_user)
 ):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -114,7 +114,7 @@ async def review_incident_complaints(
     current_user: User = Depends(get_current_user)
 ):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -131,7 +131,7 @@ async def reject_incident_complaints(
     current_user: User = Depends(get_current_user)
 ):
     
-    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF, UserRole.BARANGAY_OFFICIAL]:
+    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.BARANGAY_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -149,7 +149,7 @@ async def reject_entire_incident(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in [UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -178,7 +178,7 @@ async def forward_incident_lgu(
 @router.post("/{incident_id}/mark-viewed", status_code=status.HTTP_200_OK)
 async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
@@ -192,7 +192,7 @@ async def notify_hearing(request: Request, incident_id: int, hearing_date: datet
 
 @router.post("/mark-hearing/{incident_id}", status_code=status.HTTP_200_OK)
 async def mark_hearing(incident_id: int, is_successful: bool = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     return await mark_hearing_as_successful(incident_id, is_successful, current_user.id, db)
@@ -201,7 +201,7 @@ async def mark_hearing(incident_id: int, is_successful: bool = Form(...), db: As
 @router.post("/reschedule-hearing/{incident_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def reschedule_hearing_route(request: Request, incident_id: int, hearing_date: datetime = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL, UserRole.DEPARTMENT_STAFF]:
+    if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     return await reschedule_hearing(incident_id, hearing_date, current_user.id, db)

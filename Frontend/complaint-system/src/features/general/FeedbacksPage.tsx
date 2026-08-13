@@ -50,7 +50,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: FEEDBACKS_PER_PAGE });
-  const { feedbacks, isLoading, error, pagination } = useResolvedPostIncidentFeedbacks({ page: metaData.page, page_size: metaData.page_size });
+  const { feedbacks, isLoading, isFetching, error } = useResolvedPostIncidentFeedbacks({ page: metaData.page, page_size: metaData.page_size });
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const handlePageChange = (page: number) => {
@@ -149,7 +149,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
+              {isLoading || isFetching ? (
                 Array.from({ length: 5 }).map((_, index) => (
                   <tr key={index}>
                     <td colSpan={6} className="px-4 py-6">

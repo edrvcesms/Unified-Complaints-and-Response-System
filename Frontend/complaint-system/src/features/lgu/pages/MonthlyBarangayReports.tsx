@@ -6,9 +6,10 @@ import { ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { FileText } from "lucide-react";
 import { Pagination } from "../../barangay/components/Pagination";
+import { TableSkeleton } from "../../barangay/components/Skeletons";
 
 export const MonthlyBarangayReports: React.FC = () => {
-  const { barangays, isLoading, error } = useAllBarangays({ page: 1, page_size: 30, search: "" });
+  const { barangays, isLoading, isFetching, error } = useAllBarangays({ page: 1, page_size: 30, search: "" });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -99,7 +100,9 @@ export const MonthlyBarangayReports: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {paginatedBarangays && paginatedBarangays.length > 0 ? (
+              {isLoading || isFetching ? (
+                <TableSkeleton columns={5} rows={5} />
+              ) : paginatedBarangays && paginatedBarangays.length > 0 ? (
                 paginatedBarangays.map((barangay) => (
                   <tr key={barangay.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">

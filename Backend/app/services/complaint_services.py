@@ -175,8 +175,8 @@ async def user_complaints_statistics(user_id: int, db: AsyncSession):
         complaints = result.scalars().all()
 
         total_complaints = len(complaints)
-        resolved_complaints = sum(1 for c in complaints if c.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
-        pending_complaints = sum(1 for c in complaints if c.status not in [ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_DEPARTMENT.value])
+        resolved_complaints = sum(1 for c in complaints if c.status in [ComplaintStatus.RESOLVED_BY_BARANGAY.value])
+        pending_complaints = sum(1 for c in complaints if c.status not in [ComplaintStatus.RESOLVED_BY_BARANGAY.value])
 
         return {
             "total_complaints": total_complaints,
@@ -242,7 +242,7 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
         if day in daily_counts:
             if status_val == 'submitted':
                 daily_counts[day]['submitted'] = count
-            elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+            elif status_val in ['resolved_by_barangay']:
                 daily_counts[day]['resolved'] = count
             elif status_val == 'forwarded_to_lgu':
                 daily_counts[day]['forwarded'] = count
@@ -315,7 +315,7 @@ async def get_monthly_stats(barangay_id: int, year: int, month: int, db: AsyncSe
         if day in daily_counts:
             if status_val == 'submitted':
                 daily_counts[day]['submitted'] = count
-            elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+            elif status_val in ['resolved_by_barangay']:
                 daily_counts[day]['resolved'] = count
             elif status_val == 'forwarded_to_lgu':
                 daily_counts[day]['forwarded'] = count
@@ -391,7 +391,7 @@ async def get_yearly_stats(barangay_id: int, year: int, db: AsyncSession):
         label = MONTHS[month_idx]
         if status_val == 'submitted':
             monthly_counts[label]['submitted'] += count
-        elif status_val in ['resolved_by_barangay', 'resolved_by_department']:
+        elif status_val in ['resolved_by_barangay']:
             monthly_counts[label]['resolved'] += count
         elif status_val == 'forwarded_to_lgu':
             monthly_counts[label]['forwarded'] += count

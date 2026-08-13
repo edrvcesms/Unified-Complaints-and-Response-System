@@ -28,5 +28,4 @@ export interface LoginResponseData {
     barangay_email: string;
     barangay_account: BarangayAccount;
   } | null;
-  departmentAccountData?: any | null;
 }

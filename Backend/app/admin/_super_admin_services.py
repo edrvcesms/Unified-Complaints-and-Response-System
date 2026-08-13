@@ -2,17 +2,14 @@ from fastapi import HTTPException, status
 from pinecone import Pinecone
 from sqlalchemy.ext import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.department import Department
 from app.models.complaint import Complaint
 from app.models.user import User
 from app.models.category import Category
 from app.models.category_config import CategoryConfigModel
 from app.models.barangay import Barangay
-from app.models.department import Department
-from app.models.department_account import DepartmentAccount
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, DepartmentAccountCreate, LGUAccountCreate, CategoryConfigsUpdate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate
 from sqlalchemy import select, func
 from app.core.security import hash_password
 from datetime import datetime
@@ -211,38 +208,6 @@ async def create_complaint_category(category_data: ComplaintCategoryCreate, db: 
     await db.refresh(new_category)
     return new_category
 
-async def create_department(department_data: DepartmentAccountCreate, db: AsyncSession) -> Department:
-    result = await db.execute(
-        select(User).where(User.email == department_data.email)
-    )
-    if result.scalars().first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Department account already exists")
-
-    hashed_password = hash_password(department_data.password)
-
-    new_account = User(
-        email=department_data.email,
-        hashed_password=hashed_password,
-        created_at=datetime.utcnow(),
-        role=UserRole.DEPARTMENT_STAFF.value,
-        is_administrator=True
-    )
-
-    new_department = Department(
-        department_name=department_data.department_name,
-        description=department_data.description,
-        created_at=datetime.utcnow()
-    )
-    department_account = DepartmentAccount(
-        user=new_account,
-        department=new_department,
-        created_at=datetime.utcnow()
-    )
-    db.add_all([new_account, department_account, new_department])
-    await db.commit()
-    await db.refresh(new_department)
-    return new_department
-    
 async def create_lgu_account(lgu_data: LGUAccountCreate, db: AsyncSession):
     try:
         result = await db.execute(

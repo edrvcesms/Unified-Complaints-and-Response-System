@@ -43,6 +43,37 @@ export const SkeletonRow: React.FC<SkeletonRowProps> = ({ columns = 6 }) => (
   </tr>
 );
 
+interface TableSkeletonProps {
+  columns?: number;
+  rows?: number;
+}
+
+export const TableSkeleton: React.FC<TableSkeletonProps> = ({ columns = 6, rows = 5 }) => (
+  <>
+    {Array.from({ length: rows }).map((_, rowIndex) => (
+      <SkeletonRow key={rowIndex} columns={columns} />
+    ))}
+  </>
+);
+
+export const GridCardSkeleton = ({ count = 3 }: { count?: number }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+    {Array.from({ length: count }).map((_, index) => (
+      <div key={index} className="border border-gray-200 rounded-lg p-4 animate-pulse bg-white">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="h-5 w-2/3 rounded bg-gray-200" />
+          <div className="h-7 w-7 rounded-md bg-gray-200" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded bg-gray-200" />
+          <div className="h-3 w-5/6 rounded bg-gray-200" />
+          <div className="h-3 w-2/3 rounded bg-gray-200" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export const SkeletonChart = () => (
   <div className="bg-white rounded-xl border border-gray-100 p-5 animate-pulse">
     {/* fake title */}

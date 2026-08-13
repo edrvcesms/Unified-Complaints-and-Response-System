@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import type { Incident } from "../../types/complaints/incident";
 import { Pagination } from "../barangay/components/Pagination";
-import { SkeletonRow } from "../barangay/components/Skeletons";
+import { TableSkeleton } from "../barangay/components/Skeletons";
 import { formatCategoryName } from "../../utils/categoryFormatter";
 import { getStatusColor, formatStatus } from "../../utils/incidentHelpers";
 import { useAuthStore } from "../../store/authStore";
@@ -50,6 +50,7 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
 interface ArchivedIncidentsTableProps {
   incidents: Incident[];
   isLoading: boolean;
+  isFetching?: boolean;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -60,6 +61,7 @@ interface ArchivedIncidentsTableProps {
 export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
   incidents,
   isLoading,
+  isFetching = false,
   currentPage,
   totalPages,
   onPageChange,
@@ -95,14 +97,8 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
           </thead>
 
           <tbody className="divide-y divide-gray-100">
-            {isLoading ? (
-              <>
-                <SkeletonRow columns={8} />
-                <SkeletonRow columns={8} />
-                <SkeletonRow columns={8} />
-                <SkeletonRow columns={8} />
-                <SkeletonRow columns={8} />
-              </>
+            {isLoading || isFetching ? (
+              <TableSkeleton columns={8} rows={5} />
             ) : incidents.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-16 text-center text-sm text-gray-500">

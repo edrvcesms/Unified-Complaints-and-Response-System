@@ -21,7 +21,6 @@ class CacheInvalidator:
         user_ids: Optional[List[int]] = None,
         incident_ids: Optional[List[int]] = None,
         barangay_id: Optional[int] = None,
-        department_account_id: Optional[int] = None,
         announcement_uploader_id: Optional[int] = None,
         announcement_id: Optional[int] = None,
         event_ids: Optional[List[int]] = None,
@@ -64,7 +63,6 @@ class CacheInvalidator:
                 "all_announcements",
                 "all_forwarded_incidents",
                 "events_cache",
-                "all_departments",
                 "lgu:complaint_counts_by_barangay_category",
                 "archive_incidents:lgu",
             })
@@ -105,13 +103,6 @@ class CacheInvalidator:
             
             logger.info(f"Barangay caches added for barangay_id: {barangay_id} (including stats)")
 
-        if department_account_id:
-            tasks.update({
-                f"department_incidents:{department_account_id}",
-                f"archive_incidents:department:{department_account_id}",
-            })
-            logger.info(f"Department caches added for department_account_id: {department_account_id}")
-
         if complaint_ids:
             for complaint_id in complaint_ids:
                 tasks.add(f"complaint:{complaint_id}")
@@ -139,7 +130,7 @@ class CacheInvalidator:
         resources: set[str] = set()
         if complaint_ids:
             resources.add("complaints")
-        if incident_ids or barangay_id or department_account_id:
+        if incident_ids or barangay_id:
             resources.add("incidents")
         if user_ids:
             resources.add("users")
@@ -209,7 +200,6 @@ async def invalidate_cache(
     user_ids: Optional[List[int]] = None,
     incident_ids: Optional[List[int]] = None,
     barangay_id: Optional[int] = None,
-    department_account_id: Optional[int] = None,
     announcement_uploader_id: Optional[int] = None,
     announcement_id: Optional[int] = None,
     event_ids: Optional[List[int]] = None,
@@ -223,7 +213,6 @@ async def invalidate_cache(
         user_ids=user_ids,
         incident_ids=incident_ids,
         barangay_id=barangay_id,
-        department_account_id=department_account_id,
         announcement_uploader_id=announcement_uploader_id,
         announcement_id=announcement_id,
         event_ids=event_ids,

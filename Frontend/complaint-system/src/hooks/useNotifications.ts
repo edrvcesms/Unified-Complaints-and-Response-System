@@ -25,30 +25,6 @@ interface UseNotificationsOptions {
   reconnectIntervalMs?: number;
 }
 
-/**
- * Hook to manage SSE notifications for barangay, LGU, and department users
- * 
- * @example
- * // Listen to specific events
- * useNotifications({
- *   events: ['new_complaint', 'complaint_update'],
- *   onNotification: (notification) => {
- *     console.log('Received:', notification);
- *     // Handle the notification (show toast, update UI, etc.)
- *   }
- * });
- * 
- * @example
- * // Listen to all events
- * useNotifications({
- *   events: ['*'],
- *   onNotification: (notification) => {
- *     if (notification.event === 'new_complaint') {
- *       // Handle new complaint
- *     }
- *   }
- * });
- */
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
   const {
     events = ['*'],

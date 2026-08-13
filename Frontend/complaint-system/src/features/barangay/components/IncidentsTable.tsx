@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from "react-router-dom";
 import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "./Pagination";
-import { SkeletonRow } from "./Skeletons";
+import { TableSkeleton } from "./Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 interface IncidentTableRowProps {
@@ -131,6 +131,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
 interface IncidentsTableProps {
   incidents: Incident[];
   isLoading: boolean;
+  isFetching?: boolean;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -139,6 +140,7 @@ interface IncidentsTableProps {
 export const IncidentsTable: React.FC<IncidentsTableProps> = ({
   incidents,
   isLoading,
+  isFetching = false,
   currentPage,
   totalPages,
   onPageChange,
@@ -178,14 +180,8 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {isLoading ? (
-                  <>
-                    <SkeletonRow columns={7} />
-                    <SkeletonRow columns={7} />
-                    <SkeletonRow columns={7} />
-                    <SkeletonRow columns={7} />
-                    <SkeletonRow columns={7} />
-                  </>
+                {isLoading || isFetching ? (
+                  <TableSkeleton columns={7} rows={5} />
                 ) : incidents.length === 0 ? (
                   <tr>
                     <td

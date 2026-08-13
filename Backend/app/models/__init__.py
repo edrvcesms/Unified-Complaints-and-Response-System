@@ -5,10 +5,8 @@ from .category import Category
 from .complaint import Complaint
 from .complaint_image import ComplaintImage
 from .feedback import Feedback
-from .department import Department
 from .user import User
 from .notification import Notification
-from .department_account import DepartmentAccount
 from .incident_model import IncidentModel
 from .incident_complaint import IncidentComplaintModel
 from .category_config import CategoryConfigModel

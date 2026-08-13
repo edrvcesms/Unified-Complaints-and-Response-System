@@ -69,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     return () => { document.body.style.overflow = ""; };
   }, [isMobile, notificationDropdownOpen]);
 
-  const rejectedStatus = ["rejected_by_barangay", "rejected_by_department", "rejected_by_lgu"];
+  const rejectedStatus = ["rejected_by_barangay", "rejected_by_lgu"];
   const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
   const previewNotifications = (notifications ?? []).slice(0, 5);
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);

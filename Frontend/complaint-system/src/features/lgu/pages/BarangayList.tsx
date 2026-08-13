@@ -7,11 +7,12 @@ import { StatCard, ErrorMessage, SearchInput } from "../../general";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { Bell } from "lucide-react";
 import { Pagination } from "../../barangay/components/Pagination";
+import { GridCardSkeleton } from "../../barangay/components/Skeletons";
 import type { PaginationQueryParams } from "../../../types/general/pagination";
 
 export const BarangayList: React.FC = () => {
   const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: 9 });
-  const { barangays, isLoading, error, pagination } = useAllBarangays(metaData);
+  const { barangays, isLoading, isFetching, error, pagination } = useAllBarangays(metaData);
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,8 +31,6 @@ export const BarangayList: React.FC = () => {
     );
   }, [barangays, searchTerm]);
 
-  const totalPages = Math.ceil((filteredBarangays?.length || 0) / itemsPerPage);
-  
   const paginatedBarangays = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -93,21 +92,25 @@ export const BarangayList: React.FC = () => {
         placeholder="Search barangays..."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {paginatedBarangays && paginatedBarangays.length > 0 ? (
-          paginatedBarangays.map((barangay) => (
-            <BarangayCard 
-              key={barangay.id}
-              barangay={barangay}
-              onViewIncidents={handleViewIncidents}
-            />
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            {searchTerm ? t('empty.noMatch') : t('empty.noBarangays')}
-          </div>
-        )}
-      </div>
+      {isLoading || isFetching ? (
+        <GridCardSkeleton count={6} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedBarangays && paginatedBarangays.length > 0 ? (
+            paginatedBarangays.map((barangay) => (
+              <BarangayCard 
+                key={barangay.id}
+                barangay={barangay}
+                onViewIncidents={handleViewIncidents}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              {searchTerm ? t('empty.noMatch') : t('empty.noBarangays')}
+            </div>
+          )}
+        </div>
+      )}
 
       <Pagination
         currentPage={pagination?.page ?? 1}

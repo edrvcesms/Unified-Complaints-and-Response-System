@@ -6,7 +6,7 @@ import type { PaginationQueryParams } from "../types/general/pagination";
 import { queryClient } from "../main";
 
 export const useAllBarangays = (params: PaginationQueryParams) => {
-  const { data, isLoading, error } = useQuery<PaginatedResponse<BarangayAccountData>>({
+  const { data, isLoading, isFetching, error } = useQuery<PaginatedResponse<BarangayAccountData>>({
     queryKey: ["barangays", params.page, params.page_size, params.search],
     queryFn: () => getAllBarangays(params),
     placeholderData: keepPreviousData,
@@ -18,6 +18,7 @@ export const useAllBarangays = (params: PaginationQueryParams) => {
     barangays: data?.data ?? [],
     pagination: data?.pagination,
     isLoading,
+    isFetching,
     error,
   };
 };

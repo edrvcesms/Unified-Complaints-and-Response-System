@@ -9,7 +9,6 @@ export interface Incident {
   description: string;
   barangay_id: number;
   category_id: number;
-  department_id: number;
   severity_level: string;
   status: string;
   complaint_count: number;

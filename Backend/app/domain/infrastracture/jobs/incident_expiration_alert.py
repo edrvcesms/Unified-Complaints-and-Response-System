@@ -30,7 +30,6 @@ EXPIRY_CHECKPOINTS_HOURS = [24, 16, 10, 3]
 RESOLVED_STATUSES = {
     ComplaintStatus.RESOLVED_BY_BARANGAY.value,
     ComplaintStatus.RESOLVED_BY_LGU.value,
-    ComplaintStatus.RESOLVED_BY_DEPARTMENT.value,
 }
 
 def _resolve_target_user_id(incident) -> int | None:
@@ -38,24 +37,14 @@ def _resolve_target_user_id(incident) -> int | None:
     Resolves which user should receive the expiry warning notification
     based on the incident's current assignment hierarchy.
 
-    Assignment hierarchy (most specific wins):
-        department_account_id → lgu_account_id → barangay_id
-
-    Args:
-        incident (IncidentModel): The incident ORM instance with
-            eagerly loaded `barangay.barangay_account` and `department_account`.
-
     Returns:
         int | None: The resolved user_id to notify, or None if unresolvable.
 
     Examples:
-        - department_account_id is set   → returns department_account.user_id
         - only lgu_account_id is set     → returns lgu_account_id (direct user FK)
         - only barangay_id is set        → returns barangay.barangay_account.user_id
         - none resolvable                → returns None (logged as warning)
     """
-    if incident.department_account_id and incident.department_account:
-        return incident.department_account.user_id
 
     if incident.lgu_account_id:
         return incident.lgu_account_id
@@ -144,12 +133,8 @@ async def run_expiry_warning_notifications():
         10hrs → Third warning (urgent)
          3hrs → Final warning (critical)
 
-    ── Assignment Hierarchy ─────────────────────────────────────────────────
-        Notifications are routed to the most specific responsible party:
-            department_account_id > lgu_account_id > barangay_id
 
     ── Reassignment Handling ────────────────────────────────────────────────
-        If an incident is reassigned (e.g. barangay → lgu → department,
         or back to barangay), the new responsible user is notified immediately
         regardless of whether the checkpoint already fired.
 
@@ -203,7 +188,6 @@ async def run_expiry_warning_notifications():
                 .options(
                     joinedload(IncidentModel.complaint_clusters).joinedload(IncidentComplaintModel.complaint),
                     joinedload(IncidentModel.barangay).joinedload(Barangay.barangay_account),
-                    joinedload(IncidentModel.department_account),
                 )
             )
             incidents = result.unique().scalars().all()
@@ -246,7 +230,6 @@ async def run_expiry_warning_notifications():
                         f"No resolvable user for incident_id={incident.id} "
                         f"(barangay_id={incident.barangay_id}, "
                         f"lgu_account_id={incident.lgu_account_id}, "
-                        f"department_account_id={incident.department_account_id})"
                     )
                     continue
 

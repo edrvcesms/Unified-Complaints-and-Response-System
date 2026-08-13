@@ -4,7 +4,7 @@ import type { PostIncidentFeedback } from "../types/general/feedback";
 import type { PaginatedResponse, PaginationQueryParams } from "../types/general/pagination";
 
 export const useFeedbacks = (params: PaginationQueryParams) => {
-  const { data, isLoading, error } = useQuery<PaginatedResponse<PostIncidentFeedback>>({
+  const { data, isLoading, isFetching, error } = useQuery<PaginatedResponse<PostIncidentFeedback>>({
     queryKey: ["postIncidentFeedbacks", "myResolvedIncidents", params.page, params.page_size, params.search],
     queryFn: () => getMyResolvedIncidentsFeedback(params),
     placeholderData: keepPreviousData,
@@ -14,6 +14,7 @@ export const useFeedbacks = (params: PaginationQueryParams) => {
     feedbacks: data?.data ?? [],
     pagination: data?.pagination,
     isLoading,
+    isFetching,
     error,
   };
 };

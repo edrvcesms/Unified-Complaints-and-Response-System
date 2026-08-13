@@ -12,11 +12,6 @@ class LGUAccountCreate(BaseModel):
     email: str
     password: str
     
-class DepartmentAccountCreate(BaseModel):
-    department_name: str
-    description: Optional[str] = None
-    email: str
-    password: str
     
 class AddEvacuationCenterLocation(BaseModel):
     center_name: str

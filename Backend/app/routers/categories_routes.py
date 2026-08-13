@@ -8,9 +8,9 @@ from app.core.pagination_params import ListParams
 router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def read_categories(params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user=Depends(get_current_user)):
-    return await get_all_categories(db, params)
+async def read_categories( db: AsyncSession = Depends(get_async_db), current_user=Depends(get_current_user)):
+    return await get_all_categories(db)
 
 @router.get("/rejection", status_code=status.HTTP_200_OK)
-async def read_rejection_categories(params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user=Depends(get_current_user)):
-    return await get_all_rejection_categories(db, params)
+async def read_rejection_categories( db: AsyncSession = Depends(get_async_db), current_user=Depends(get_current_user)):
+    return await get_all_rejection_categories(db)

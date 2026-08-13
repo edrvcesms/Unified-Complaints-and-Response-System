@@ -8,9 +8,9 @@ from app.models.user import User
 from app.dependencies.rate_limiter import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
-from app.admin._super_admin_services import create_barangay_account, create_complaint_category, create_department, create_lgu_account, delete_pinecone_data, get_user_rejected_complaints, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs, get_submission_restricted_users, get_suspended_users, lift_suspension, remove_submission_restriction
+from app.admin._super_admin_services import create_barangay_account, create_complaint_category,  create_lgu_account, delete_pinecone_data, get_user_rejected_complaints, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs, get_submission_restricted_users, get_suspended_users, lift_suspension, remove_submission_restriction
 from fastapi import status
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, DepartmentAccountCreate, CategoryConfigsUpdate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate
 from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
 from app.services.emergency_hotline_services import add_emergency_hotlines, get_emergency_hotlines
 from typing import Optional
@@ -61,16 +61,6 @@ async def create_category(request: Request, category_data: ComplaintCategoryCrea
     except HTTPException as e:
         raise e
     
-    
-@router.post("/create-department", status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-async def create_department_route(request: Request, department_data: DepartmentAccountCreate, db: AsyncSession = Depends(get_async_db)):
-    try:
-        return await create_department(department_data, db)
-    except RateLimitExceeded as e:
-        raise rate_limit_exceeded_handler(None, e)
-    except HTTPException as e:
-        raise e
     
     
 @router.post("/create-lgu-account", status_code=status.HTTP_201_CREATED)

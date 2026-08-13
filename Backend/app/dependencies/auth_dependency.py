@@ -10,7 +10,6 @@ from app.utils.caching import get_cache, set_cache
 from app.core.security import is_token_revoked, verify_token
 from app.constants.roles import UserRole
 from app.models.barangay_account import BarangayAccount
-from app.models.department_account import DepartmentAccount
 from app.utils.logger import logger
 
 bearer = HTTPBearer()
@@ -30,11 +29,6 @@ def _serialize_user_for_cache(user: User) -> dict:
             "user_id": user.barangay_account.user_id,
             "barangay_id": user.barangay_account.barangay_id,
         } if user.barangay_account else None,
-        "department_account": {
-            "id": user.department_account.id,
-            "user_id": user.department_account.user_id,
-            "department_id": user.department_account.department_id,
-        } if user.department_account else None,
     }
 
 def _build_user_from_cache(cached_user: dict):
@@ -54,14 +48,6 @@ def _build_user_from_cache(cached_user: dict):
             id=barangay_account_data.get("id"),
             user_id=barangay_account_data.get("user_id"),
             barangay_id=barangay_account_data.get("barangay_id"),
-        )
-
-    department_account_data = cached_user.get("department_account")
-    if isinstance(department_account_data, dict):
-        user.department_account = DepartmentAccount(
-            id=department_account_data.get("id"),
-            user_id=department_account_data.get("user_id"),
-            department_id=department_account_data.get("department_id"),
         )
 
     return user
@@ -93,8 +79,6 @@ async def get_current_user(
         user = _build_user_from_cache(cached_user)
         if user and user.role == UserRole.BARANGAY_OFFICIAL and not user.barangay_account:
             user = None
-        if user and user.role == UserRole.DEPARTMENT_STAFF and not user.department_account:
-            user = None
         from_cache = user is not None
 
     if not user:
@@ -102,7 +86,6 @@ async def get_current_user(
             select(User)
             .options(
                 selectinload(User.barangay_account).selectinload(BarangayAccount.barangay),
-                selectinload(User.department_account),
             )
             .where(User.id == user_id)
         )
@@ -116,14 +99,6 @@ async def get_current_user(
             "Fetched user with barangay data (%s), Barangay: %s",
             "cache" if from_cache else "database",
             user.barangay_account.barangay_id if user.barangay_account else "N/A",
-        )
-        return user
-    
-    if user.role == UserRole.DEPARTMENT_STAFF:
-        logger.info(
-            "Fetched user with department data (%s), Department Account ID: %s",
-            "cache" if from_cache else "database",
-            user.department_account.id if user.department_account else "N/A",
         )
         return user
 

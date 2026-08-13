@@ -39,15 +39,12 @@ export const BarangayIncidents: React.FC = () => {
     dateTo,
     minDate,
     maxDate,
-    currentPage,
     paginated,
-    totalPages,
     handleFilterChange,
     handleSortChange,
     handleDateFromChange,
     handleDateToChange,
     handleClearDateFilter,
-    setCurrentPage,
   } = useComplaintsFilter(incidents || []);
   if (incidentsError) {
     return <ErrorMessage message={t('frontend.incidents.loadIncidentsFailed')} />;

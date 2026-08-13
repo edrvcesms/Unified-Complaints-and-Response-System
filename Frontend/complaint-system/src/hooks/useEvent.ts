@@ -5,7 +5,7 @@ import type { Event } from "../types/general/event";
 import type { PaginatedResponse, PaginationQueryParams } from "../types/general/pagination";
 
 export const useEvents = (params: PaginationQueryParams) => {
-  const { data, isLoading, error, refetch } = useQuery<PaginatedResponse<Event>>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<PaginatedResponse<Event>>({
     queryKey: ["events", params.page, params.page_size, params.search],
     queryFn: () => getEvents(params),
     placeholderData: keepPreviousData,
@@ -16,6 +16,7 @@ export const useEvents = (params: PaginationQueryParams) => {
     events: data?.data ?? [],
     pagination: data?.pagination,
     isLoading,
+    isFetching,
     error,
     refetch,
   };

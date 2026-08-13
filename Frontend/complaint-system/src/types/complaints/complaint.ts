@@ -1,7 +1,6 @@
 import type { UserData } from "../general/user";
 import type { BarangayData } from "../barangay/barangayAccount";
 import type { Category } from "../general/category";
-import type { Department } from "../department/department";
 import type { Attachment } from "../general/attachment";
 
 export interface Complaint {
@@ -11,22 +10,19 @@ export interface Complaint {
   location_details: string;
   category_id: number;
   barangay_id: number;
-  department_id: number;
   priority_level_id: number;
   status: string;
   created_at: string;
   user: UserData;
   barangay: BarangayData;
   category: Category;
-  department: Department;
   attachment: Attachment[];
   longitude?: number;
   latitude?: number;
   is_rejected_by_lgu?: boolean;
-  is_rejected_by_department?: boolean;
 }
 
-export type ComplaintStatus = "submitted" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
+export type ComplaintStatus = "submitted" | "resolved" | "forwarded_to_lgu" | "resolved_by_barangay" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
 
 export type ActivePage = "dashboard" | "complaints" | "complaint_details";
 
@@ -73,7 +69,7 @@ export type StatusFilter = "all" | "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
 
 export type SeverityScoreFilter = "all" | "0-3.9" | "4.0-5.9" | "6.0-7.9" | "8.0+";
 
-export type ComplaintStatusFilter = "all" | "submitted" | "resolved" | "forwarded_to_lgu" | "forwarded_to_department" | "resolved_by_department" | "resolved_by_barangay" | "reviewed_by_department" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
+export type ComplaintStatusFilter = "all" | "submitted" | "resolved" | "forwarded_to_lgu"  |"resolved_by_barangay" |"reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
 
 export interface ComplaintsPageProps {
   complaints: Complaint[];
@@ -108,10 +104,7 @@ export const COMPLAINT_STATUS_FILTERS: { label: string; value: ComplaintStatusFi
   { label: "Submitted", value: "submitted" },
   { label: "Resolved by Barangay", value: "resolved_by_barangay" },
   { label: "Resolved by LGU", value: "resolved_by_lgu" },
-  { label: "Resolved by Department", value: "resolved_by_department" },
   { label: "Forwarded to LGU", value: "forwarded_to_lgu" },
-  { label: "Forwarded to Department", value: "forwarded_to_department" },
-  { label: "Reviewed by Department", value: "reviewed_by_department" },
   { label: "Reviewed by Barangay", value: "reviewed_by_barangay" },
   { label: "Reviewed by LGU", value: "reviewed_by_lgu" },
   { label: "Resolved by LGU", value: "resolved_by_lgu" },

@@ -66,7 +66,7 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
     return params;
   }, [currentPage, debouncedSearch, filterComplaintStatus, dateFrom, dateTo, sortBy]);
 
-  const { incidents, pagination, isLoading, error: isError } = useAllIncidents(queryParams);
+  const { incidents, pagination, isLoading, isFetching, error: isError } = useAllIncidents(queryParams);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value);
   const handleComplaintStatusFilterChange = (status: ComplaintStatusFilter) => setFilterComplaintStatus(status);
@@ -117,6 +117,7 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
       <ArchivedIncidentsTable
         incidents={incidents}
         isLoading={isLoading}
+        isFetching={isFetching}
         currentPage={pagination?.page ?? 1}
         totalPages={pagination?.total_pages ?? 1}
         onPageChange={setCurrentPage}

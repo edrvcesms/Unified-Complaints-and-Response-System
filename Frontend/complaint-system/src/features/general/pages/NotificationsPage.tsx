@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useNotifications } from "../../../hooks/useNotification";
 import { useUserRole } from "../../../hooks/useUserRole";
 import type { Notification } from "../../../types/notifications/notification";
-import { formatDateTime, formatTimeAgo } from "../../../utils/dateUtils";
+import { formatTimeAgo } from "../../../utils/dateUtils";
 import LoadingIndicator from "../LoadingIndicator";
 import { Pagination } from "../../../features/barangay/components/Pagination";
 const PAGE_SIZE = 10;
@@ -17,12 +17,12 @@ export const NotificationsPage: React.FC = () => {
   const { userRole } = useUserRole();
   const [page, setPage] = useState(1);
 
-  const { notifications, pagination, isLoading, markAsRead, markAllAsRead } = useNotifications({
+  const { notifications, pagination, isLoading, isFetching, markAsRead, markAllAsRead } = useNotifications({
     page,
     page_size: PAGE_SIZE,
   });
 
-  const rejectedStatus = ["rejected_by_barangay", "rejected_by_department", "rejected_by_lgu"];
+  const rejectedStatus = ["rejected_by_barangay", "rejected_by_lgu"];
 
   const isRejectNotification = (notification: Notification) => notification.notification_type === "complaint_rejected" || rejectedStatus.includes(notification.notification_type);
   const isWarningNotification = (notification: Notification) => notification.notification_type === "warning";
@@ -84,7 +84,7 @@ export const NotificationsPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (isLoading) {
+  if (isLoading && !notifications?.length) {
     return <LoadingIndicator />;
   }
 
@@ -143,16 +143,31 @@ export const NotificationsPage: React.FC = () => {
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         {!notifications || notifications.length === 0 ? (
-          <div className="px-6 py-14 text-center sm:px-10">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
-              <Bell className="h-8 w-8" />
+          isLoading || isFetching ? (
+            <div className="space-y-3 p-4 sm:p-6">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-16 animate-pulse rounded-xl bg-gray-100" />
+              ))}
             </div>
-            <p className="text-base font-semibold text-gray-900">{t("nav.noNotifications")}</p>
-            <p className="mt-1 text-sm text-gray-500">{t("nav.noNotificationsMessage")}</p>
-          </div>
+          ) : (
+            <div className="px-6 py-14 text-center sm:px-10">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
+                <Bell className="h-8 w-8" />
+              </div>
+              <p className="text-base font-semibold text-gray-900">{t("nav.noNotifications")}</p>
+              <p className="mt-1 text-sm text-gray-500">{t("nav.noNotificationsMessage")}</p>
+            </div>
+          )
         ) : (
           <>
             <div className="divide-y divide-gray-100">
+              {isFetching && (
+                <div className="space-y-3 border-b border-gray-100 bg-gray-50/50 p-4 sm:p-6">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-14 animate-pulse rounded-lg bg-gray-100" />
+                  ))}
+                </div>
+              )}
               {notifications.map((notification) => (
                 <button
                   key={notification.id}

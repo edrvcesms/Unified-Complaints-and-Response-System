@@ -17,8 +17,6 @@ from app.core.security import create_access_token, create_refresh_token
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary
 from app.constants.roles import UserRole
 from app.schemas.barangay_schema import BarangayWithUserData
-from app.schemas.department_schema import DepartmentWithUserData
-from app.services.department_services import get_department_account
 from app.services.barangay_services import get_barangay_account
 from app.services.sse_manager import sse_manager
 from app.utils.attachments import validate_upload_files
@@ -316,7 +314,6 @@ async def login_user(login_data: LoginData, db: AsyncSession):
 
 async def officials_login(login_data: LoginData, db: AsyncSession):
     barangay_data = None
-    department_data = None
 
     try:
         result = await db.execute(select(User).where(User.email == login_data.email))
@@ -330,7 +327,7 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
             logger.warning(f"Login attempt with incorrect password for email: {login_data.email}")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
         
-        if user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.DEPARTMENT_STAFF, UserRole.LGU_OFFICIAL]:
+        if user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
             logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
 
@@ -341,13 +338,6 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated barangay not found")
             barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
 
-        if user.role == UserRole.DEPARTMENT_STAFF:
-            department = await get_department_account(user.id, db)
-            if not department:
-                logger.warning(f"Login attempt for department staff with no associated department: {login_data.email}")
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Associated department not found")
-            department_data = DepartmentWithUserData.model_validate(department, from_attributes=True)
-
         logger.info(f"User logged in successfully with email: {login_data.email}")
 
         refresh_token = create_refresh_token(data={"user_id": user.id})
@@ -355,7 +345,6 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
 
         user_cache = {
             "barangay_data": jsonable_encoder(barangay_data.model_dump()) if barangay_data else None,
-            "department_data": jsonable_encoder(department_data.model_dump()) if department_data else None
         }
         await set_cache(f"user_data:{user.id}", user_cache, expiration=3600)
         logger.info(f"User data cached for user_id: {user.id}")
@@ -368,7 +357,6 @@ async def officials_login(login_data: LoginData, db: AsyncSession):
                 "refresh_token": refresh_token if user.role == UserRole.USER else None,
                 "role": user.role,
                 "barangayAccountData": user_cache["barangay_data"] if barangay_data else None,
-                "departmentAccountData": user_cache["department_data"] if department_data else None
             })
         )
 
@@ -469,7 +457,6 @@ async def refresh_access_token(request: Request, db: AsyncSession):
             )
         
         barangay_data = None
-        department_data = None
         cached_user_data = await get_cache(f"user_data:{user_id}")
         logger.info(f"Cache lookup completed for user_id: {user_id} during token refresh attempt.")
         
@@ -484,17 +471,6 @@ async def refresh_access_token(request: Request, db: AsyncSession):
                 barangay = await get_barangay_account(user.id, db)
                 barangay_data = BarangayWithUserData.model_validate(barangay, from_attributes=True)
             
-            
-        if user.role == UserRole.DEPARTMENT_STAFF:
-            department_json_data = cached_user_data.get("department_data") if cached_user_data else None
-            if department_json_data:
-                logger.info(f"Department data for user_id: {user.id} retrieved from cache during token refresh.")
-                department_data = DepartmentWithUserData.model_validate(jsonable_encoder(department_json_data))
-            else:
-                logger.info(f"Department data for user_id: {user.id} not found in cache during token refresh. Fetching from database.")
-                department = await get_department_account(user_id, db)
-                department_data = DepartmentWithUserData.model_validate(department, from_attributes=True)
-        
 
         new_refresh_token = create_refresh_token(data={"user_id": user_id})
         new_access_token = create_access_token(data={"user_id": user_id})
@@ -509,7 +485,6 @@ async def refresh_access_token(request: Request, db: AsyncSession):
                 "refresh_token": new_refresh_token,
                 "role": user.role,
                 "barangayAccountData": barangay_data if user.role == UserRole.BARANGAY_OFFICIAL else None,
-                "departmentAccountData": department_data if user.role == UserRole.DEPARTMENT_STAFF else None
             })
         )
         await set_cookies(response, refresh_token=new_refresh_token)

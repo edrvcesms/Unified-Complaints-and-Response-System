@@ -342,9 +342,6 @@ class ClusterComplaintUseCase:
                 elif "forwarded_to_lgu" in statuses:
                     existing_status = "forwarded_to_lgu"
                     message = "This incident has already been forwarded to the LGU for action."
-                elif "forwarded_to_department" in statuses:
-                    existing_status = "forwarded_to_department"
-                    message = "This incident has already been forwarded to the department for action."
                 elif "resolved" in statuses:
                     existing_status = "resolved"
                     message = "This incident has already been resolved."

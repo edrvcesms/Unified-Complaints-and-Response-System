@@ -20,30 +20,34 @@ from app.core.pagination_params import ListParams, PaginationParams
 from app.core.pagination_response import PaginatedResponse
 from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
-async def get_events(db: AsyncSession):
+async def get_events(db: AsyncSession, params: ListParams) -> PaginatedResponse[EventData]:
     try:
-        events_cache = await get_cache("events_cache")
-        if events_cache is not None:
-            logger.info("Events fetched from cache")
-            return [
-                EventData.model_validate_json(e)
-                if isinstance(e, str)
-                else EventData.model_validate(e, from_attributes=True)
-                for e in events_cache
-            ]
-
-        result = await db.execute(
-            select(Event)
-            .options(selectinload(Event.media))
-            .where(Event.date >= datetime.now(timezone.utc))
-            .order_by(Event.date.asc())
+        cached_events = await get_cache(build_list_cache_key("events", params.model_dump(mode="json")))
+        if cached_events is not None:
+            logger.info("Cache hit for events")
+            return PaginatedResponse[EventData].model_validate(cached_events)
+        
+        statement = select(Event).options(selectinload(Event.media))
+        if params.search:
+            statement = statement.where(Event.event_name.ilike(f"%{params.search}%"))
+        
+        if params.order == "desc":
+            statement = statement.order_by(Event.date.desc())
+        else:
+            statement = statement.order_by(Event.date.asc())
+                
+        page = await paginate(db, statement, params, mapper=lambda item: EventData.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[EventData].model_validate(page)
+        await set_cache(
+            build_list_cache_key("events", params.model_dump(mode="json")),
+            response.model_dump(mode="json"),
+            expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS,
         )
-        events = result.scalars().all()
-        event_data = [EventData.model_validate(event, from_attributes=True) for event in events]
-        serialized_events = [event.model_dump_json() for event in event_data]
-        await set_cache("events_cache", serialized_events, expiration=300)
-        logger.info("Events stored in cache")
-        return event_data
+        return response
+    
+    except HTTPException:
+        raise
+    
     except Exception as e:
         logger.exception(f"Error fetching events: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch events")

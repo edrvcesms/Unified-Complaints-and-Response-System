@@ -20,25 +20,32 @@ from app.utils.caching import get_cache, set_cache
 from app.constants.roles import UserRole
 from app.utils.attachments import validate_upload_files
 
-async def get_all_announcements(db: AsyncSession):
+async def get_all_announcements(db: AsyncSession, params: ListParams) -> PaginatedResponse[AnnouncementOut]:
     try:
-        all_announcement_cache = await get_cache("all_announcements")
-        if all_announcement_cache:
+        cache_key = build_list_cache_key("all_announcements", params.model_dump(mode="json"))
+        all_announcements_cache = await get_cache(cache_key)
+        if all_announcements_cache is not None:
             logger.info("Cache hit for all announcements")
-            return [AnnouncementOut.model_validate_json(announcement) if isinstance(announcement, str) else AnnouncementOut.model_validate(announcement) for announcement in all_announcement_cache]
+            return PaginatedResponse[AnnouncementOut].model_validate(all_announcements_cache)
         
-        result = await db.execute(
-            select(Announcement).options(
-                selectinload(Announcement.uploader),
-                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
-                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
-                selectinload(Announcement.media)
-            ).order_by(Announcement.created_at.desc())
+        statement = select(Announcement).options(
+            selectinload(Announcement.uploader),
+            selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
+            selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
+            selectinload(Announcement.media)
         )
-        announcements = result.scalars().all()
-        all_announcements = [AnnouncementOut.model_validate(announcement, from_attributes=True) for announcement in announcements]
-        await set_cache("all_announcements", [announcement.model_dump_json() for announcement in all_announcements], expiration=300)
-        return all_announcements
+        if params.search:
+            statement = statement.where(Announcement.title.ilike(f"%{params.search}%"))
+        
+        if params.order == "desc":
+            statement = statement.order_by(Announcement.created_at.desc())
+        else:
+            statement = statement.order_by(Announcement.created_at.asc())
+        
+        page = await paginate(db, statement, params, mapper=lambda item: AnnouncementOut.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[AnnouncementOut].model_validate(page)
+        await set_cache(cache_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
     
     except HTTPException:
         raise

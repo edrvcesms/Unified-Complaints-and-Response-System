@@ -30,7 +30,7 @@ from app.utils.reverse_geocoding import reverse_geocode
 from app.utils.query_optimization import PaginationParams, QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
 from app.utils.cache_invalidator_optimized import CacheInvalidator
 from app.core.pagination import paginate
-from app.core.pagination_params import ListParams
+from app.core.pagination_params import ListParams, PaginationParams, IncidentListParams
 from app.core.pagination_response import PaginatedResponse
 from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
@@ -545,37 +545,30 @@ async def get_geometric_location_details(latitude: float, longitude: float, bara
         logger.exception(f"Error in get_geometric_location_details: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
  
-async def get_my_complaints(user_id: int, db: AsyncSession):
+async def get_my_complaints(user_id: int, params: IncidentListParams, db: AsyncSession) -> PaginatedResponse[ComplaintOut]:
     try:
-        cached = await get_cache(f"user_complaints:{user_id}")
+        cached_key = build_list_cache_key("my_complaints", params.model_dump(mode="json"), user_id=user_id)
+        cached = await get_cache(cached_key)
         if cached:
-            logger.info(f"My complaints for user {user_id} retrieved from cache")
-            return [ComplaintOut.model_validate_json(c) for c in cached]
-
-        result = await db.execute(
-            select(Complaint)
-            .options(*QueryOptions.complaints())
-            .where(Complaint.user_id == user_id)
-            .order_by(Complaint.created_at.asc())
-        )
-        complaints = result.scalars().all()
+            logger.info(f"Cache hit for my complaints (user_id: {user_id})")
+            return PaginatedResponse[ComplaintOut].model_validate(cached)
         
-        if not complaints:
-            return []
-
-        user_complaints = [
-            ComplaintOut.model_validate(c, from_attributes=True)
-            for c in complaints
-        ]
-
-        await set_cache(
-            f"user_complaints:{user_id}",
-            [c.model_dump_json() for c in user_complaints],
-            expiration=3600,
-        )
-
-        logger.info(f"Fetched {len(user_complaints)} complaints for user {user_id}")
-        return user_complaints
+        query = select(Complaint).where(Complaint.user_id == user_id).options(*QueryOptions.complaint_full())
+        if params.complaint_status:
+            query = query.where(Complaint.status == params.complaint_status)
+            
+        if params.search:
+            query = query.where(Complaint.title.ilike(f"%{params.search}%"))
+            
+        if params.order == "asc":
+            query = query.order_by(Complaint.created_at.asc())
+        else:
+            query = query.order_by(Complaint.created_at.desc())
+            
+        page = await paginate(db, query, params, mapper=lambda item: ComplaintOut.model_validate(item, from_attributes=True))
+        response = PaginatedResponse[ComplaintOut].model_validate(page)
+        await set_cache(cached_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)
+        return response
 
     except HTTPException:
         raise

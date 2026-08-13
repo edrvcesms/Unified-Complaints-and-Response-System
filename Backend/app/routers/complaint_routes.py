@@ -10,7 +10,7 @@ from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
 from app.models.user import User
 from fastapi.requests import Request
-from app.core.pagination_params import ListParams, PaginationParams
+from app.core.pagination_params import ListParams, IncidentListParams
 
 router = APIRouter()
 
@@ -44,8 +44,8 @@ async def yearly_complaint_stats(request: Request, year: int, db: AsyncSession =
 
 @router.get("/my-complaints", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
-async def list_my_complaints(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    return await get_my_complaints(current_user.id, db)
+async def list_my_complaints(request: Request, params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    return await get_my_complaints(current_user.id, params, db)
 
 @router.get("/my-stats", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

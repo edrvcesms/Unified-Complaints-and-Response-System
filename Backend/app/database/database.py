@@ -12,8 +12,18 @@ def get_engine():
         _engine = create_async_engine(
             settings.DATABASE_URL_ASYNC,
             pool_pre_ping=True,
-            connect_args={"ssl": "require"},
+            pool_size=5,
+            max_overflow=10,
+            pool_timeout=30,
+            connect_args={
+                "ssl": "require",
+            },
         )
+        
+        print("🔥 DB POOL CONFIG")
+        print("Pool size:", _engine.pool.size())
+        print("Max overflow:", _engine.pool._max_overflow)
+        print("Pool timeout:", _engine.pool._timeout)
     return _engine
 
 

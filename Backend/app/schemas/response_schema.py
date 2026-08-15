@@ -32,6 +32,7 @@ class ResponseSchema(BaseModel):
     actions_taken: str
     response_date: datetime
     user: Optional[ResponseUserData] = None
+    response_attachments: Optional[List[ResponseAttachmentsData]] = []  
 
     class Config:
         from_attributes = True

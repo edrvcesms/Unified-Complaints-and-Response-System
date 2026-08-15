@@ -131,47 +131,50 @@ class QueryOptions:
     # Incident detail (optimized for single incident view - only first complaint)
     @staticmethod
     def incident_detail():
-        """Incident detail view: category, barangay, responses, and first complaint cluster only."""
-        return (
-            QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
-            QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
-            QueryOptions._response_summary_load(
-                selectinload(IncidentModel.responses)
-            ).selectinload(Response.user),
-            selectinload(IncidentModel.complaint_clusters)
-            .selectinload(IncidentComplaintModel.complaint)
-            .load_only(
-                Complaint.id,
-                Complaint.title,
-                Complaint.description,
-                Complaint.location_details,
-                Complaint.status,
-                Complaint.is_rejected_by_lgu,
-                Complaint.created_at,
-                Complaint.user_id,
-                Complaint.barangay_id,
-                Complaint.category_id,
-                Complaint.latitude,
-                Complaint.longitude,
-            ),
-            selectinload(IncidentModel.complaint_clusters)
-            .selectinload(IncidentComplaintModel.complaint)
-            .selectinload(Complaint.user)
-            .load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number),
-            selectinload(IncidentModel.complaint_clusters)
-            .selectinload(IncidentComplaintModel.complaint)
-            .selectinload(Complaint.attachment)
-            .load_only(
-                Attachment.id,
-                Attachment.file_name,
-                Attachment.file_path,
-                Attachment.file_type,
-                Attachment.file_size,
-                Attachment.uploaded_at,
-                Attachment.complaint_id,
-                Attachment.uploaded_by,
-            ),
-        )
+      """Incident detail view: category, barangay, responses, and first complaint cluster only."""
+      return (
+        QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
+        QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
+        QueryOptions._response_summary_load(
+            selectinload(IncidentModel.responses)
+        ).selectinload(Response.user),
+        QueryOptions._response_attachment_summary_load(
+            selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
+        ),
+        selectinload(IncidentModel.complaint_clusters)
+        .selectinload(IncidentComplaintModel.complaint)
+        .load_only(
+            Complaint.id,
+            Complaint.title,
+            Complaint.description,
+            Complaint.location_details,
+            Complaint.status,
+            Complaint.is_rejected_by_lgu,
+            Complaint.created_at,
+            Complaint.user_id,
+            Complaint.barangay_id,
+            Complaint.category_id,
+            Complaint.latitude,
+            Complaint.longitude,
+        ),
+        selectinload(IncidentModel.complaint_clusters)
+        .selectinload(IncidentComplaintModel.complaint)
+        .selectinload(Complaint.user)
+        .load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number),
+        selectinload(IncidentModel.complaint_clusters)
+        .selectinload(IncidentComplaintModel.complaint)
+        .selectinload(Complaint.attachment)
+        .load_only(
+            Attachment.id,
+            Attachment.file_name,
+            Attachment.file_path,
+            Attachment.file_type,
+            Attachment.file_size,
+            Attachment.uploaded_at,
+            Attachment.complaint_id,
+            Attachment.uploaded_by,
+        ),
+    )
 
     # Incident full (for complete details with all complaints)
     @staticmethod

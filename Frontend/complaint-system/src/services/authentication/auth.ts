@@ -6,7 +6,7 @@ import { useAuthStore } from "../../store/authStore";
 
 const isTurnstileValidationError = (error: any): boolean => {
   const detail = String(error?.response?.data?.detail || "").toLowerCase();
-  return detail.includes("turnstile verification required");
+  return detail.includes("turnstile verification");
 };
 
 export const loginAccount = async (

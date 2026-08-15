@@ -12,6 +12,7 @@ interface LoginFormProps {
   showPassword: boolean;
   isLoading: boolean;
   turnstileRenderKey?: number;
+  turnstileAction?: string;
   title?: string;
   subtitle?: string;
   turnstileToken?: string;
@@ -28,6 +29,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   showPassword,
   isLoading,
   turnstileRenderKey,
+  turnstileAction,
   title,
   subtitle,
   onTurnstileToken,
@@ -39,7 +41,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { t } = useTranslation();
   const titleText = title ?? t('auth.officialLogin');
   const subtitleText = subtitle ?? t('auth.signinInstruction');
-  const siteKey = (import.meta.env.VITE_RECAPTCHA_SITE_KEY || "").trim();
+  const siteKey = (
+    import.meta.env.VITE_TURNSTILE_SITE_KEY ||
+    import.meta.env.VITE_RECAPTCHA_SITE_KEY ||
+    ""
+  ).trim();
+  const action = (turnstileAction || "official_login").trim();
   
   return (
   <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-gray-100 p-8 space-y-6">
@@ -109,7 +116,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <Turnstile
             key={`login-turnstile-${turnstileRenderKey ?? 0}`}
             siteKey={siteKey}
-            options={{ theme: "light", appearance: "always" }}
+            options={{ theme: "light", appearance: "always", action }}
             onSuccess={(token) => onTurnstileToken?.(token)}
             onExpire={() => onTurnstileToken?.(undefined)}
             onError={() => onTurnstileToken?.(undefined)}

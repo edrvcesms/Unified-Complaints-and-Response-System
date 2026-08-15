@@ -35,7 +35,7 @@ import requests
 # --------------------------------------------------------------------------
 BASE_URL = "http://127.0.0.1:8000/api/v1/complaints"          # <-- change to your API base URL
 SUBMIT_ENDPOINT = f"{BASE_URL}/submit-complaint"
-AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5MCwiZXhwIjoxNzg2NTQ3MTUzLCJpYXQiOjE3ODY1NDM1NTMsImp0aSI6ImM1ZGMxYTc1N2RhYTQ3ZWI5Y2U2NzRjYTUxMWY5MjEwIiwiYXVkIjoidWNycyIsInRva2VuX3R5cGUiOiJhY2Nlc3MifQ.OY5tbfnGoMceA1t-Q_y8jChZWNLB4bu8Ac1ZZTgmkkU"    # <-- hardcoded token, as requested
+AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo2NSwiZXhwIjoxNzg2NjgzNDk0LCJpYXQiOjE3ODY2Nzk4OTQsImp0aSI6IjkyZjBlZDBmNGMxMTQwNzk4NDBiYWZlYjM1ODBhYTZhIiwiYXVkIjoidWNycyIsInRva2VuX3R5cGUiOiJhY2Nlc3MifQ.s-R5kje74NWbo2Eiu9l6qak6mTq2xffxS7RTTn_q_0Q"    # <-- hardcoded token, as requested
 
 BARANGAY_ID = 30   # Adia
 CATEGORY_ID = 30   # "Others" -> treated as emergency

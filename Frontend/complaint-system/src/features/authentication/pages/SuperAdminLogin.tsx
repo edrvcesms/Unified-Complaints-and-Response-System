@@ -36,6 +36,7 @@ export const SuperAdminLoginPage: React.FC = () => {
           errors={errors}
           showPassword={showPassword}
           isLoading={isLoading}
+          turnstileAction="superadmin_login"
           onChange={handleChange}
           onSubmit={handleSubmit}
           onForgotPassword={handleForgotPassword}

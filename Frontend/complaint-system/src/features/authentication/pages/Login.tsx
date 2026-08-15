@@ -36,6 +36,7 @@ export const LoginPage: React.FC = () => {
           errors={errors}
           showPassword={showPassword}
           isLoading={isLoading}
+          turnstileAction="official_login"
           onChange={handleChange}
           onSubmit={handleSubmit}
           onForgotPassword={handleForgotPassword}

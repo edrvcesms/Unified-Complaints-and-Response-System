@@ -38,13 +38,13 @@ async def login(request: Request, login_data: LoginData, db: AsyncSession = Depe
 @router.post("/officials-login", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")
 async def officials_login_route(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
-    await verify_turnstile(login_data.turnstile_token, request)
+    await verify_turnstile(login_data.turnstile_token, request, expected_action="official_login")
     return await officials_login(login_data, db)
 
 @router.post("/superadmin-login", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")
 async def superadmin_login_route(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
-    await verify_turnstile(login_data.turnstile_token, request)
+    await verify_turnstile(login_data.turnstile_token, request, expected_action="superadmin_login")
     return await superadmin_login(login_data, db)
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

@@ -110,13 +110,15 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
                 Complaint.has_feedback == False
             )
         )
-        if not complaint_result.scalar_one_or_none():
+
+        complaint = complaint_result.scalar_one_or_none()
+
+        if not complaint:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Feedback can only be submitted for resolved complaints"
             )
-            
-        complaint = complaint_result.scalar_one()
+
         complaint.has_feedback = True
         await db.commit()
             

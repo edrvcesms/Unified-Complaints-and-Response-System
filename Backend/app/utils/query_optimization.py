@@ -184,6 +184,9 @@ class QueryOptions:
             QueryOptions._category_summary_load(selectinload(IncidentModel.category)),
             QueryOptions._barangay_summary_load(selectinload(IncidentModel.barangay)),
             QueryOptions._response_summary_load(selectinload(IncidentModel.responses)).selectinload(Response.user),
+            QueryOptions._response_attachment_summary_load(
+                selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
+            ),
             selectinload(IncidentModel.complaint_clusters)
             .selectinload(IncidentComplaintModel.complaint)
             .load_only(

@@ -4,7 +4,7 @@ import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, CalendarIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -21,6 +21,58 @@ import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { validateAttachments } from '../../../utils/attachmentHelper';
 import { RejectIncidentModal } from "../components/RejectIncidentModal";
 import { startOfTomorrow } from "date-fns";
+
+const getResponseAuthorName = (response: any, incident: any) => {
+  if (response?.user) {
+    const fullName = [response.user.first_name, response.user.last_name].filter(Boolean).join(' ').trim();
+    if (fullName) return fullName;
+  }
+
+  if (response?.user?.role === 'lgu_official') return 'Local Government Unit';
+  if (incident?.barangay?.barangay_name) return `Barangay ${incident.barangay.barangay_name}`;
+  return 'Barangay Official';
+};
+
+const ResponseMediaAction: React.FC<{ attachment: { file_url: string; media_type?: string }; onClick: () => void }> = ({ attachment, onClick }) => {
+  const isVideo = attachment.media_type?.startsWith('video');
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+      aria-label={isVideo ? 'View video response attachment' : 'View image response attachment'}
+    >
+      {isVideo ? <Play className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+      View media
+    </button>
+  );
+};
+
+const ResponseMediaLightbox: React.FC<{ media: { url: string; type: string }; onClose: () => void }> = ({ media, onClose }) => {
+  const isVideo = media.type?.startsWith('video');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 p-2 text-white/80 transition-colors hover:text-white"
+        aria-label="Close"
+      >
+        <X className="h-6 w-6" />
+      </button>
+
+      <div className="flex max-h-[85vh] max-w-3xl items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        {isVideo ? (
+          <video src={media.url} controls autoPlay className="max-h-[85vh] max-w-full rounded-lg" />
+        ) : (
+          <img src={media.url} alt="Response attachment" className="max-h-[85vh] max-w-full rounded-lg object-contain" />
+        )}
+      </div>
+    </div>
+  );
+};
 
 const getHearingDateLabel = (count: number) => {
   if (count <= 0) {
@@ -73,6 +125,7 @@ export const IncidentDetails: React.FC = () => {
     title: '',
     message: '',
   });
+  const [lightboxAttachment, setLightboxAttachment] = useState<{ url: string; type: string } | null>(null);
 
   useEffect(() => {
     if (!actionsTakenModal.isOpen) {
@@ -485,7 +538,7 @@ export const IncidentDetails: React.FC = () => {
   const hearingCount = Number(incident.hearing_count ?? 0);
   const hearingOutcome = incident.is_hearing_successful ?? null;
   const canScheduleFollowUpHearing = hasScheduledHearingDate && hearingOutcome === false;
-  const shouldShowHearingControls = !isResolved && !isRejected;
+  const shouldShowHearingControls = !isResolved && !isRejected && !isForwardedToLgu;
   const hearingDateLabel = getHearingDateLabel(hearingCount);
   const showNewComplaintBadge = Boolean(incident.has_new_complaints) || Number(incident.new_complaint_count ?? 0) > 0;
   const titleStatusBadge = isResolved
@@ -654,26 +707,36 @@ export const IncidentDetails: React.FC = () => {
               {t('incidents.details.remarks')}
             </h2>
             {sortedResponses.length === 0 ? (
-              <p className="text-sm text-gray-600 mb-6">No responses yet.</p>
+              <p className="text-sm text-gray-600">No responses yet.</p>
             ) : (
-              <div className="max-h-64 overflow-y-auto space-y-4 mb-6 pr-1">
-                {sortedResponses.map((response) => (
-                  <div key={response.id} className="rounded-md border border-gray-200 p-3">
+              <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
+                {sortedResponses.map((response) => {
+                  const attachment = response.response_attachments?.[0];
 
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                      {response.actions_taken}
-                    </p>
-                    {response.user && (
-                      <p className="text-xs font-semibold text-gray-500 mt-2">
-                        - {response.user?.role === "lgu_official" ? "Local Government Unit" : "Barangay " + incident.barangay?.barangay_name}{" "}
+                  return (
+                    <div key={response.id} className="rounded-md border border-gray-200 p-3">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap leading-6">
+                        {response.actions_taken}
                       </p>
 
-                    )}
-                    <p className="text-xs text-gray-500 mb-1 mt-1 text-right">
-                      {formatDateTime(response.response_date)}
-                    </p>
-                  </div>
-                ))}
+                      {attachment && (
+                        <ResponseMediaAction
+                          attachment={attachment}
+                          onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
+                        />
+                      )}
+
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="text-xs text-gray-500">
+                          {getResponseAuthorName(response, incident)}
+                        </p>
+                        <p className="text-[11px] text-gray-400">
+                          {formatDateTime(response.response_date)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -687,14 +750,14 @@ export const IncidentDetails: React.FC = () => {
                   className="relative px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 >
                   {t('incidents.details.viewAllComplaints')}
-                 {showNewComplaintBadge && (
-  <span className="absolute -top-2.5 -right-2.5 flex items-center justify-center">
-    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
-    <span className="relative flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-orange-500 text-white text-[15px] font-bold">
-      {incident.complaint_count}
-    </span>
-  </span>
-)}
+                  {showNewComplaintBadge && (
+                    <span className="absolute -top-2.5 -right-2.5 flex items-center justify-center">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
+                      <span className="relative flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-orange-500 text-white text-[15px] font-bold">
+                        {incident.complaint_count}
+                      </span>
+                    </span>
+                  )}
                 </button>
               </div>
               <p className="text-sm text-gray-600">
@@ -706,7 +769,7 @@ export const IncidentDetails: React.FC = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        {isResolved || isRejected ? null : (
+        {isResolved || isRejected || isForwardedToLgu ? null : (
           <>
             <button
               onClick={handleReview}
@@ -739,6 +802,13 @@ export const IncidentDetails: React.FC = () => {
           </>
         )}
       </div>
+
+      {lightboxAttachment && (
+        <ResponseMediaLightbox
+          media={lightboxAttachment}
+          onClose={() => setLightboxAttachment(null)}
+        />
+      )}
 
       <ActionsTakenModal
         isOpen={actionsTakenModal.isOpen}

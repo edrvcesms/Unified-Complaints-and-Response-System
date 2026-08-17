@@ -4,6 +4,7 @@ import uuid
 from io import BytesIO
 from fastapi import UploadFile
 from fastapi import HTTPException, status
+from starlette.datastructures import Headers
 
 # Matches "data:image/jpeg;base64,....." and captures the subtype + payload
 DATA_URI_RE = re.compile(r'^data:image/(?P<subtype>\w+);base64,(?P<data>.+)$')
@@ -45,8 +46,12 @@ def data_uri_to_upload_file(data_uri: str, field_name: str) -> UploadFile:
     filename = f"{field_name}-{uuid.uuid4().hex}.{subtype}"
     content_type = f"image/{subtype}"
 
-    # UploadFile signature varies slightly by Starlette version;
-    # this works for Starlette >= 0.24 / FastAPI >= 0.100
-    upload_file = UploadFile(filename=filename, file=buffer, headers=None)
-    upload_file.headers = {"content-type": content_type}  # ensure content_type resolves correctly
+    # Set both content-type and size so shared upload validators
+    # can enforce media-type and max-size checks on base64 uploads.
+    upload_file = UploadFile(
+        filename=filename,
+        file=buffer,
+        headers=Headers({"content-type": content_type}),
+        size=len(raw_bytes),
+    )
     return upload_file

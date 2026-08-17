@@ -90,6 +90,7 @@ async def get_incident_complaints(incident_id: int, params: PaginationParams = D
 @router.patch("/{incident_id}/resolve", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def resolve_incident_complaints(
+    request: Request,
     incident_id: int,
     response_data: Optional[str] = Form(None),
     actions_taken: Optional[str] = Form(None),
@@ -108,6 +109,7 @@ async def resolve_incident_complaints(
 @router.patch("/{incident_id}/review", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def review_incident_complaints(
+    request: Request,
     incident_id: int,
     response_data: Optional[str] = Form(None),
     actions_taken: Optional[str] = Form(None),
@@ -126,6 +128,7 @@ async def review_incident_complaints(
 @router.patch("/{incident_id}/reject", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def reject_incident_complaints(
+    request: Request,
     incident_id: int,
     actions_taken: Optional[str] = Form(None),
     rejection_category_id: int = Form(...),
@@ -147,6 +150,7 @@ async def reject_incident_complaints(
 @router.patch("/{incident_id}/reject-incident", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def reject_entire_incident(
+    request: Request,
     incident_id: int,
     actions_taken: Optional[str] = Form(None),
     attachments: List[UploadFile] = File([]),
@@ -165,6 +169,7 @@ async def reject_entire_incident(
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def forward_incident_lgu(
+    request: Request,
     incident_id: int,
     response_data: Optional[str] = Form(None),
     actions_taken: Optional[str] = Form(None),
@@ -182,7 +187,7 @@ async def forward_incident_lgu(
 
 @router.post("/{incident_id}/mark-viewed", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")
-async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def mark_incident_viewed(request: Request, incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
@@ -197,7 +202,8 @@ async def notify_hearing(request: Request, incident_id: int, hearing_date: datet
 
 
 @router.post("/mark-hearing/{incident_id}", status_code=status.HTTP_200_OK)
-async def mark_hearing(incident_id: int, is_successful: bool = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def mark_hearing(request: Request, incident_id: int, is_successful: bool = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")

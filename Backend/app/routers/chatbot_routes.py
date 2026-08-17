@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from app.services.rag_services import _upsert_chunks, _embed, _chunk_text, _extract_text
 from fastapi import UploadFile, File, HTTPException
+from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from app.schemas.chatbot_schema import ChatRequest, ChatResponse
 from app.dependencies.auth_dependency import get_current_user
@@ -18,6 +19,7 @@ from app.domain.infrastracture.service.chatbot_service import create_chatbot_ser
 @router.post("/ask", response_model=ChatResponse)
 @limiter.limit("10/minute")
 async def ask(
+    request: Request,
     body: ChatRequest,
     chatbot: ChatbotService = Depends(create_chatbot_service),
     user=Depends(get_current_user),

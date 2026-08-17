@@ -74,7 +74,7 @@ async def id_verification(
 
 @router.post("/login/google", response_model=LoginResponse)
 @limiter.limit("10/minute")
-async def login_google(payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
+async def login_google(request: Request, payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
     
     return await login_with_google(payload.clerk_token, db)
  

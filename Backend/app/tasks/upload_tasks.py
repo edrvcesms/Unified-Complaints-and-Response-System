@@ -176,7 +176,7 @@ def delete_announcement_media_task(self, public_ids, announcement_id: int, uploa
 
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def upload_event_media_task(self, files_data, event_id: int):
+def upload_event_media_task(self, files_data, event_id: int, uploader_id: int):
 
     async def _run():
         file_objs = []
@@ -211,7 +211,7 @@ def upload_event_media_task(self, files_data, event_id: int):
                 except Exception:
                     pass
             try:
-                await invalidate_cache(event_ids=[event_id])
+                await invalidate_cache(event_ids=[event_id], event_uploader_id=uploader_id)
             except Exception as e:
                 logger.exception(f"Cache invalidation failed after event media upload: {e}")
 
@@ -223,7 +223,7 @@ def upload_event_media_task(self, files_data, event_id: int):
 
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def delete_event_media_task(self, public_ids, event_id: int):
+def delete_event_media_task(self, public_ids, event_id: int, uploader_id: int):
 
     async def _run():
         ids = [public_ids] if isinstance(public_ids, str) else public_ids
@@ -253,7 +253,7 @@ def delete_event_media_task(self, public_ids, event_id: int):
             await db.commit()
 
         try:
-            await invalidate_cache(event_ids=[event_id])
+            await invalidate_cache(event_ids=[event_id], event_uploader_id=uploader_id)
         except Exception as e:
             logger.exception(f"Cache invalidation failed after event media deletion: {e}")
 

@@ -167,7 +167,7 @@ async def create_new_event(user_id: int, event_data: EventCreate, event_files: O
                         "file_size": len(content_bytes),
                     })
 
-                task = upload_event_media_task.delay(event_media, event_id=new_event.id)
+                task = upload_event_media_task.delay(event_media, event_id=new_event.id, uploader_id=user_id)
                 
                 if not task:
                     logger.error("Failed to enqueue event media upload task")
@@ -175,6 +175,11 @@ async def create_new_event(user_id: int, event_data: EventCreate, event_files: O
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail="Failed to enqueue media upload task"
                     )
+                
+                await invalidate_cache(event_ids=[new_event.id], event_uploader_id=user_id)
+                logger.info(f"Cache invalidated for new event {new_event.id} and uploader {user_id}")
+                await delete_cache(f"event_{new_event.id}")
+                logger.info(f"Cache deleted for event {new_event.id}")
                     
             except HTTPException:
                 raise
@@ -186,8 +191,6 @@ async def create_new_event(user_id: int, event_data: EventCreate, event_files: O
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to prepare media for upload"
                 )
-        await invalidate_cache(event_ids=[new_event.id], event_uploader_id=user_id)
-        await delete_cache(f"event_{new_event.id}")
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
             content={"message": "Event created successfully", "event_id": new_event.id}
@@ -255,7 +258,7 @@ async def update_event(user_id: int, event_id: int, event_data: EventCreate, eve
                         "file_size": len(content_bytes),
                     })
 
-                task = upload_event_media_task.delay(event_media, event_id=event.id)
+                task = upload_event_media_task.delay(event_media, event_id=event.id, uploader_id=user_id)
 
                 if not task:
                     raise HTTPException(

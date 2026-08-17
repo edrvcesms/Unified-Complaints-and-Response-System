@@ -195,7 +195,7 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
                 )
             
       
-        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=new_announcement.id)
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=new_announcement.id, include_global=True)
         return AnnouncementOut.model_validate(new_announcement)
       
     except HTTPException:
@@ -284,7 +284,7 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
                     detail=f"Error processing media files: {str(e)}"
                 )
         
-        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id, include_global=True)
         result = await db.execute(
             select(Announcement).where(Announcement.id == announcement_id).options(
                 selectinload(Announcement.uploader),
@@ -341,7 +341,7 @@ async def delete_announcement(announcement_id: int, uploader_id: int, db: AsyncS
             logger.warning(f"Failed to enqueue media deletion task for announcement {announcement_id}")
             
         logger.info(f"Announcement {announcement_id} and its media deleted successfully")
-        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id)
+        await invalidate_cache(announcement_uploader_id=uploader_id, announcement_id=announcement.id, include_global=True)
         return {"detail": "Announcement deleted successfully"}
     
     except HTTPException:

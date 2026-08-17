@@ -88,6 +88,7 @@ async def get_incident_complaints(incident_id: int, params: PaginationParams = D
     return await get_complaints_by_incident(incident_id, db, params)
 
 @router.patch("/{incident_id}/resolve", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def resolve_incident_complaints(
     incident_id: int,
     response_data: Optional[str] = Form(None),
@@ -105,6 +106,7 @@ async def resolve_incident_complaints(
     return await resolve_complaints_by_incident(response_payload, incident_id, current_user.id, attachments=attachments, db=db)
 
 @router.patch("/{incident_id}/review", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def review_incident_complaints(
     incident_id: int,
     response_data: Optional[str] = Form(None),
@@ -122,6 +124,7 @@ async def review_incident_complaints(
     return await review_complaints_by_incident(response_payload, incident_id, current_user.id, attachments=attachments, db=db)
 
 @router.patch("/{incident_id}/reject", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def reject_incident_complaints(
     incident_id: int,
     actions_taken: Optional[str] = Form(None),
@@ -142,6 +145,7 @@ async def reject_incident_complaints(
     return await reject_complaints_by_incident(incident_id, current_user.id, response_payload, attachments=attachments, db=db)
 
 @router.patch("/{incident_id}/reject-incident", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def reject_entire_incident(
     incident_id: int,
     actions_taken: Optional[str] = Form(None),
@@ -159,6 +163,7 @@ async def reject_entire_incident(
     return await reject_incident(incident_id, current_user.id, response_payload, attachments=attachments, db=db)
 
 @router.patch("/{incident_id}/forward/lgu", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
 async def forward_incident_lgu(
     incident_id: int,
     response_data: Optional[str] = Form(None),
@@ -176,6 +181,7 @@ async def forward_incident_lgu(
     return await forward_incident_to_lgu(response_payload, incident_id, current_user.id, attachments=attachments, db=db)
 
 @router.post("/{incident_id}/mark-viewed", status_code=status.HTTP_200_OK)
+@limiter.limit("50/minute")
 async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     if current_user.role not in [UserRole.BARANGAY_OFFICIAL, UserRole.LGU_OFFICIAL]:
@@ -185,7 +191,7 @@ async def mark_incident_viewed(incident_id: int, db: AsyncSession = Depends(get_
     return await mark_incident_as_viewed(incident_id, db)
 
 @router.post("/notify-hearing/{incident_id}", status_code=status.HTTP_200_OK)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def notify_hearing(request: Request, incident_id: int, hearing_date: datetime = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     await notify_user_for_hearing(incident_id, hearing_date, current_user.id, db)
 

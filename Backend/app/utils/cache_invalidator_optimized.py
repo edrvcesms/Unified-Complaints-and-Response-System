@@ -49,6 +49,7 @@ class CacheInvalidator:
             for event_id in event_ids:
                 tasks.add(f"event:{event_id}")
             tasks.add("events_cache")
+            tasks.add("my_events")
             logger.info(f"Event caches added for event_ids: {event_ids}")
             
         if event_uploader_id:
@@ -137,8 +138,10 @@ class CacheInvalidator:
             resources.add("notifications")
         if announcement_id or announcement_uploader_id:
             resources.add("announcements")
+            resources.add("all_announcements")
         if event_ids:
             resources.add("events")
+            resources.add("my_events")
         if event_uploader_id:
             resources.add("my_events")
 

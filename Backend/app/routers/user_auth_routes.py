@@ -14,41 +14,41 @@ import json
 router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 async def register(request: Request, user_data: RegisterData, db: AsyncSession = Depends(get_async_db)):
     return await register_user(user_data, db)
 
 @router.post("/verify-otp", status_code=status.HTTP_200_OK)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 async def verify_otp(request: Request, data: str = Form(...), front_id: UploadFile = None, back_id: UploadFile = None,selfie_with_id: UploadFile = None, db: AsyncSession = Depends(get_async_db)):
     parsed_data = json.loads(data)
     otp_data = OTPVerificationData(**parsed_data)
     return await verify_otp_and_register(otp_data.otp, otp_data, front_id, back_id, selfie_with_id, db)
 
 @router.post("/resend-otp", status_code=status.HTTP_200_OK)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 async def resend_otp(request: Request, email: ResendOtpData, db: AsyncSession = Depends(get_async_db)):
     return await resend_otp_code(email, db)
 
 @router.post("/login", status_code=status.HTTP_200_OK)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute")
 async def login(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
     return await login_user(login_data, db)
 
 @router.post("/officials-login", status_code=status.HTTP_200_OK)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute")
 async def officials_login_route(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
     await verify_turnstile(login_data.turnstile_token, request, expected_action="official_login")
     return await officials_login(login_data, db)
 
 @router.post("/superadmin-login", status_code=status.HTTP_200_OK)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute")
 async def superadmin_login_route(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
     await verify_turnstile(login_data.turnstile_token, request, expected_action="superadmin_login")
     return await superadmin_login(login_data, db)
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute")
 async def logout(request: Request, db: AsyncSession = Depends(get_async_db)):
     return await logout_user(request)
 
@@ -73,6 +73,7 @@ async def id_verification(
     return await upload_id_images(current_user.id, id_type, id_number, front_id, back_id, selfie_with_id, db)
 
 @router.post("/login/google", response_model=LoginResponse)
+@limiter.limit("10/minute")
 async def login_google(payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
     
     return await login_with_google(payload.clerk_token, db)

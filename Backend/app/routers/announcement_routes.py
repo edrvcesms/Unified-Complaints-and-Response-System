@@ -13,12 +13,12 @@ router = APIRouter()
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 async def read_announcements(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db)):
     return await get_all_announcements(db, params)
 
 @router.get("/my-announcements", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("50/minute")
 async def read_my_announcements(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_announcement_by_uploader(current_user.id, db, params)
 
@@ -28,7 +28,7 @@ async def read_announcement(request: Request, announcement_id: int, db: AsyncSes
     return await get_announcement_by_id(announcement_id, db)
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def upload_announcement(request: Request,announcement_data: str = Form(...), media_files: Optional[List[UploadFile]] = File(default=[]), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
   
     if current_user.role not in ["lgu_official", "barangay_official"]:
@@ -40,12 +40,12 @@ async def upload_announcement(request: Request,announcement_data: str = Form(...
     return await create_announcement(announcement_data, media_files, current_user.id, db)
 
 @router.delete("/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def remove_announcement(request: Request, announcement_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
     return await delete_announcement(announcement_id, current_user.id, db)
 
 @router.put("/{announcement_id}", status_code=status.HTTP_200_OK)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def update_announcement(request: Request, announcement_id: int, announcement_data: str = Form(...), keep_media_ids: Optional[str] = Form(default=None), media_files: Optional[List[UploadFile]] = File(default=[]), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_async_db)):
     announcement_data = AnnouncementCreate.model_validate_json(announcement_data)
     # Parse keep_media_ids if provided

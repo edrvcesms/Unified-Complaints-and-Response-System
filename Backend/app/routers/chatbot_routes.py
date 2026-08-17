@@ -1,15 +1,12 @@
 # app/api/v1/routes/chatbot.py
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from app.services.rag_services import _upsert_chunks, _embed, _chunk_text, _extract_text
 from fastapi import UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 from app.schemas.chatbot_schema import ChatRequest, ChatResponse
 from app.dependencies.auth_dependency import get_current_user
 from app.models.user import User
-from app.core.redis import redis_client 
-
+from app.dependencies.rate_limiter import limiter
 
 router = APIRouter()
 
@@ -19,6 +16,7 @@ from app.domain.infrastracture.service.chatbot_service import create_chatbot_ser
 
 
 @router.post("/ask", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def ask(
     body: ChatRequest,
     chatbot: ChatbotService = Depends(create_chatbot_service),
@@ -34,7 +32,7 @@ async def ask(
 
 
 @router.post("/upload-pdf", summary="Upload a PDF to index into Pinecone")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), user: User = Depends(get_current_user)):
     """
     Accepts a PDF file, extracts text, chunks it by section headings,
     embeds each chunk via openAI, and upserts into Pinecone.

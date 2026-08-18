@@ -74,7 +74,53 @@ async def get_all_unverified_users(current_user: User, db: AsyncSession, page: i
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def get_user_by_id(user_id: int, current_user: User, db: AsyncSession):
+    try:
+        if not current_user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
 
+        if current_user.role != UserRole.SUPERADMIN.value:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        return {
+            "id": user.id,
+            "email": user.email,
+            "first_name": user.first_name,
+            "middle_name": user.middle_name,
+            "last_name": user.last_name,
+            "suffix": user.suffix,
+            "role": user.role,
+            "created_at": user.created_at,
+            "is_verified": user.is_verified,
+            "birthdate": user.birthdate,
+            "gender": user.gender,
+            "phone_number": user.phone_number,
+            "zip_code": user.zip_code,
+            "longitude": user.longitude,
+            "latitude": user.latitude,
+            "full_address": user.full_address,
+            "front_id": user.front_id,
+            "back_id": user.back_id,
+            "selfie_with_id": user.selfie_with_id,
+            "id_number": user.id_number,
+            "id_type": user.id_type,
+            "age": user.age,
+            "barangay": user.barangay,
+            "is_administrator": user.is_administrator,
+            "last_login": user.last_login,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_all_users(
     current_user: User,

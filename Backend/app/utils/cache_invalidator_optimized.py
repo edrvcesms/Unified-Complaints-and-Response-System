@@ -58,6 +58,7 @@ class CacheInvalidator:
 
         if include_global:
             tasks.update({
+                "my_complaints",
                 "all_complaints",
                 "all_rejection_categories",
                 "all_barangays",
@@ -109,6 +110,7 @@ class CacheInvalidator:
                 tasks.add(f"complaint:{complaint_id}")
             tasks.update({
                 "all_complaints",
+                "my_complaints",
                 f"barangay_{barangay_id}_complaints" if barangay_id else None,
             })
             tasks.discard(None)
@@ -135,6 +137,7 @@ class CacheInvalidator:
             resources.add("incidents")
         if user_ids:
             resources.add("users")
+            resources.add("my_complaints")
             resources.add("notifications")
         if announcement_id or announcement_uploader_id:
             resources.add("announcements")

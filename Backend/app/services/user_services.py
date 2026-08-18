@@ -1,10 +1,16 @@
+
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 import redis
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.push_token import PushToken
 from app.utils.otp_handler import generate_otp
-from app.schemas.user_schema import UserPersonalData, ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData, UserLocationData, ResetPasswordData
+from app.schemas.user_schema import ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData, UserLocationData, ResetPasswordData
 from app.models.user import User
-from sqlalchemy import select, update
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.utils.geo_services import get_barangay
+from app.utils.reverse_geocoding import reverse_geocode
 from app.core.security import hash_password, decrypt_password
 from fastapi.responses import JSONResponse
 from app.tasks.email_tasks import send_otp_email_task
@@ -214,8 +220,14 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
         
         user.latitude = location_data.latitude
         user.longitude = location_data.longitude
+        barangay_info = get_barangay(location_data.latitude, location_data.longitude)
+        if barangay_info:
+            user.barangay = barangay_info["name"]
+        else:
+            user.barangay = None  # or handle as needed if no barangay is found
         
-       
+        full_address_info = await reverse_geocode(location_data.latitude, location_data.longitude, user.barangay)
+        user.full_address = full_address_info.get("display_name", "Unknown Location")
        
         await delete_cache(f"user_profile:{user_id}")
 
@@ -240,20 +252,45 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
 async def save_push_token(db: AsyncSession, user_id: int, token: str) -> User:
     try:
         result = await db.execute(
-            select(User).where(User.id == user_id)
+            select(User)
+            .options(selectinload(User.push_tokens))
+            .where(User.id == user_id)
         )
         user = result.scalars().first()
 
         if not user:
             raise ValueError(f"User with id '{user_id}' not found.")
 
-        user.push_token = token
-        user.push_notifications_enabled = True  # auto-enable when token exists
-       
+        existing_token = next(
+            (
+                push_token
+                for push_token in user.push_tokens
+                if push_token.token == token
+            ),
+            None
+        )
+
+        if existing_token:
+            # Token already exists, make sure it is active again
+            existing_token.is_active = True
+        else:
+            # New device/token
+            db.add(
+                PushToken(
+                    user_id=user_id,
+                    token=token,
+                    is_active=True,
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+
+        user.push_notifications_enabled = True
+
         await db.commit()
         await db.refresh(user)
-        
+
         await delete_cache(f"user_profile:{user_id}")
+
         return user
 
     except ValueError:
@@ -290,17 +327,20 @@ async def send_push_notification(
     user_id: str,
     title: str,
     body: str,
-    data: dict = {},
+    data: dict | None = None,
 ) -> dict:
     try:
-        user = db.query(User).filter(User.id == user_id).first()
+        user = await db.execute(
+            select(User).options(selectinload(User.push_tokens)).where(User.id == user_id)
+        )
+        user = user.scalars().first()
 
         if not user:
             raise ValueError(f"User with id '{user_id}' not found.")
        
        
-        if not user.push_token:
-            return {"status": "skipped", "reason": f"User '{user_id}' has no push token registered."}
+        if user.push_tokens is None or len(user.push_tokens) == 0:
+            raise ValueError(f"User with id '{user_id}' does not have any registered push tokens.")
 
     except ValueError:
         raise
@@ -308,19 +348,25 @@ async def send_push_notification(
         raise Exception(f"Failed to fetch user '{user_id}' from database: {e}") from e
 
     try:
-        payload = {
-            "to": user.push_token,
-            "title": title,
-            "body": body,
-            "data": data,
-            "sound": "default",
-            "priority": "high",
-        }
+        tokens = [push_token.token for push_token in user.push_tokens if push_token.is_active]
+        if not tokens:
+            raise ValueError(f"User with id '{user_id}' does not have any active push tokens.")
+        messages = [
+            {
+                "to": token,
+                "title": title,
+                "body": body,
+                "data": data or {},
+                "sound": "default",
+                "priority": "high",
+            }
+            for token in tokens
+        ]
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 settings.EXPO_PUSH_URL,
-                json=payload,
+                json=messages,
                 headers={
                     "Accept": "application/json",
                     "Accept-Encoding": "gzip, deflate",

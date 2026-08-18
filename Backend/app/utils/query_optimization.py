@@ -20,6 +20,7 @@ from app.models.user import User
 from app.models.barangay import Barangay
 from app.models.category import Category
 from app.models.attachment import Attachment
+from app.models.push_token import PushToken
 from app.models.response_attachments import ResponseAttachments
 
 
@@ -315,6 +316,28 @@ class PaginationParams:
 
 class BatchLoader:
     """Batch load related objects to avoid N+1 queries."""
+    
+    @staticmethod
+    async def fetch_push_tokens_by_user_ids(
+        db: AsyncSession,
+        user_ids: List[int]
+    ) -> dict[int, List[PushToken]]:
+        """Fetch push tokens for multiple users in one query."""
+        if not user_ids:
+            return {}
+
+        result = await db.execute(
+            select(PushToken)
+            .where(PushToken.user_id.in_(user_ids))
+        )
+        
+        tokens = result.scalars().all()
+        token_dict = {}
+        for token in tokens:
+            token_dict.setdefault(token.user_id, []).append(token)
+        
+        return token_dict
+        
 
     @staticmethod
     async def fetch_complaints_by_ids(

@@ -7,7 +7,7 @@ export interface UserData {
   suffix: string | null;
   role: string;
   age: number;
-  birthdate: string;
+  birthdate: Date;
   barangay: string;
   full_address: string;
   zip_code: string;
@@ -22,4 +22,6 @@ export interface UserData {
   selfie_with_id: string;
   is_administrator: boolean;
   last_login: string;
+  is_verified: boolean;
+  created_at: Date;
 }

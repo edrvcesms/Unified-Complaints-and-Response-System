@@ -90,27 +90,58 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
         
-        # Batch load all users to avoid N+1 queries
-        user_ids = [c.user_id for c in complaints]
-        users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
-        
+        user_ids = list({c.user_id for c in complaints})
+
+        users_dict = await BatchLoader.fetch_users_by_ids(
+            db,
+            user_ids
+        )
+
+        push_tokens_dict = await BatchLoader.fetch_push_tokens_by_user_ids(
+            db,
+            user_ids
+        )
+
         for complaint in complaints:
             complaint_user = users_dict.get(complaint.user_id)
+
+            user_push_tokens = push_tokens_dict.get(complaint.user_id, [])
+
+            logger.info(
+                f"Fetched push tokens for user {complaint.user_id}: "
+                f"{[token.token for token in user_push_tokens]}"
+            )
+
             if complaint_user:
+                for push_token in user_push_tokens:
+                    send_push_notification_task.delay(
+                        token=push_token.token,
+                        enabled=complaint_user.push_notifications_enabled,
+                        title=complaint.title,
+                        body=f"Your complaint about '{complaint.title}' is now under review",
+                        data={
+                            "complaint_id": complaint.id,
+                            "notification_type": "complaint_under_review",
+                        },
+                    )
+
+                    logger.info(
+                        f"Sent push notification for complaint {complaint.id} "
+                        f"to user {complaint.user_id} with token {push_token.token}"
+                    )
+
+                logger.info(
+                    f"Sending notification for complaint {complaint.id} "
+                    f"to user {complaint.user_id}"
+                )
+
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
                     incident_id=incident_id,
                     message=f"Your complaint about '{complaint.title}' is now under review",
                     complaint_id=complaint.id,
-                    notification_type="complaint_under_review"
-                )
-                send_push_notification_task.delay(
-                    token=complaint_user.push_token,
-                    enabled=complaint_user.push_notifications_enabled,
-                    title=complaint.title,
-                    body=f"Your complaint about '{complaint.title}' is now under review",
-                    data={"complaint_id": complaint.id, "notification_type": "complaint_under_review"},
+                    notification_type="complaint_under_review",
                 )
                 
         await invalidate_cache(
@@ -205,12 +236,40 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         barangay_id = first_complaint.barangay_id if first_complaint else None
         
         # Batch load all users to avoid N+1 queries
-        user_ids = [c.user_id for c in complaints]
+        user_ids = list({c.user_id for c in complaints})
+        
         users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        
+        user_push_tokens_dict = await BatchLoader.fetch_push_tokens_by_user_ids(db, user_ids)
         
         for complaint in complaints:
             complaint_user = users_dict.get(complaint.user_id)
+            user_push_tokens = user_push_tokens_dict.get(complaint.user_id, [])
+            
+            logger.info(
+                f"Fetched push tokens for user {complaint.user_id}: "
+                f"{[token.token for token in user_push_tokens]}"
+            )
+            
             if complaint_user:
+                
+                for token in user_push_tokens:
+                    send_push_notification_task.delay(
+                        token=token.token,
+                        enabled=complaint_user.push_notifications_enabled,
+                        title=complaint.title,
+                        body=f"Your complaint '{complaint.title}' has been resolved",
+                        data={"complaint_id": complaint.id, "notification_type": "success"},
+                    )
+                    logger.info(
+                        f"Sent push notification for complaint {complaint.id} "
+                        f"to user {complaint.user_id} with token {token.token}"
+                    )
+                    
+                logger.info(
+                    f"Sending notification for complaint {complaint.id} "
+                    f"to user {complaint.user_id}"
+                )
                 send_notifications_task.delay(
                     user_id=complaint.user_id,
                     title=complaint.title,
@@ -219,13 +278,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
                     complaint_id=complaint.id,
                     notification_type="success"
                 )
-                send_push_notification_task.delay(
-                    token=complaint_user.push_token,
-                    enabled=complaint_user.push_notifications_enabled,
-                    title="Complaint Resolved",
-                    body=f"Your complaint regarding on '{complaint.title}' has been resolved.",
-                    data={"complaint_id": complaint.id}
-                )
+            
 
                 
         await invalidate_cache(
@@ -362,8 +415,9 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         barangay_id = first_complaint["barangay_id"] if first_complaint else None
             
         # Batch load all users to avoid N+1 queries
-        user_ids = [c["user_id"] for c in complaint_snapshots]
+        user_ids = list({c["user_id"] for c in complaint_snapshots})
         users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        user_push_tokens_dict = await BatchLoader.fetch_push_tokens_by_user_ids(db, user_ids)
         complaint_ids = [c["id"] for c in complaint_snapshots]
         user_complaint_counts = Counter(user_ids)
 
@@ -376,6 +430,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         
         for complaint in complaint_snapshots:
             complaint_user = users_dict.get(complaint["user_id"])
+            user_push_tokens = user_push_tokens_dict.get(complaint["user_id"], [])
             if complaint_user:
                 if rejector.role == UserRole.BARANGAY_OFFICIAL:
                     current_reject_counter = reject_counters.get(complaint["user_id"], 0)
@@ -417,13 +472,17 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                     if current_reject_counter >= 3:
                         restricted_users.add(complaint["user_id"])
                         
-                send_push_notification_task.delay(
-                    token=complaint_user.push_token,
-                    enabled=complaint_user.push_notifications_enabled,
-                    title="Complaint Rejected",
-                    body=f"Your complaint regarding '{complaint['title']}' has been rejected by the {rejected_by}.",
-                    data={"complaint_id": complaint["id"]}
-                )
+                for token in user_push_tokens:
+                    logger.info(
+                        f"Sending push notification for complaint {complaint['id']} to user {complaint['user_id']} with token {token.token}"
+                    )
+                    send_push_notification_task.delay(
+                        token=token.token,
+                        enabled=complaint_user.push_notifications_enabled,
+                        title=complaint["title"],
+                        body=f"Your complaint '{complaint['title']}' has been rejected by the {rejected_by}.",
+                        data={"complaint_id": complaint["id"], "notification_type": notification_type},
+                    )
 
         if (
             rejector.role != UserRole.BARANGAY_OFFICIAL
@@ -611,20 +670,24 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
         barangay_id = first_complaint["barangay_id"] if first_complaint else None
             
         # Batch load all users to avoid N+1 queries
-        user_ids = [c["user_id"] for c in complaint_snapshots]
+        user_ids = list({c["user_id"] for c in complaint_snapshots})
         users_dict = await BatchLoader.fetch_users_by_ids(db, user_ids)
+        user_push_tokens_dict = await BatchLoader.fetch_push_tokens_by_user_ids(db, user_ids)
         complaint_ids = [c["id"] for c in complaint_snapshots]
         
+                
         for complaint in complaint_snapshots:
             complaint_user = users_dict.get(complaint["user_id"])
+            user_push_tokens = user_push_tokens_dict.get(complaint["user_id"], [])
             if complaint_user:
-                send_push_notification_task.delay(
-                    token=complaint_user.push_token,
-                    enabled=complaint_user.push_notifications_enabled,
-                    title="Complaint Rejected",
-                    body=f"Your complaint regarding '{complaint['title']}' has been rejected by the {rejected_by}.",
-                    data={"complaint_id": complaint["id"]}
-                )
+                for token in user_push_tokens:
+                    send_push_notification_task.delay(
+                        token=token.token,
+                        enabled=complaint_user.push_notifications_enabled,
+                        title=complaint["title"],
+                        body=f"Your complaint '{complaint['title']}' has been rejected by the {rejected_by}.",
+                        data={"complaint_id": complaint["id"], "notification_type": notification_type},
+                    )
 
         await invalidate_cache(
             complaint_ids=complaint_ids,

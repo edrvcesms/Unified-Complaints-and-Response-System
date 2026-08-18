@@ -19,7 +19,6 @@ class User(Base):
     role = Column(String, default="user")
     barangay = Column(String, nullable=True)
     zip_code = Column(String, nullable=True)
-    push_token = Column(String, nullable=True)
     push_notifications_enabled = Column(Boolean, default=False)
     full_address = Column(String, nullable=True)
     latitude = Column(String, nullable=True)
@@ -61,4 +60,4 @@ class User(Base):
     back_populates="resolver",
     foreign_keys="[IncidentModel.resolver_id]"
 )
-    
+    push_tokens = relationship("PushToken", back_populates="user", cascade="all, delete-orphan")

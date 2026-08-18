@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../general";
 import { superAdminInstance } from "../../../services/axios/apiServices";
 import { SuccessModal } from "../../general/SuccessModal";
@@ -10,19 +11,11 @@ import { ErrorMessage } from "../../general/ErrorMessage";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { Pagination } from "../../barangay/components/Pagination";
 import { TableSkeleton } from "../../barangay/components/Skeletons";
+import type { UserData } from "../../../types/general/user";
 
-interface UnverifiedUser {
-  id: number;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  role?: string | null;
-  created_at?: string | null;
-  is_verified: boolean;
-}
 
 interface PaginatedResponse {
-  items: UnverifiedUser[];
+  items: UserData[];
   total: number;
   page: number;
   page_size: number;
@@ -31,7 +24,8 @@ interface PaginatedResponse {
 type VerificationFilter = "all" | "verified" | "unverified";
 
 export const SuperAdminVerifyUsers: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<UnverifiedUser | null>(null);
+  const navigate = useNavigate();
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [successModal, setSuccessModal] = useState({ isOpen: false, title: "", message: "" });
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
@@ -103,17 +97,12 @@ export const SuperAdminVerifyUsers: React.FC = () => {
     },
   });
 
-  const handleVerifyClick = (user: UnverifiedUser) => {
-    setSelectedUser(user);
-    setConfirmOpen(true);
-  };
-
   const handleConfirm = async () => {
     if (!selectedUser) return;
     await verifyMutation.mutateAsync(selectedUser.id);
   };
 
-  const buildDisplayName = (user: UnverifiedUser) => {
+  const buildDisplayName = (user: UserData) => {
     const name = `${user.first_name || ""} ${user.last_name || ""}`.trim();
     return name || user.email;
   };
@@ -250,11 +239,10 @@ export const SuperAdminVerifyUsers: React.FC = () => {
                       <td className="px-6 py-4 text-sm whitespace-nowrap">
                         <button
                           type="button"
-                          onClick={() => handleVerifyClick(user)}
-                          disabled={user.is_verified}
-                          className="inline-flex items-center justify-center min-h-9 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          onClick={() => navigate(`/superadmin/verify-users/${user.id}`)}
+                          className="inline-flex items-center justify-center min-h-9 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                          {user.is_verified ? "Verified" : "Verify"}
+                          View
                         </button>
                       </td>
                     </tr>

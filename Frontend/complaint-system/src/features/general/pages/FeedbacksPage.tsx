@@ -1,8 +1,10 @@
 import { MessageSquare, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorMessage } from "../ErrorMessage";
 import { useFeedbacks } from "../../../hooks/useFeedbacks";
+import { useAuthStore } from "../../../store/authStore";
 import { Pagination } from "../../barangay/components/Pagination";
 import { GridCardSkeleton } from "../../barangay/components/Skeletons";
 
@@ -58,12 +60,19 @@ const renderStars = (rating: number) => {
 
 export const FeedbacksPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const userRole = useAuthStore((state) => state.userRole);
   const [metaData, setMetaData] = useState<PaginationQueryParams>({ page: 1, page_size: FEEDBACKS_PER_PAGE });
   const { feedbacks, isLoading, isFetching, error } = useFeedbacks({ page: metaData.page, page_size: metaData.page_size });
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalFeedbacks = feedbacks?.length || 0;
   const totalPages = Math.max(1, Math.ceil(totalFeedbacks / FEEDBACKS_PER_PAGE));
+  const getIncidentPath = (incidentId: number) => {
+    const routePrefix = userRole === "lgu_official" ? "/lgu" : "/dashboard";
+    return `${routePrefix}/incidents/${incidentId}`;
+  };
+
   const handlePageChange = (page: number) => {
     setMetaData((prev) => ({ ...prev, page }));
   }
@@ -122,9 +131,11 @@ export const FeedbacksPage: React.FC = () => {
             </div>
           ) : (
             paginatedFeedbacks.map((feedback) => (
-              <div
+              <button
+                type="button"
                 key={feedback.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 transition-shadow hover:shadow-md"
+                onClick={() => navigate(getIncidentPath(feedback.incident_id))}
+                className="w-full rounded-2xl border border-slate-200 bg-white p-5 text-left transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -160,7 +171,7 @@ export const FeedbacksPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </button>
             ))
           )}
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>OTP Email</title>
+<title>Account Verified</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6f8; font-family: Arial, Helvetica, sans-serif;">
 
@@ -23,29 +23,39 @@
 
           <!-- Body -->
           <tr>
-            <td style="padding:36px 32px 24px 32px; text-align:center;">
-              <h1 style="margin:0 0 8px 0; font-size:20px; color:#1a1a1a;">
-                Your Verification Code
-              </h1>
-              <p style="margin:0 0 24px 0; font-size:14px; color:#6b7280; line-height:1.5;">
-                {{ purpose }}
-              </p>
+            <td style="padding:40px 32px 24px 32px; text-align:center;">
 
-              <div style="display:inline-block; background-color:#f0f7f2; border:1px solid #cfe8d9; border-radius:10px; padding:16px 32px; margin-bottom:20px;">
-                <span style="font-size:32px; font-weight:700; letter-spacing:8px; color:#2f7d4f;">
-                  {{ otp }}
-                </span>
+              <!-- Success Icon -->
+              <div style="width:64px; height:64px; background-color:#f0f7f2; border:1px solid #cfe8d9; border-radius:50%; margin:0 auto 20px auto; line-height:64px; text-align:center;">
+                <span style="font-size:30px; color:#2f7d4f; line-height:64px;">&#10003;</span>
               </div>
 
-              <p style="margin:0; font-size:13px; color:#9ca3af;">
-                This code expires in <strong style="color:#6b7280;">5 minutes</strong>. Do not share it with anyone.
+              <h1 style="margin:0 0 10px 0; font-size:22px; color:#1a1a1a;">
+                You're All Set, {{ full_name }}!
+              </h1>
+              <p style="margin:0 0 28px 0; font-size:14.5px; color:#6b7280; line-height:1.6;">
+                Congratulations! Your account has been successfully verified. You now have full access to the Marry App!
               </p>
+
+              <div style="display:inline-block; background-color:#f0f7f2; border:1px solid #cfe8d9; border-radius:10px; padding:14px 28px; margin-bottom:24px; text-align:left;">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-size:13px; color:#6b7280; padding-right:16px; padding-bottom:6px;">Account Email</td>
+                    <td style="font-size:13px; color:#1a1a1a; font-weight:600; padding-bottom:6px;">{{ email }}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:13px; color:#6b7280; padding-right:16px;">Status</td>
+                    <td style="font-size:13px; color:#2f7d4f; font-weight:700;">Verified</td>
+                  </tr>
+                </table>
+              </div>
+
             </td>
           </tr>
 
           <!-- Divider -->
           <tr>
-            <td style="padding:0 32px;">
+            <td style="padding:8px 32px 0 32px;">
               <hr style="border:none; border-top:1px solid #eef0f2; margin:0;">
             </td>
           </tr>
@@ -54,7 +64,7 @@
           <tr>
             <td style="padding:20px 32px 28px 32px; text-align:center;">
               <p style="margin:0; font-size:12px; color:#9ca3af; line-height:1.6;">
-                If you did not request this code, you can safely ignore this email.<br>
+                If you did not create this account, please contact our support team immediately.<br>
                 This is an automated message — please do not reply.
               </p>
             </td>

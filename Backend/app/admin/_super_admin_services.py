@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.utils.caching import delete_cache
 from typing import Optional
 from app.constants.complaint_status import ComplaintStatus
+from app.tasks.email_tasks import send_verification_email_task
 
 # This file contains services that are only accessible to super administrators, such as creating barangay accounts, complaint categories, priority levels, sectors, and comittee accounts.
 
@@ -321,10 +322,12 @@ async def verify_user_account(user_id: int, db: AsyncSession):
     
     if user.is_verified:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User account is already verified")
+  
     
     user.is_verified = True
     user.updated_at = datetime.utcnow()
     db.add(user)
+    send_verification_email_task.delay(user.email, user.first_name)
     await db.commit()
     await db.refresh(user)
     await delete_cache(f"user_profile:{user_id}")

@@ -220,14 +220,18 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
         
         user.latitude = location_data.latitude
         user.longitude = location_data.longitude
-        barangay_info = get_barangay(location_data.latitude, location_data.longitude)
-        if barangay_info:
-            user.barangay = barangay_info["name"]
-        else:
-            user.barangay = None  # or handle as needed if no barangay is found
+        # barangay_info = get_barangay(location_data.latitude, location_data.longitude)
+        # if barangay_info:
+        #     user.barangay = barangay_info["name"]
+        # else:
+        #     user.barangay = None  # or handle as needed if no barangay is found
         
-        full_address_info = await reverse_geocode(location_data.latitude, location_data.longitude, user.barangay)
-        user.full_address = full_address_info.get("display_name", "Unknown Location")
+        user.barangay = "Currently Disabled for Testing Purposes"  # Disable barangay detection for testing
+        
+        # full_address_info = await reverse_geocode(location_data.latitude, location_data.longitude, user.barangay)
+        full_address_info = "Currently Disabled for Testing Purposes"  # Disable reverse geocoding for testing
+        # user.full_address = full_address_info.get("display_name", "Unknown Location")
+        user.full_address = full_address_info  # Set to the placeholder string for testing
        
         await delete_cache(f"user_profile:{user_id}")
 

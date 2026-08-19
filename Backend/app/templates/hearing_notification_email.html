@@ -1,154 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Notice of Hearing - Mediation Proceedings</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notice of Hearing - Mediation Proceedings</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Times New Roman', Times, serif;">
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family: Arial, Helvetica, sans-serif;">
 
-    <!-- Email Wrapper -->
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
-        <tr>
-            <td align="center" style="padding: 30px 10px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:40px 0;">
+    <tr>
+      <td align="center">
 
-                <!-- Email Card -->
-                <table role="presentation" width="650" cellspacing="0" cellpadding="0" border="0"
-                    style="background-color: #ffffff; border: 1px solid #cccccc; max-width: 650px; width: 100%;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.06);">
 
-                    <!-- Top Border Accent -->
-                    <tr>
-                        <td style="background-color: #1a3a6b; height: 6px; font-size: 0; line-height: 0;">&nbsp;</td>
-                    </tr>
-
-                    <!-- Body -->
-                    <tr>
-                        <td style="padding: 50px 60px 40px 60px;">
-
-                            <!-- Header -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td align="center" style="padding-bottom: 32px;">
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.8;">Republic of the Philippines</p>
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.8;">STA. MARIA, LAGUNA</p>
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.8;">
-                                            Barangay &nbsp;
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 160px; padding: 0 6px;">{{ barangay_name }}</span>
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- Divider -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td style="border-top: 1px solid #cccccc; padding-bottom: 32px; font-size: 0; line-height: 0;">&nbsp;</td>
-                                </tr>
-                            </table>
-
-                            <!-- Title -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td align="center" style="padding-bottom: 40px;">
-                                        <p style="margin: 0 0 6px 0; font-size: 13pt; font-weight: bold; font-family: 'Times New Roman', Times, serif; color: #000000; letter-spacing: 0.5px;">OFFICE OF THE LUPON TAGAPAMAYAPA</p>
-                                        <p style="margin: 12px 0 0 0; font-size: 13pt; font-weight: bold; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.6;">
-                                            NOTICE OF HEARING<br>
-                                            (MEDIATION PROCEEDINGS)
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- TO Field -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td style="padding-bottom: 28px;">
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000;">
-                                            TO: &nbsp;
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 200px; padding: 0 6px;">{{ compliant_name }}</span>
-                                        </p>
-                                    </td>
-                                </tr>
-
-                            </table>
-
-                            <!-- Body Paragraph -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td style="padding-bottom: 32px;">
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.9; text-align: justify;">
-                                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;You are hereby required to appear before me on the
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 50px; text-align: center; padding: 0 4px;">{{ hearing_day }}</span>
-                                            day of
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 100px; text-align: center; padding: 0 4px;">{{ hearing_month }}</span>
-                                            20<span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 40px; text-align: center; padding: 0 4px;">{{ hearing_year }}</span>
-                                            at
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 80px; text-align: center; padding: 0 4px;">{{ hearing_time }}</span>
-                                            o'clock in the morning/afternoon for the hearing of your complaint.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <!-- This Day Line -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td style="padding-bottom: 40px; padding-left: 20px;">
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.9;">
-                                            This
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 50px; text-align: center; padding: 0 4px;">{{ issued_day }}</span>
-                                            day of
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 100px; text-align: center; padding: 0 4px;">{{ issued_month }}</span>
-                                            20<span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 40px; text-align: center; padding: 0 4px;">{{ issued_year }}</span>.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-
-
-                            <!-- Notified Section -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                                <tr>
-                                    <td style="padding-bottom: 10px;">
-                                        <p style="margin: 0; font-size: 13pt; font-family: 'Times New Roman', Times, serif; color: #000000; line-height: 1.9;">
-                                            Notified this
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 50px; text-align: center; padding: 0 4px;">{{ notified_day }}</span>
-                                            day of
-                                            <span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 100px; text-align: center; padding: 0 4px;">{{ notified_month }}</span>
-                                            20<span style="display: inline-block; border-bottom: 1px solid #000000; min-width: 40px; text-align: center; padding: 0 4px;">{{ notified_year }}</span>.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-
-
-
-                        </td>
-                    </tr>
-
-                    <!-- Bottom Border Accent -->
-                    <tr>
-                        <td style="background-color: #1a3a6b; height: 4px; font-size: 0; line-height: 0;">&nbsp;</td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td align="center" style="background-color: #f9f9f9; padding: 14px 50px; border-top: 1px solid #eeeeee;">
-                            <p style="margin: 0; font-size: 10pt; color: #777777; font-family: Arial, sans-serif;">
-                                This is an official notice from the Office of the Lupon Tagapamayapa,<br>
-                                Barangay {{ barangay }}, Sta. Maria, Laguna. Please do not reply to this email.
-                            </p>
-                        </td>
-                    </tr>
-
-                </table>
-                <!-- /Email Card -->
-
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#2f7d4f; padding:28px 32px; text-align:center;">
+              <p style="margin:0 0 4px 0; color:#ffffff; font-size:12px; letter-spacing:1px; text-transform:uppercase; opacity:0.9;">
+                Republic of the Philippines &middot; Sta. Maria, Laguna
+              </p>
+              <p style="margin:0; color:#ffffff; font-size:15px; font-weight:700;">
+                Barangay {{ barangay_name }}
+              </p>
             </td>
-        </tr>
-    </table>
+          </tr>
+
+          <!-- Title Block -->
+          <tr>
+            <td style="padding:32px 40px 8px 40px; text-align:center;">
+              <p style="margin:0 0 6px 0; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#2f7d4f;">
+                Office of the Lupon Tagapamayapa
+              </p>
+              <h1 style="margin:0; font-size:21px; color:#1a1a1a; line-height:1.4;">
+                Notice of Hearing
+              </h1>
+              <p style="margin:4px 0 0 0; font-size:13px; color:#6b7280; letter-spacing:0.5px;">
+                MEDIATION PROCEEDINGS
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <hr style="border:none; border-top:1px solid #eef0f2; margin:0;">
+            </td>
+          </tr>
+
+          <!-- TO -->
+          <tr>
+            <td style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f7f2; border:1px solid #cfe8d9; border-radius:8px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <p style="margin:0; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:#2f7d4f; font-weight:700;">Notice To</p>
+                    <p style="margin:4px 0 0 0; font-size:16px; color:#1a1a1a; font-weight:600;">{{ compliant_name }}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px 40px 0 40px;">
+              <p style="margin:0; font-size:14.5px; color:#333333; line-height:1.9; text-align:justify;">
+                You are hereby required to appear before me on the
+                <strong style="color:#1a1a1a;">{{ hearing_day }}</strong> day of
+                <strong style="color:#1a1a1a;">{{ hearing_month }}</strong>, 20<strong style="color:#1a1a1a;">{{ hearing_year }}</strong>,
+                at <strong style="color:#1a1a1a;">{{ hearing_time }}</strong> o'clock in the morning/afternoon,
+                for the hearing of your complaint.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Hearing Details Card -->
+          <tr>
+            <td style="padding:20px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fafafa; border:1px solid #eef0f2; border-radius:8px;">
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:13px; color:#6b7280; padding-bottom:8px;">Hearing Date</td>
+                        <td style="font-size:13px; color:#1a1a1a; font-weight:600; text-align:right; padding-bottom:8px;">{{ hearing_month }} {{ hearing_day }}, 20{{ hearing_year }}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px; color:#6b7280;">Hearing Time</td>
+                        <td style="font-size:13px; color:#1a1a1a; font-weight:600; text-align:right;">{{ hearing_time }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Dates -->
+          <tr>
+            <td style="padding:24px 40px 0 40px;">
+              <p style="margin:0 0 6px 0; font-size:13px; color:#6b7280; line-height:1.7;">
+                Issued this <strong style="color:#333333;">{{ issued_day }}</strong> day of <strong style="color:#333333;">{{ issued_month }}</strong>, 20<strong style="color:#333333;">{{ issued_year }}</strong>.
+              </p>
+              <p style="margin:0; font-size:13px; color:#6b7280; line-height:1.7;">
+                Notified this <strong style="color:#333333;">{{ notified_day }}</strong> day of <strong style="color:#333333;">{{ notified_month }}</strong>, 20<strong style="color:#333333;">{{ notified_year }}</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Spacer -->
+          <tr><td style="padding-top:32px;"></td></tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <hr style="border:none; border-top:1px solid #eef0f2; margin:0;">
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px 28px 40px; text-align:center;">
+              <p style="margin:0; font-size:12px; color:#9ca3af; line-height:1.6;">
+                This is an official notice from the Office of the Lupon Tagapamayapa,<br>
+                Barangay {{ barangay }}, Sta. Maria, Laguna. Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <p style="margin:20px 0 0 0; font-size:11px; color:#b0b5bb;">
+          &copy; Barangay {{ barangay }} &middot; Sta. Maria, Laguna
+        </p>
+
+      </td>
+    </tr>
+  </table>
 
 </body>
 </html>

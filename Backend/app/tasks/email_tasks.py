@@ -87,3 +87,28 @@ def notify_user_for_hearing_task(
 
         logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
         raise self.retry(exc=e)
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def send_verification_email_task(self, recipient: str, full_name: str):
+    try:
+        subject = "Account Verification - CFMS Sta Maria"
+        body = render_template(
+            "verified_account.html",
+            {
+                "full_name": full_name,
+                "email": recipient,
+            }
+        )
+        _send_email(subject, recipient, body)
+        
+        logger.info(f"[VERIFICATION_EMAIL_SENT] to={recipient}")
+        
+    except Exception as e:
+        msg = str(e).lower()
+
+        if any(x in msg for x in ["invalid", "not verified", "domain"]):
+            logger.exception(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            raise e
+
+        logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
+        raise self.retry(exc=e)

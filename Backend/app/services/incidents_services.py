@@ -240,7 +240,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
         await db.refresh(response)
 
         if attachments:
-            await enqueue_response_attachments(attachments, response.id, responder_id)
+            await enqueue_response_attachments(attachments, response.id, responder_id, incident_id)
         
         result = await db.execute(
             select(User).where(User.role == "lgu_official")

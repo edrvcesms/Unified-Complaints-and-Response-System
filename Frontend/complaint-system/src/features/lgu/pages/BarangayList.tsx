@@ -72,7 +72,7 @@ export const BarangayList: React.FC = () => {
           <p className="text-sm text-gray-600 mt-1">{t('page.barangayIncidents.description')}</p>
         </div>
         <div className="flex gap-3">
-          <StatCard label={t('stats.totalBarangays')} value={barangays?.length || 0} />
+          <StatCard label={t('stats.totalBarangays')} value={25} />
           {barangaysWithNewIncidents > 0 && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 min-w-35">
               <div className="flex items-center gap-2 mb-1">

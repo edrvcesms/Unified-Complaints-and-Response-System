@@ -91,11 +91,10 @@ function PeriodSelector({
           <button
             key={p}
             onClick={() => onChange(p)}
-            className={`px-3 py-1.5 font-medium capitalize transition-colors ${
-              period === p
+            className={`px-3 py-1.5 font-medium capitalize transition-colors ${period === p
                 ? "bg-primary-600 text-white"
                 : "text-gray-600 hover:bg-gray-50"
-            }`}
+              }`}
           >
             {p}
           </button>
@@ -418,8 +417,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Pick active query result
   const activeQuery =
     period === "weekly" ? weekly
-    : period === "monthly" ? monthly
-    : yearly;
+      : period === "monthly" ? monthly
+        : yearly;
 
   const { data, isLoading: statsLoading, isError, error, isFetching } = activeQuery;
   const cardStats = useDashboardCardStats(data, complaints);
@@ -655,7 +654,7 @@ function StatusBadge({ status }: { status: string }) {
   > = {
     submitted: {
       label: t("dashboard.statuses.submitted"),
-      className: "bg-yellow-100 text-yellow-800",
+      className: "bg-gray-100 text-gray-800",
     },
     under_review: {
       label: t("dashboard.statuses.underReview"),
@@ -684,10 +683,9 @@ function StatusBadge({ status }: { status: string }) {
   };
 
   const { label, className } = config[status] ?? {
-    label: status.charAt(0).toUpperCase() + status.slice(1),
+    label: status.toUpperCase().replace(/_/g, " "),
     className: "bg-gray-100 text-gray-700",
   };
-
   return (
     <span
       className={`inline-flex px-2 py-0.5 rounded-md text-sm font-semibold ${className}`}

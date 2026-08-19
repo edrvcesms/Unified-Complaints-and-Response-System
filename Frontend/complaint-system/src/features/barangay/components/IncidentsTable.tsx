@@ -13,12 +13,12 @@ const getSeverityColor = (severity: string) => {
   switch (severity) {
     case "LOW":
       return "bg-green-100 text-green-800";
-    case "MEDIUM":
+    case "MODERATE":
       return "bg-yellow-100 text-yellow-800";
     case "HIGH":
-      return "bg-orange-100 text-orange-800";
-    case "VERY_HIGH":
       return "bg-red-100 text-red-800";
+    case "VERY_HIGH":
+      return "bg-black-100 text-black-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -33,11 +33,13 @@ const getStatusColor = (status: string) => {
     case "reviewed_by_barangay":
       return "bg-primary-100 text-primary-800";
     case "submitted":
-      return "bg-yellow-100 text-yellow-800";
-    case "in_progress":
-      return "bg-orange-100 text-orange-800";
-    case "pending":
       return "bg-gray-100 text-gray-800";
+    case "under_review_by_lgu":
+      return "bg-yellow-100 text-yellow-800";
+    case "forwarded_to_lgu":
+      return "bg-blue-100 text-blue-800";
+    case "rejected_by_lgu":
+      return "bg-red-100 text-red-800";
     default:
       return "bg-gray-100 text-gray-800";
   }
@@ -48,7 +50,7 @@ const formatStatus = (status: string) => {
   const lowerStatus = status.toLowerCase();
 
   if (lowerStatus === 'forwarded_to_lgu') {
-    return "FORWARDED";
+    return "FORWARDED TO LGU";
   }
 
   if (lowerStatus === 'resolved_by_barangay') {

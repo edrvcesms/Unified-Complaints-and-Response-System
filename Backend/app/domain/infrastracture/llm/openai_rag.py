@@ -392,8 +392,6 @@ HARD LIMITS
         Answers strictly from the retrieved documents.
         """
         formatted_context = self._format_context(context)
-        
-        logger.info("formatted_context:\n%s", formatted_context)  # Debug log for formatted context
 
         user_prompt = (
             f"RETRIEVED CONTEXT\n"

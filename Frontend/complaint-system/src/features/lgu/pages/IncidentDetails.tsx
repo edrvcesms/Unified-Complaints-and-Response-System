@@ -35,7 +35,7 @@ const ResponseMediaAction: React.FC<{ attachment: { file_url: string; media_type
     <button
       type="button"
       onClick={onClick}
-      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
       aria-label={isVideo ? 'View video response attachment' : 'View image response attachment'}
     >
       {isVideo ? <Play className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
@@ -282,7 +282,7 @@ export const LguIncidentDetails: React.FC = () => {
   const isRejectedByLgu = incident.complaint_clusters[0]?.complaint?.is_rejected_by_lgu === true;
   const isRejected = incidentStatus === "rejected" || incidentStatus === "rejected_by_lgu" || isRejectedByLgu;
   const isForwardedToLgu = incidentStatus === "forwarded_to_lgu";
-
+  const shouldShowActions = !isResolved && !isRejected && ( isUnderReviewByLgu || isForwardedToLgu);
   const titleStatusBadge = isResolved
     ? { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-200', dotClassName: 'bg-green-600' }
     : isRejected || isRejectedByLgu
@@ -443,7 +443,7 @@ export const LguIncidentDetails: React.FC = () => {
             ) : (
               <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
                 {sortedResponses.map((response) => {
-                  const attachment = response.response_attachments?.[0];
+                  const attachments = response.response_attachments ?? [];
 
                   return (
                     <div key={response.id} className="rounded-md border border-gray-200 p-3">
@@ -451,11 +451,16 @@ export const LguIncidentDetails: React.FC = () => {
                         {response.actions_taken}
                       </p>
 
-                      {attachment && (
-                        <ResponseMediaAction
-                          attachment={attachment}
-                          onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
-                        />
+                      {attachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {attachments.map((attachment: any, idx: number) => (
+                            <ResponseMediaAction
+                              key={attachment.id ?? idx}
+                              attachment={attachment}
+                              onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
+                            />
+                          ))}
+                        </div>
                       )}
 
                       <div className="mt-3 flex items-center justify-between gap-3">
@@ -493,7 +498,7 @@ export const LguIncidentDetails: React.FC = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        {isForwardedToLgu && (
+        {shouldShowActions && (
           <>
             <button
               onClick={handleReview}

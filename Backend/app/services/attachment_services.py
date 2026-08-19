@@ -5,6 +5,7 @@ from app.tasks.upload_tasks import upload_attachments_task, upload_remarks_attac
 from app.utils.attachments import validate_upload_files
 import base64
 from typing import List
+from app.utils.cache_invalidator_optimized import invalidate_cache
 
 
 async def upload_attachments(files: List[UploadFile], uploader_id: int, complaint_id: int, db: AsyncSession) -> str:
@@ -46,7 +47,8 @@ async def upload_attachments(files: List[UploadFile], uploader_id: int, complain
 async def enqueue_response_attachments(
     files: List[UploadFile],
     response_id: int,
-    responder_id: int
+    responder_id: int,
+    incident_id: int
 ) -> None:
 
     files_data = []
@@ -67,14 +69,18 @@ async def enqueue_response_attachments(
         task_result = upload_remarks_attachment.delay(
             files_data,
             response_id=response_id,
-            responder_id=responder_id
+            responder_id=responder_id,
+            incident_id=incident_id
         )
+        
+        await invalidate_cache(incident_ids=[incident_id], include_global=True)
         if not task_result:
             logger.error("Failed to enqueue response attachment upload task")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to enqueue response attachment upload task"
             )
+            
     except HTTPException:
         raise
     except Exception as e:
@@ -83,3 +89,4 @@ async def enqueue_response_attachments(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process response attachments"
         )
+

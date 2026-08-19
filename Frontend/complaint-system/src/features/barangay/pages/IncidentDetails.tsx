@@ -40,7 +40,7 @@ const ResponseMediaAction: React.FC<{ attachment: { file_url: string; media_type
     <button
       type="button"
       onClick={onClick}
-      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
       aria-label={isVideo ? 'View video response attachment' : 'View image response attachment'}
     >
       {isVideo ? <Play className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
@@ -543,7 +543,7 @@ export const IncidentDetails: React.FC = () => {
   const showNewComplaintBadge = Boolean(incident.has_new_complaints) || Number(incident.new_complaint_count ?? 0) > 0;
   const titleStatusBadge = isResolved
     ? { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-200', dotClassName: 'bg-green-600' }
-    : isRejected || isRejectedByLgu
+    : isRejected 
       ? { label: 'Rejected', className: 'bg-red-50 text-red-700 border-red-200', dotClassName: 'bg-red-600' }
       : isUnderReviewByBarangay || isUnderReviewByLgu
         ? { label: 'Under Review', className: 'bg-yellow-50 text-yellow-700 border-yellow-200', dotClassName: 'bg-yellow-600' }
@@ -711,7 +711,7 @@ export const IncidentDetails: React.FC = () => {
             ) : (
               <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
                 {sortedResponses.map((response) => {
-                  const attachment = response.response_attachments?.[0];
+                  const attachments = response.response_attachments ?? [];
 
                   return (
                     <div key={response.id} className="rounded-md border border-gray-200 p-3">
@@ -719,11 +719,16 @@ export const IncidentDetails: React.FC = () => {
                         {response.actions_taken}
                       </p>
 
-                      {attachment && (
-                        <ResponseMediaAction
-                          attachment={attachment}
-                          onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
-                        />
+                      {attachments.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {attachments.map((attachment: any, idx: number) => (
+                            <ResponseMediaAction
+                              key={attachment.id ?? idx}
+                              attachment={attachment}
+                              onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
+                            />
+                          ))}
+                        </div>
                       )}
 
                       <div className="mt-3 flex items-center justify-between gap-3">

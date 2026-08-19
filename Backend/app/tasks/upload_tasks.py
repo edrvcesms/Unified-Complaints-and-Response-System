@@ -1,6 +1,7 @@
 from app.core.config import settings
 from app.models.response_attachments import ResponseAttachments
 from datetime import datetime, timezone
+from typing import Optional, List
 from app.tasks.worker_loop import run_async
 from app.models.attachment import Attachment
 from app.models.announcement_media import AnnouncementMedia
@@ -275,7 +276,7 @@ def delete_event_media_task(self, public_ids, event_id: int, uploader_id: int):
 
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
-def upload_remarks_attachment(self, files_data, response_id: int, responder_id: int):
+def upload_remarks_attachment(self, files_data, response_id: int, responder_id: int, incident_id: Optional[int] = None):
 
     async def _run():
         file_objs = []
@@ -310,7 +311,8 @@ def upload_remarks_attachment(self, files_data, response_id: int, responder_id: 
                 except Exception:
                     pass
             try:
-                await invalidate_cache(response_id=response_id)
+                await invalidate_cache(response_id=response_id, incident_ids=[incident_id] if incident_id else None, include_global=True)
+                logger.info(f"Cache invalidated for response_id={response_id}, responder_id={responder_id}, incident_id={incident_id}")
             except Exception as e:
                 logger.exception(f"Cache invalidation failed after remarks attachment upload: {e}")
             logger.info(

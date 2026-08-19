@@ -30,3 +30,4 @@ numpy
 shapely
 clerk-backend-api
 pyjwt 
+psutil

@@ -11,6 +11,7 @@ from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
 from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, announcement_routes, report_routes, app_feedback_routes, event_routes, sms_routes, categories_routes,emergency_routes, emergency_queues
 from app.admin import _super_admin_routes as _super_admin
+from app.utils.memory import MemoryMonitoringMiddleware
 from app.database.database import AsyncSessionLocal
 from app.core.redis import redis_client
 scheduler = AsyncIOScheduler()
@@ -49,6 +50,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "X-Request-ID"],
     expose_headers=["X-Request-ID"],
 )
+app.add_middleware(MemoryMonitoringMiddleware)
 
 @app.get("/healthz")
 async def healthz():

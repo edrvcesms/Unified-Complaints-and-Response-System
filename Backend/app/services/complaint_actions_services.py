@@ -85,7 +85,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
         await db.refresh(response)
 
         if attachments:
-            await enqueue_response_attachments(attachments, response.id, responder_id)
+            await enqueue_response_attachments(attachments, response.id, responder_id, incident_id)
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -230,7 +230,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
         await db.refresh(response)
 
         if attachments:
-            await enqueue_response_attachments(attachments, response.id, responder_id)
+            await enqueue_response_attachments(attachments, response.id, responder_id, incident_id)
 
         first_complaint = complaints[0] if complaints else None
         barangay_id = first_complaint.barangay_id if first_complaint else None
@@ -409,7 +409,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
         await db.refresh(response)
 
         if attachments:
-            await enqueue_response_attachments(attachments, response.id, rejector_id)
+            await enqueue_response_attachments(attachments, response.id, rejector_id, incident_id)
         
         first_complaint = complaint_snapshots[0] if complaint_snapshots else None
         barangay_id = first_complaint["barangay_id"] if first_complaint else None
@@ -664,7 +664,7 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
         await db.refresh(response)
 
         if attachments:
-            await enqueue_response_attachments(attachments, response.id, rejector_id)
+            await enqueue_response_attachments(attachments, response.id, rejector_id, incident_id)
         
         first_complaint = complaint_snapshots[0] if complaint_snapshots else None
         barangay_id = first_complaint["barangay_id"] if first_complaint else None

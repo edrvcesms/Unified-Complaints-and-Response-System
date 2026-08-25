@@ -34,6 +34,20 @@ def decode_data_uri(data_uri: str) -> bytes:
         raise HTTPException(status_code=400, detail="Invalid image data.")
     return base64.b64decode(match.group(1))
 
+async def _build_login_response(user: User) -> JSONResponse:
+    refresh_token = create_refresh_token(data={"user_id": user.id})
+    access_token = create_access_token(data={"user_id": user.id})
+
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=jsonable_encoder({
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        })
+    )
+    await set_cookies(response, refresh_token=refresh_token)
+    return response
 
 async def register_user(user_data: RegisterData, db: AsyncSession):
     
@@ -354,42 +368,44 @@ async def login_user(login_data: UserLoginData, db: AsyncSession):
         user_devices_dict = await BatchLoader.fetch_user_devices_by_user_ids(db, [user.id])
         
         user_devices = user_devices_dict.get(user.id, [])
+        logger.info(f"User devices retrieved for {login_data.email}: {user_devices}")
         
-        if not any(device.device_id == login_data.device_id for device in user_devices):
-            generate_device_otp = generate_otp()
-            logger.info(f"Device not recognized for user {login_data.email}. Generated OTP: {generate_device_otp}")
-            await set_cache(f"device_otp:{login_data.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
-            send_otp_device_verification.delay(login_data.email, generate_device_otp, device_info={
-                "device_id": login_data.device_id,
-                "model": login_data.model,
-                "brand": login_data.brand,
-                "system_name": login_data.system_name,
-                "app_version": login_data.app_version,
-                "build_number": login_data.build_number
-            })
-            await set_cache(f"user_login_info:{login_data.email}", login_data.dict(), expiration=300)  # Store login info for 5 minutes
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content=jsonable_encoder({
-                    "is_verified": False,
-                    "message": "Device OTP sent successfully"
-                })
+        if not user_devices:
+            new_device = UserDevice(
+                user_id=user.id,
+                device_id=login_data.device_id,
+                model=login_data.model,
+                brand=login_data.brand,
+                system_name=login_data.system_name,
+                app_version=login_data.app_version,
+                build_number=login_data.build_number
             )
+            db.add(new_device)
+            await db.commit()
+            return await _build_login_response(user) 
 
-        refresh_token = create_refresh_token(data={"user_id": user.id})
-        access_token = create_access_token(data={"user_id": user.id})
+        if any(device.device_id == login_data.device_id for device in user_devices):
+            return await _build_login_response(user)
 
-        response = JSONResponse(
+        generate_device_otp = generate_otp()
+        logger.info(f"Device not recognized for user {login_data.email}. OTP generated.")
+        await set_cache(f"device_otp:{login_data.email}", generate_device_otp, expiration=300)
+        send_otp_device_verification.delay(login_data.email, generate_device_otp, device_info={
+            "device_id": login_data.device_id,
+            "model": login_data.model,
+            "brand": login_data.brand,
+            "system_name": login_data.system_name,
+            "app_version": login_data.app_version,
+            "build_number": login_data.build_number
+        })
+        await set_cache(f"user_login_info:{login_data.email}", login_data.dict(), expiration=300)
+        return JSONResponse(
             status_code=status.HTTP_200_OK,
             content=jsonable_encoder({
-                "message": "Login successful",
-                "access_token": access_token,
-                "refresh_token": refresh_token if user.role == UserRole.USER else None
+                "is_verified": False,
+                "message": "Device OTP sent successfully"
             })
         )
-
-        await set_cookies(response, refresh_token=refresh_token)
-        return response
 
     except HTTPException:
         raise
@@ -660,33 +676,38 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
     
     user_devices = user_devices_dict.get(user.id, [])
     
-    if not any(device.device_id == device_info.device_id for device in user_devices):
-        generate_device_otp = generate_otp()
-        logger.info(f"Device not recognized for user {user.email}. Generated OTP: {generate_device_otp}")
-        await set_cache(f"device_otp:{user.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
-        send_otp_device_verification.delay(user.email, generate_device_otp, device_info={
-            "device_id": device_info.device_id,
-            "model": device_info.model,
-            "brand": device_info.brand,
-            "system_name": device_info.system_name,
-            "app_version": device_info.app_version,
-            "build_number": device_info.build_number
-        })
-        await set_cache(f"user_login_info:{user.email}", device_info.dict(), expiration=300)  # Store login info for 5 minutes
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=jsonable_encoder({
-                "is_verified": False,
-                "message": "Device OTP sent successfully"
-            })
+    if not user_devices:
+        
+        new_device = UserDevice(
+            user_id=user.id,
+            device_id=device_info.device_id,
+            model=device_info.model,
+            brand=device_info.brand,
+            system_name=device_info.system_name,
+            app_version=device_info.app_version,
+            build_number=device_info.build_number
         )
+        db.add(new_device)
+        await db.commit()
+        if any (device.device_id == device_info.device_id for device in user_devices):
+            return await _build_login_response(user)
 
-
-    # Generate JWTs
-    access_token = create_access_token(data={"user_id": user.id})
-    refresh_token = create_refresh_token(data={"user_id": user.id})
-
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
+    generate_device_otp = generate_otp()
+    logger.info(f"Device not recognized for user {user.email}. Generated OTP: {generate_device_otp}")
+    await set_cache(f"device_otp:{user.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
+    send_otp_device_verification.delay(user.email, generate_device_otp, device_info={
+        "device_id": device_info.device_id,
+        "model": device_info.model,
+        "brand": device_info.brand,
+        "system_name": device_info.system_name,
+        "app_version": device_info.app_version,
+        "build_number": device_info.build_number
+    })
+    await set_cache(f"user_login_info:{user.email}", device_info.dict(), expiration=300)  # Store login info for 5 minutes
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content=jsonable_encoder({
+            "is_verified": False,
+            "message": "Device OTP sent successfully"
+        })
     )

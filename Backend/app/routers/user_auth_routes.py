@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.utils.turnstile import verify_turnstile
 from fastapi.requests import Request
 import json
-
+from app.schemas.user_auth_schema import DeviceInfo
 router = APIRouter()
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -79,7 +79,7 @@ async def id_verification(
 
 @router.post("/login/google", response_model=LoginResponse)
 @limiter.limit("10/minute")
-async def login_google(request: Request, payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
+async def login_google(request: Request, device_info: DeviceInfo, payload: ClerkLoginRequest, db: AsyncSession = Depends(get_async_db)):
     
-    return await login_with_google(payload.clerk_token, db)
+    return await login_with_google(device_info,payload.clerk_token, db)
  

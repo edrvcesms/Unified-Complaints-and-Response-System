@@ -675,9 +675,9 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
     user_devices_dict = await BatchLoader.fetch_user_devices_by_user_ids(db, [user.id])
     
     user_devices = user_devices_dict.get(user.id, [])
+    logger.info(f"User devices retrieved for {user.email}: {user_devices}")
     
     if not user_devices:
-        
         new_device = UserDevice(
             user_id=user.id,
             device_id=device_info.device_id,
@@ -689,12 +689,14 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
         )
         db.add(new_device)
         await db.commit()
-        if any (device.device_id == device_info.device_id for device in user_devices):
-            return await _build_login_response(user)
+        return await _build_login_response(user) 
+
+    if any(device.device_id == device_info.device_id for device in user_devices):
+        return await _build_login_response(user)
 
     generate_device_otp = generate_otp()
-    logger.info(f"Device not recognized for user {user.email}. Generated OTP: {generate_device_otp}")
-    await set_cache(f"device_otp:{user.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
+    logger.info(f"Device not recognized for user {user.email}. OTP generated.")
+    await set_cache(f"device_otp:{user.email}", generate_device_otp, expiration=300)
     send_otp_device_verification.delay(user.email, generate_device_otp, device_info={
         "device_id": device_info.device_id,
         "model": device_info.model,
@@ -703,12 +705,11 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
         "app_version": device_info.app_version,
         "build_number": device_info.build_number
     })
-    await set_cache(f"user_login_info:{user.email}", device_info.dict(), expiration=300)  # Store login info for 5 minutes
+    await set_cache(f"user_login_info:{user.email}", device_info.dict(), expiration=300)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=jsonable_encoder({
             "is_verified": False,
-            "email": user.email,
             "message": "Device OTP sent successfully"
         })
     )

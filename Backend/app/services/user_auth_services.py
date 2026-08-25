@@ -708,6 +708,7 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
         status_code=status.HTTP_200_OK,
         content=jsonable_encoder({
             "is_verified": False,
+            "email": user.email,
             "message": "Device OTP sent successfully"
         })
     )

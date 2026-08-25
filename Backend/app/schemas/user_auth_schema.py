@@ -20,6 +20,14 @@ class LoginData(UserAuthModel):
     role: str
     password: str
     turnstile_token: str | None = None
+
+class DeviceInfo(BaseModel):
+    device_id: str
+    model: str
+    brand: str
+    system_name: str
+    app_version: str
+    build_number: str
     
 class UserLoginData(UserAuthModel):
     device_id: str

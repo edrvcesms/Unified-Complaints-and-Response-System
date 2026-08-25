@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.query_optimization import BatchLoader
 from app.models.user import User
 from app.utils.logger import logger
-from app.schemas.user_auth_schema import LoginData, LoginResponse, RegisterData, UserLoginData,OTPVerificationData, ResendOtpData
+from app.schemas.user_auth_schema import DeviceInfo, LoginData, LoginResponse, RegisterData, UserLoginData,OTPVerificationData, ResendOtpData
 from app.models.user_device import UserDevice
 from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token, is_token_revoked, revoke_token_jti
@@ -640,7 +640,7 @@ async def logout_user(request: Request):
         
 
 
-async def login_with_google(clerk_token: str, db: AsyncSession) -> LoginResponse:
+async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: AsyncSession) -> LoginResponse:
     # Verify Clerk JWT
     claims = verify_clerk_token(clerk_token)
     clerk_user_id = claims["sub"]
@@ -654,6 +654,33 @@ async def login_with_google(clerk_token: str, db: AsyncSession) -> LoginResponse
         clerk_user_id=clerk_user_id,
         email=email,
     )
+    
+
+    user_devices_dict = await BatchLoader.fetch_user_devices_by_user_ids(db, [user.id])
+    
+    user_devices = user_devices_dict.get(user.id, [])
+    
+    if not any(device.device_id == device_info.device_id for device in user_devices):
+        generate_device_otp = generate_otp()
+        logger.info(f"Device not recognized for user {user.email}. Generated OTP: {generate_device_otp}")
+        await set_cache(f"device_otp:{user.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
+        send_otp_device_verification.delay(user.email, generate_device_otp, device_info={
+            "device_id": device_info.device_id,
+            "model": device_info.model,
+            "brand": device_info.brand,
+            "system_name": device_info.system_name,
+            "app_version": device_info.app_version,
+            "build_number": device_info.build_number
+        })
+        await set_cache(f"user_login_info:{user.email}", device_info.dict(), expiration=300)  # Store login info for 5 minutes
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=jsonable_encoder({
+                "is_verified": False,
+                "message": "Device OTP sent successfully"
+            })
+        )
+
 
     # Generate JWTs
     access_token = create_access_token(data={"user_id": user.id})

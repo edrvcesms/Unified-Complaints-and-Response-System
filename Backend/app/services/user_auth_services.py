@@ -2,16 +2,18 @@ from fastapi import HTTPException, Request, status, UploadFile
 from jose import JWTError
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.utils.query_optimization import BatchLoader
 from app.models.user import User
 from app.utils.logger import logger
-from app.schemas.user_auth_schema import LoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
+from app.schemas.user_auth_schema import LoginData, LoginResponse, RegisterData, UserLoginData,OTPVerificationData, ResendOtpData
+from app.models.user_device import UserDevice
 from sqlalchemy import select
 from app.core.security import hash_password, decrypt_password, verify_token, is_token_revoked, revoke_token_jti
 from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
 from app.utils.caching import set_cache, get_cache, delete_cache
-from app.tasks.email_tasks import send_otp_email_task
+from app.tasks.email_tasks import send_otp_email_task, send_otp_device_verification
 from fastapi.responses import JSONResponse
 from app.core.security import create_access_token, create_refresh_token
 from app.utils.cloudinary import upload_multiple_files_to_cloudinary
@@ -269,8 +271,69 @@ async def resend_otp_code(email: ResendOtpData, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while resending OTP. Please try again later."
         )
-
-async def login_user(login_data: LoginData, db: AsyncSession):
+        
+async def verify_device_otp(email: str, otp: str, db: AsyncSession):
+    try:
+        
+        response = await db.execute(select(User).where(User.email == email))
+        user = response.scalars().first()
+        
+        device_otp_key = f"device_otp:{email}"
+        cached_otp = await get_cache(device_otp_key)
+        user_login_data_key = f"user_login_info:{email}"
+        get_user_login_data = await get_cache(user_login_data_key)
+        logger.info(f"Verifying device OTP for {email}. Cached OTP: {cached_otp}, Provided OTP: {otp}")
+        
+        if not cached_otp:
+            logger.warning(f"Device OTP verification failed for {email}: OTP expired or not found.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP expired or not found. Please request a new one."
+            )
+            
+        if otp != str(cached_otp):
+            logger.warning(f"Device OTP verification failed for {email}: Incorrect OTP.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incorrect OTP. Please try again."
+            )
+        logger.info(f"Device OTP verified successfully for {email}.")
+        
+        new_device = UserDevice(
+            user_id=user.id,
+            device_id=get_user_login_data.get("device_id"),
+            model=get_user_login_data.get("model"),
+            brand=get_user_login_data.get("brand"),
+            system_name=get_user_login_data.get("system_name"),
+            app_version=get_user_login_data.get("app_version"),
+            build_number=get_user_login_data.get("build_number")
+        )
+        db.add(new_device)
+        await db.commit()
+        await delete_cache(user_login_data_key)
+        await delete_cache(device_otp_key)
+        
+        refresh_token = create_refresh_token(data={"user_id": user.id})
+        access_token = create_access_token(data={"user_id": user.id})
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=jsonable_encoder({
+                "message": "Device verified successfully. You can now log in.",
+                "access_token": access_token,
+                "refresh_token": refresh_token if user.role == UserRole.USER else None
+            }))
+        
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.exception(f"Error during device OTP verification for {email}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during device OTP verification. Please try again later."
+        )
+async def login_user(login_data: UserLoginData, db: AsyncSession):
     try:
         result = await db.execute(select(User).where(User.email == login_data.email))
         user = result.scalars().first()
@@ -287,8 +350,31 @@ async def login_user(login_data: LoginData, db: AsyncSession):
             logger.warning(f"Login attempt with unauthorized role for email: {login_data.email}")
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized Access")
         
-
-        logger.info(f"User logged in successfully with email: {login_data.email}")
+        
+        user_devices_dict = await BatchLoader.fetch_user_devices_by_user_ids(db, [user.id])
+        
+        user_devices = user_devices_dict.get(user.id, [])
+        
+        if not any(device.device_id == login_data.device_id for device in user_devices):
+            generate_device_otp = generate_otp()
+            logger.info(f"Device not recognized for user {login_data.email}. Generated OTP: {generate_device_otp}")
+            await set_cache(f"device_otp:{login_data.email}", generate_device_otp, expiration=300)  # Expire in 5 minutes
+            send_otp_device_verification.delay(login_data.email, generate_device_otp, device_info={
+                "device_id": login_data.device_id,
+                "model": login_data.model,
+                "brand": login_data.brand,
+                "system_name": login_data.system_name,
+                "app_version": login_data.app_version,
+                "build_number": login_data.build_number
+            })
+            await set_cache(f"user_login_info:{login_data.email}", login_data.dict(), expiration=300)  # Store login info for 5 minutes
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=jsonable_encoder({
+                    "is_verified": False,
+                    "message": "Device OTP sent successfully"
+                })
+            )
 
         refresh_token = create_refresh_token(data={"user_id": user.id})
         access_token = create_access_token(data={"user_id": user.id})

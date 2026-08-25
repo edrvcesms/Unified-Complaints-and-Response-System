@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Device Verification OTP</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family: Arial, Helvetica, sans-serif;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:40px 0;">
+    <tr>
+      <td align="center">
+
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#2f7d4f; padding:28px 32px; text-align:center;">
+              <p style="margin:0; color:#ffffff; font-size:13px; letter-spacing:1px; text-transform:uppercase; opacity:0.9;">
+                Sta. Maria Complaints &amp; Feedback Management System
+              </p>
+            </td>
+          </tr>
+
+          <!-- Alert banner -->
+          <tr>
+            <td style="background-color:#fff7e6; padding:14px 32px; text-align:center; border-bottom:1px solid #ffe8b3;">
+              <p style="margin:0; font-size:13px; color:#8a6100; font-weight:600;">
+                ⚠ New device sign-in detected
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 32px 24px 32px; text-align:center;">
+              <h1 style="margin:0 0 8px 0; font-size:20px; color:#1a1a1a;">
+                Verify This Device
+              </h1>
+              <p style="margin:0 0 24px 0; font-size:14px; color:#6b7280; line-height:1.5;">
+                We noticed a login attempt from a device we don't recognize. Enter the code below to confirm it's you.
+              </p>
+
+              <div style="display:inline-block; background-color:#f0f7f2; border:1px solid #cfe8d9; border-radius:10px; padding:16px 32px; margin-bottom:8px;">
+                <span style="font-size:32px; font-weight:700; letter-spacing:8px; color:#2f7d4f;">
+                  {{ otp }}
+                </span>
+              </div>
+
+              <p style="margin:0 0 24px 0; font-size:13px; color:#9ca3af;">
+                This code expires in <strong style="color:#6b7280;">5 minutes</strong>. Do not share it with anyone.
+              </p>
+
+              <!-- Device Info Card -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border:1px solid #eef0f2; border-radius:10px; text-align:left;">
+                <tr>
+                  <td style="padding:16px 20px 8px 20px;">
+                    <p style="margin:0; font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:0.5px;">
+                      Device Details
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 20px 16px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0; font-size:13px; color:#6b7280; width:40%;">Device</td>
+                        <td style="padding:6px 0; font-size:13px; color:#1a1a1a; font-weight:600;">{{ device_info.brand }} {{ device_info.model }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; font-size:13px; color:#6b7280;">System</td>
+                        <td style="padding:6px 0; font-size:13px; color:#1a1a1a; font-weight:600;">{{ device_info.system_name }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; font-size:13px; color:#6b7280;">App Version</td>
+                        <td style="padding:6px 0; font-size:13px; color:#1a1a1a; font-weight:600;">{{ device_info.app_version }} ({{ device_info.build_number }})</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; font-size:13px; color:#6b7280;">Device ID</td>
+                        <td style="padding:6px 0; font-size:12px; color:#1a1a1a; font-weight:600; word-break:break-all;">{{ device_info.device_id }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 32px;">
+              <hr style="border:none; border-top:1px solid #eef0f2; margin:0;">
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px 32px; text-align:center;">
+              <p style="margin:0; font-size:12px; color:#9ca3af; line-height:1.6;">
+                If this wasn't you, please ignore this email and consider changing your password.<br>
+                This is an automated message — please do not reply.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <p style="margin:20px 0 0 0; font-size:11px; color:#b0b5bb;">
+          &copy; Sta. Maria Complaints &amp; Feedback Management System
+        </p>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

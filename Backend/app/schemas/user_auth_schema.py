@@ -17,7 +17,17 @@ class ResendOtpData(UserAuthModel):
     pass
 
 class LoginData(UserAuthModel):
-
+    role: str
+    password: str
+    turnstile_token: str | None = None
+    
+class UserLoginData(UserAuthModel):
+    device_id: str
+    model: str
+    brand: str
+    system_name: str
+    app_version: str
+    build_number: str
     role: str
     password: str
     turnstile_token: str | None = None

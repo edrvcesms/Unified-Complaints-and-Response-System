@@ -4,8 +4,8 @@ from app.dependencies.db_dependency import   get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.dependencies.auth_dependency import get_current_user
-from app.schemas.user_auth_schema import ClerkLoginRequest, LoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
-from app.services.user_auth_services import login_with_google, logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code, upload_id_images
+from app.schemas.user_auth_schema import ClerkLoginRequest, LoginData, UserLoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
+from app.services.user_auth_services import login_with_google, logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code, upload_id_images, verify_device_otp
 from slowapi.errors import RateLimitExceeded
 from app.utils.turnstile import verify_turnstile
 from fastapi.requests import Request
@@ -30,9 +30,14 @@ async def verify_otp(request: Request, data: str = Form(...), front_id: UploadFi
 async def resend_otp(request: Request, email: ResendOtpData, db: AsyncSession = Depends(get_async_db)):
     return await resend_otp_code(email, db)
 
+@router.post("/verify-device-otp", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def verify_device_otp_endpoint(request: Request, email: str = Form(...), otp: str = Form(...), db: AsyncSession = Depends(get_async_db)):
+    return await verify_device_otp(email, otp, db)
+
 @router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
-async def login(request: Request, login_data: LoginData, db: AsyncSession = Depends(get_async_db)):
+async def login(request: Request, login_data: UserLoginData, db: AsyncSession = Depends(get_async_db)):
     return await login_user(login_data, db)
 
 @router.post("/officials-login", status_code=status.HTTP_200_OK)

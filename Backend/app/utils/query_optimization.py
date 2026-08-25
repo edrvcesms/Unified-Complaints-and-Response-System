@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import selectinload, joinedload, load_only
 from sqlalchemy import func, select, cast, Date, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.models.user_device import UserDevice
 from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.complaint import Complaint
@@ -316,6 +316,27 @@ class PaginationParams:
 
 class BatchLoader:
     """Batch load related objects to avoid N+1 queries."""
+    
+    @staticmethod
+    async def fetch_user_devices_by_user_ids(
+        db: AsyncSession,
+        user_ids: List[int]
+    ) -> dict[int, List[UserDevice]]:
+        """Fetch user devices for multiple users in one query."""
+        if not user_ids:
+            return {}
+
+        result = await db.execute(
+            select(UserDevice)
+            .where(UserDevice.user_id.in_(user_ids))
+        )
+        
+        devices = result.scalars().all()
+        device_dict = {}
+        for device in devices:
+            device_dict.setdefault(device.user_id, []).append(device)
+        
+        return device_dict
     
     @staticmethod
     async def fetch_push_tokens_by_user_ids(

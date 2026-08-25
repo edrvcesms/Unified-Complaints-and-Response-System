@@ -61,3 +61,4 @@ class User(Base):
     foreign_keys="[IncidentModel.resolver_id]"
 )
     push_tokens = relationship("PushToken", back_populates="user", cascade="all, delete-orphan")
+    user_devices = relationship("UserDevice", back_populates="user", cascade="all, delete-orphan")

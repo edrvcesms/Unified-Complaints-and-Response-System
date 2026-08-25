@@ -37,6 +37,26 @@ def send_otp_email_task(self, recipient: str, otp: str, purpose: str):
 
         logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
         raise self.retry(exc=e)
+    
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def send_otp_device_verification(self, recipient: str, otp: str, device_info: dict):
+    try:
+        subject = "Device Verification OTP"
+        body = render_template("device_otp.html", {"otp": otp, "device_info": device_info})
+
+        _send_email(subject, recipient, body)
+
+        logger.info(f"[DEVICE_VERIFICATION_OTP_EMAIL_SENT] to={recipient}")
+
+    except Exception as e:
+        msg = str(e).lower()
+
+        if any(x in msg for x in ["invalid", "not verified", "domain"]):
+            logger.exception(f"[PERMANENT_EMAIL_FAIL] to={recipient} error={e}")
+            raise e
+
+        logger.exception(f"[RETRY_EMAIL] to={recipient} error={e}")
+        raise self.retry(exc=e)
       
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def notify_user_for_hearing_task(

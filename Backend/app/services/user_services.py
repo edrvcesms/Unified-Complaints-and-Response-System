@@ -5,7 +5,7 @@ import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.push_token import PushToken
 from app.utils.otp_handler import generate_otp
-from app.schemas.user_schema import ChangePasswordData, VerifyEmailData, UserData, VerifyResetPasswordOTPData, UserLocationData, ResetPasswordData
+from app.schemas.user_schema import ChangePasswordData, VerifyEmailData, UserData, OTPData, UserLocationData, ResetPasswordData
 from app.models.user import User
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -133,7 +133,7 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
         logger.exception(f"Error requesting reset password for email {normalized_email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-async def verify_otp_reset_password(otp_data: VerifyResetPasswordOTPData, db: AsyncSession):
+async def verify_otp_reset_password(otp_data: OTPData, db: AsyncSession):
     try:
         normalized_email = otp_data.email.strip().lower()
         print(f"[VERIFY OTP] Normalized email: '{normalized_email}'")
@@ -390,3 +390,53 @@ async def send_push_notification(
         return result
     except Exception as e:
         raise Exception(f"Failed to send push notification to user '{user_id}': {e}") from e
+    
+async def verify_delete_account_otp(email: str, otp: str, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+        cached_otp = await get_cache(f"otp_delete_account:{email}")
+        if not cached_otp:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP expired or not found. Please request a new one.")
+        
+        if otp != cached_otp:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP. Please try again.")
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        await db.delete(user)
+        await db.commit()
+        await delete_cache(f"otp_delete_account:{email}")
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "OTP verified successfully. You can now delete your account."}
+        )
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.exception(f"Error verifying OTP for account deletion for email {email}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+
+async def delete_account(email: str, db: AsyncSession):
+    try:
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        generated_otp = generate_otp()
+        await set_cache(f"otp_delete_account:{email}", generated_otp, expiration=300)
+        send_otp_email_task.delay(email, generated_otp, purpose="Account Deletion")
+    
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        await db.rollback()
+        logger.exception(f"Error deleting account for user ID {user.id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

@@ -3,9 +3,9 @@ from app.dependencies.rate_limiter import limiter
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
-from app.services.user_services import request_reset_password, save_push_token, set_push_notifications, verify_otp_reset_password, change_password, get_user_by_id, update_user_location, forgot_password, create_new_password
+from app.services.user_services import request_reset_password, save_push_token, set_push_notifications, verify_otp_reset_password, change_password, get_user_by_id, update_user_location, forgot_password, create_new_password, delete_account, verify_delete_account_otp
 from app.dependencies.auth_dependency import get_current_user
-from app.schemas.user_schema import ResetPasswordData, UserLocationData, UserPersonalData, VerifyEmailData, VerifyResetPasswordOTPData, ChangePasswordData
+from app.schemas.user_schema import OTPData, ResetPasswordData, UserLocationData, UserPersonalData, VerifyEmailData, ChangePasswordData
 from app.schemas.push_token_schema import PushNotificationRequest, SavePushTokenRequest
 router = APIRouter()
 
@@ -30,7 +30,7 @@ async def create_new_password_endpoint(request: Request, password_data: ResetPas
 
 @router.post("/verify-reset-password-otp", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
-async def verify_password_reset_otp (request: Request, otp_data: VerifyResetPasswordOTPData, db: AsyncSession = Depends(get_async_db)):
+async def verify_password_reset_otp (request: Request, otp_data: OTPData, db: AsyncSession = Depends(get_async_db)):
     return await verify_otp_reset_password(otp_data, db)
     
 @router.post("/change-password", status_code=status.HTTP_200_OK)
@@ -65,4 +65,13 @@ async def enable_push_notifications(
 ):
     return await set_push_notifications(db=db, user_id=current_user.id, enabled=body.enabled)
     
-      
+
+@router.delete("/delete-account", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def delete_account_endpoint(request: Request, email: str, db: AsyncSession = Depends(get_async_db)):
+    return await delete_account(email, db)
+
+@router.post("/verify-delete-account-otp", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def verify_delete_account_otp_endpoint(request: Request, otp_data: OTPData, db: AsyncSession = Depends(get_async_db)):
+    return await verify_delete_account_otp(otp_data.email, otp_data.otp, db)

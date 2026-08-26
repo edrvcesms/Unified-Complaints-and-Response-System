@@ -37,6 +37,7 @@ import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, 
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
+import { AccountDeletionPage } from "./features/general/pages/AccountDeletionPage"
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 function App() {
@@ -64,9 +65,10 @@ function App() {
   }
   return (
     <>
-      {isAuthenticated && <Navbar onLogout={clearAuth} />}
+      {isAuthenticated && window.location.pathname !== "/delete-account" && <Navbar onLogout={clearAuth} />}
       <NetworkProvider>
         <Routes>
+          <Route path="/delete-account" element={<AccountDeletionPage />} />
           <Route
             path="/"
             element={

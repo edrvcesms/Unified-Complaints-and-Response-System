@@ -25,3 +25,4 @@ from .complaint_logs import ComplaintLogs
 from .rejection_categories import RejectionCategory
 from .push_token import PushToken
 from .user_device import UserDevice
+from .push_subscriptions import PushSubscription

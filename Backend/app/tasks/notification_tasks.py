@@ -9,8 +9,29 @@ from app.utils.caching import delete_cache
 from app.utils.caching import delete_cache_prefix
 from app.utils.redis_pub import publish_sse_event
 from app.services.emergency_queue import add_emergency
+from app.services.web_push_services import send_web_push_notification
 
 
+
+@celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
+def send_web_push_notification_task(
+    self,
+    user_id: int,
+    payload: dict,
+):
+    async def _run():
+        async with AsyncSessionLocal() as db:
+            await send_web_push_notification(
+                user_id=user_id,
+                push_notif=payload,
+                db=db
+            )
+
+    try:
+        run_async(_run())
+    except Exception as e:
+        logger.exception(f"Send web push notification task failed: {e}")
+        raise self.retry(exc=e)
 
 @celery_worker.task(bind=True, max_retries=3, default_retry_delay=30)
 def send_push_notification_task(

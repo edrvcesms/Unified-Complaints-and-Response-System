@@ -1,11 +1,11 @@
 from collections import Counter
 from typing import List, Optional
-
 from fastapi import HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.response_schema import ResponseCreateSchema, RejectComplaintSchema
 from app.models.rejection_categories import RejectionCategory as RejectionCategoryModel
 from app.models.incident_model import IncidentModel
+from app.schemas.web_push_schema import PushNotificationPayload
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
@@ -13,9 +13,9 @@ from app.models.user import User
 from app.constants.complaint_status import ComplaintStatus
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
-
+from app.services.web_push_services import send_web_push_notification
 from app.utils.cache_invalidator_optimized import invalidate_cache
-from app.tasks.notification_tasks import send_notifications_task, send_push_notification_task
+from app.tasks.notification_tasks import send_notifications_task, send_push_notification_task, send_web_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
 from app.services.complaint_services import log_status_change
@@ -373,6 +373,16 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 notification_type=notification_type,
                 event="reject"
             )
+            payload = {
+                "title": "The LGU has rejected the complaints under this incident",
+                "body": f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
+                "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
+                "url": f"https://cfms-stamaria.com/dashboard/incidents/{incident_id}"
+            }
+            send_web_push_notification_task.delay(
+                user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
+                payload=payload
+            )
             await log_status_change(
                 complaint_ids=complaint_ids,
                 new_status=ComplaintStatus.FORWARDED_TO_LGU.value,
@@ -638,6 +648,16 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
                 complaint_id=complaints[0].id if complaints else None,
                 notification_type=notification_type,
                 event="reject"
+            )
+            payload = {
+                "title": "The LGU has rejected the complaints under this incident",
+                "body": f"The LGU has rejected the complaints under the incident you forwarded '{complaints[0].title if complaints else 'N/A'}'.",
+                "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
+                "url": f"https://cfms-stamaria.com/dashboard/incidents/{incident_id}"
+            }
+            send_web_push_notification_task.delay(
+                user_id=complaints[0].barangay_account.user_id if complaints and complaints[0].barangay_account and complaints[0].barangay_account.user_id else None,
+                payload=payload
             )
             
         else:

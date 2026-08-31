@@ -56,8 +56,6 @@ function App() {
 
   useEffect(() => {
     refreshAccessToken();
-    
-    console.log("app mounted");
   }, [refreshAccessToken]);
 
   if (isCheckingAuth) {

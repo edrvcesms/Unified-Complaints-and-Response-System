@@ -5,9 +5,8 @@ from sqlalchemy.orm import selectinload
 from app.models.notification import Notification
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
-
 from app.database.database import AsyncSessionLocal
-
+from app.schemas.web_push_schema import PushNotificationPayload
 from app.utils.caching import delete_cache
 from app.utils.cache_invalidator_optimized import invalidate_cache
 from app.utils.logger import logger
@@ -35,7 +34,7 @@ from app.domain.infrastracture.llm.openai_incident_verifier import (
 )
 from app.domain.config.embeddings.openai_embedding import OpenAIEmbeddingService
 
-from app.tasks.notification_tasks import send_notifications_task
+from app.tasks.notification_tasks import send_notifications_task, send_web_push_notification_task
 from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.tasks.worker_loop import run_async, get_worker_loop
 
@@ -204,7 +203,16 @@ def cluster_complaint_task(self, complaint_data: dict):
                         "notification_type": "emergency" if is_emergency else "info",
                         "event": "emergency" if is_emergency else "new_complaint",
                     }
-
+                    web_push_payload = {
+                        "title": complaint_for_barangay_notification.title if complaint_for_barangay_notification.title else ("Emergency!" if is_emergency else "New Incident"),
+                        "body": f"There's an emergency incident reported." if is_emergency else "A new incident has been reported.",
+                        "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
+                        "url": f"https://cfms-stamaria.com/dashboard/incidents/{result.incident_id}"
+                    }
+                    send_web_push_notification_task.delay(
+                        user_id=barangay_notification_payload["user_id"],
+                        payload=web_push_payload
+                    )
             if not result.is_new_incident and result.existing_incident_status:
                 
                 logger.info(f"Existing incident {result.incident_id} updated for complaint {cluster_data.complaint_id}. Emergency status: {is_emergency}")
@@ -222,7 +230,16 @@ def cluster_complaint_task(self, complaint_data: dict):
                 complaint = complaint_result.scalars().first()
 
                 if (complaint and complaint.barangay_account and complaint.barangay_account.user_id):
-
+                    web_push_payload = {
+                        "title": "Emergency!" if is_emergency else "Update on Complaint",
+                        "body": f"A new complaint has been submitted similar to an existing incident.",
+                        "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
+                        "url": f"https://cfms-stamaria.com/dashboard/incidents/{result.incident_id}"
+                    }
+                    send_web_push_notification_task.delay(
+                        user_id=complaint.barangay_account.user_id,
+                        payload=web_push_payload
+                    )
                     barangay_notification_payload = {
                         "user_id": complaint.barangay_account.user_id,
                         "title": "Emergency!" if is_emergency else "Update on Complaint",

@@ -12,7 +12,7 @@ import { useToast } from "../hooks/useToast";
 import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
 import { formatTimeAgo } from "../utils/dateUtils";
-
+import { subscribeToPushNotifications, savePushSubscription } from "../services/notifications/pushNotification";
 
 interface NavbarProps {
   onLogout: () => void;
@@ -68,7 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     }
     return () => { document.body.style.overflow = ""; };
   }, [isMobile, notificationDropdownOpen]);
-
+// Add alongside your other refs (dropdownRef, notificationDropdownRef)
+  const isPushInitializingRef = useRef(false);
   const rejectedStatus = ["rejected_by_barangay", "rejected_by_lgu"];
   const unreadCount = notifications?.filter((n) => !n.is_read).length || 0;
   const previewNotifications = (notifications ?? []).slice(0, 5);
@@ -160,9 +161,39 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleBellClick = () => {
-    setNotificationDropdownOpen((prev) => !prev);
-  };
+const handlePushSubscription = async () => {
+  // Guard against SSR / unsupported browsers and overlapping invocations
+  if (isPushInitializingRef.current) return;
+  if (typeof Notification === "undefined") return;
+
+  const currentPermission = Notification.permission;
+
+  // Only act when the user has never been asked before.
+  // "granted" -> already subscribed previously, nothing to do.
+  // "denied"  -> never re-prompt, just let the dropdown open.
+  if (currentPermission !== "default") return;
+
+  isPushInitializingRef.current = true;
+  try {
+    const subscription = await subscribeToPushNotifications();
+    const permissionAfterPrompt: NotificationPermission = Notification.permission;
+    if (permissionAfterPrompt === "granted") {
+      await savePushSubscription(subscription);
+    }
+  } catch (error) {
+    console.error("[Push] Failed to enable push notifications:", error);
+  } finally {
+    isPushInitializingRef.current = false;
+  }
+};
+
+const handleBellClick = () => {
+  // Fire-and-forget: never block or gate the SSE dropdown on push registration.
+  handlePushSubscription().catch((error) => {
+    console.error("[Push] Unexpected error enabling push notifications:", error);
+  });
+  setNotificationDropdownOpen((prev) => !prev);
+};
 
   const handleLogout = () => {
     setDropdownOpen(false);

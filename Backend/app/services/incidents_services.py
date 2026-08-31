@@ -14,7 +14,7 @@ from app.schemas.incident_schema import IncidentData, IncidentOut
 from app.utils.caching import delete_cache
 from app.utils.logger import logger
 from app.models.complaint import Complaint
-from app.tasks.notification_tasks import send_notifications_task
+from app.tasks.notification_tasks import send_notifications_task, send_web_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
 from app.utils.caching import set_cache, get_cache
@@ -31,6 +31,7 @@ from sqlalchemy import select, update, or_, case, cast, String, func
 from app.core.pagination_params import IncidentListParams
 from app.models.category import Category
 from app.models.barangay import Barangay
+from app.schemas.web_push_schema import PushNotificationPayload
 from app.utils.incident_filter import _apply_incident_filters_and_sort, PRIORITY_SCORE
 
 def _active_statuses_by_role(role: str) -> set[str]:
@@ -255,7 +256,16 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 incident_id=incident_id,
                 notification_type="info",
                 event="info"
-
+            )
+            payload = {
+                "title": "New Incident Forwarded to LGU",
+                "body": f"A new incident with ID {incident.id} has been forwarded to the LGU.",
+                "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
+                "url": f"https://cfms-stamaria.com/lgu/incidents/{incident_id}"
+            }
+            send_web_push_notification_task.delay(
+                user_id=official.id,
+                payload=payload,
             )
             incident.lgu_account_id = official.id
             await db.commit()

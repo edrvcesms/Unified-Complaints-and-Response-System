@@ -27,6 +27,9 @@ class Settings:
     TURNSTILE_ALLOWED_HOSTNAMES: str = os.getenv("TURNSTILE_ALLOWED_HOSTNAMES", "")
     OPEN_AI_API_KEY: str = os.getenv("OPEN_AI_API_KEY")
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY")
+    VAPID_PUBLIC_KEY: str = os.getenv("VAPID_PUBLIC_KEY")
+    VAPID_PRIVATE_KEY: str = os.getenv("VAPID_PRIVATE_KEY")
+    VAPID_SUBJECT: str = os.getenv("VAPID_SUBJECT")
    
 
 settings = Settings()

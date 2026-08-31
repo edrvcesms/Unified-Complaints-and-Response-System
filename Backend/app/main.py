@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select
 from app.utils.logger import logger
 from app.utils.attachments import AttachmentSizeLimitMiddleware
-from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, announcement_routes, report_routes, app_feedback_routes, event_routes, sms_routes, categories_routes,emergency_routes, emergency_queues
+from app.routers import user_auth_routes, user_routes, barangay_routes,chatbot_routes, complaint_routes, incident_routes, lgu_routes, notification_routes, announcement_routes, report_routes, app_feedback_routes, event_routes, sms_routes, categories_routes,emergency_routes, emergency_queues, web_push_routes
 from app.admin import _super_admin_routes as _super_admin
 from app.utils.memory import MemoryMonitoringMiddleware
 from app.database.database import AsyncSessionLocal
@@ -100,3 +100,4 @@ app.include_router(event_routes.router, prefix="/api/v1/events", tags=["Events"]
 app.include_router(chatbot_routes.router, prefix="/api/v1/chatbot", tags=["Chatbot"])
 app.include_router(emergency_queues.router, prefix="/api/v1/emergency-queue", tags=["Emergency Queue"])
 app.include_router(emergency_routes.router, prefix="/api/v1/emergency", tags=["Emergency"])
+app.include_router(web_push_routes.router, prefix="/api/v1/web-push", tags=["Web Push"])

@@ -31,3 +31,4 @@ shapely
 clerk-backend-api
 pyjwt 
 psutil
+pywebpush

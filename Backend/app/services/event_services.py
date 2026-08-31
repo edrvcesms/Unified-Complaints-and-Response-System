@@ -22,12 +22,13 @@ from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_T
 
 async def get_events(db: AsyncSession, params: ListParams) -> PaginatedResponse[EventData]:
     try:
+        today = datetime.now(timezone.utc)
         cached_events = await get_cache(build_list_cache_key("events", params.model_dump(mode="json")))
         if cached_events is not None:
             logger.info("Cache hit for events")
             return PaginatedResponse[EventData].model_validate(cached_events)
         
-        statement = select(Event).options(selectinload(Event.media))
+        statement = select(Event).options(selectinload(Event.media)).where(Event.date >= today)
         if params.search:
             statement = statement.where(Event.event_name.ilike(f"%{params.search}%"))
         

@@ -9,3 +9,5 @@ script.sql
 load_test_k6.js
 locustfile.py
 LOAD_TESTING_GUIDE.md
+private_key.pem
+public_key.pem

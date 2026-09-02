@@ -347,6 +347,41 @@ async def verify_device_otp(email: str, otp: str, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during device OTP verification. Please try again later."
         )
+        
+async def resend_device_verification_otp(email: str, db: AsyncSession):
+    try:
+        await delete_cache(f"device_otp:{email}")
+        result = await db.execute(select(User).where(User.email == email))
+        existing_user = result.scalars().first()
+
+        if not existing_user:
+            logger.warning(f"Device OTP resend attempt with unregistered email: {email}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="This email is not registered. Please check your email or register for a new account."
+            )
+
+        generated_otp = generate_otp()
+        await set_cache(f"device_otp:{email}", generated_otp, expiration=300)
+        logger.info(f"Device OTP generated for {email} and stored in cache.")
+
+        send_otp_device_verification.delay(email, generated_otp)
+        logger.info(f"Device OTP task enqueued for {email}.")
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"message": "Device OTP resent to your email. Please verify to complete device verification."}
+        )
+    except HTTPException:
+        raise   
+    
+    except Exception as e:
+        logger.exception(f"Error during device OTP resend for {email}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while resending device OTP. Please try again later."
+        )        
+
 async def login_user(login_data: UserLoginData, db: AsyncSession):
     try:
         result = await db.execute(select(User).where(User.email == login_data.email))
@@ -709,6 +744,7 @@ async def login_with_google(device_info: DeviceInfo, clerk_token: str, db: Async
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=jsonable_encoder({
+            "email": user.email,
             "is_verified": False,
             "message": "Device OTP sent successfully"
         })

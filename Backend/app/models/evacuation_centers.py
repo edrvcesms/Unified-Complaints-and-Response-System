@@ -1,5 +1,5 @@
 from app.database.database import Base
-from sqlalchemy import Column, ForeignKey, Integer, String, DateTime
+from sqlalchemy import Column, Float, ForeignKey, Integer, String, DateTime
 from datetime import datetime
 from sqlalchemy.orm import relationship
 
@@ -9,8 +9,8 @@ class EvacuationCenter(Base):
     id = Column(Integer, primary_key=True, index=True)
     barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False)
     center_name = Column(String, unique=True, index=True, nullable=False)
-    latitude = Column(String, nullable=False)
-    longitude = Column(String, nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
     address = Column(String, nullable=False)
     contact_number = Column(String, nullable=True)
     

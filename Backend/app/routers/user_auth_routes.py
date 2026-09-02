@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.dependencies.auth_dependency import get_current_user
 from app.schemas.user_auth_schema import ClerkLoginRequest, LoginData, UserLoginData, LoginResponse, RegisterData, OTPVerificationData, ResendOtpData
-from app.services.user_auth_services import login_with_google, logout_user, register_user, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code, upload_id_images, verify_device_otp
+from app.services.user_auth_services import login_with_google, logout_user, register_user, resend_device_verification_otp, verify_otp_and_register, login_user, refresh_access_token, officials_login, superadmin_login, resend_otp_code, upload_id_images, verify_device_otp
 from slowapi.errors import RateLimitExceeded
 from app.utils.turnstile import verify_turnstile
 from fastapi.requests import Request
@@ -34,6 +34,11 @@ async def resend_otp(request: Request, email: ResendOtpData, db: AsyncSession = 
 @limiter.limit("10/minute")
 async def verify_device_otp_endpoint(request: Request, email: str = Form(...), otp: str = Form(...), db: AsyncSession = Depends(get_async_db)):
     return await verify_device_otp(email, otp, db)
+
+@router.post("/resend-device-otp", status_code=status.HTTP_200_OK)
+@limiter.limit("10/minute")
+async def resend_device_otp(request: Request, email: str = Form(...), db: AsyncSession = Depends(get_async_db)):
+    return await resend_device_verification_otp(email, db)
 
 @router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")

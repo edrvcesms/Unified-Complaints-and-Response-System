@@ -5,11 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.complaint import Complaint
 from app.models.user import User
 from app.models.category import Category
+from app.utils.logger import logger
+from app.models.evacuation_centers import EvacuationCenter
 from app.models.category_config import CategoryConfigModel
 from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount
 from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCreate
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate, EvacuationCenters
 from sqlalchemy import select, func
 from app.core.security import hash_password
 from datetime import datetime
@@ -199,7 +201,93 @@ async def get_all_categories(current_user: User, db: AsyncSession):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
+async def get_user_evacuation_centers(user_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
+        result = await db.execute(
+            select(Barangay).where(Barangay.barangay_name == user.barangay)
+        )
+        barangay = result.scalars().first()
+        if not barangay:
+            return []
+        
+        result = await db.execute(
+            select(EvacuationCenter).where(EvacuationCenter.barangay_id == barangay.id)
+        )
+        evacuation_centers = result.scalars().all()
+        if not evacuation_centers:
+            return []
+        return evacuation_centers
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+async def get_barangay_evacuation_centers(barangay_id: int, user_id: int, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(Barangay).where(Barangay.id == barangay_id)
+        )
+        barangay = result.scalars().first()
+        if not barangay:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+        logger.info(f"User ID {user_id} requested evacuation centers for Barangay ID {barangay_id} ({barangay.barangay_name})")
+        
+        result = await db.execute(
+            select(EvacuationCenter).where(EvacuationCenter.barangay_id == barangay_id)
+        )
+        evacuation_centers = result.scalars().all()
+        if not evacuation_centers:
+            logger.info(f"No evacuation centers found for Barangay ID {barangay_id} ({barangay.barangay_name})")
+            return []
+        return evacuation_centers
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+async def create_evacuation_center(evacuation_center_data: EvacuationCenters, db: AsyncSession):
+    try:
+        result = await db.execute(
+            select(Barangay).where(Barangay.id == evacuation_center_data.barangay_id)
+        )
+        barangay = result.scalars().first()
+        if not barangay:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+        
+        result = await db.execute(
+            select(EvacuationCenter).where(EvacuationCenter.center_name == evacuation_center_data.center_name)
+        )
+        if result.scalars().first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Evacuation center with this name already exists")
+        
+        new_center = EvacuationCenter(
+            center_name=evacuation_center_data.center_name,
+            barangay_id=evacuation_center_data.barangay_id,
+            latitude=evacuation_center_data.latitude,
+            longitude=evacuation_center_data.longitude,
+            address=evacuation_center_data.address,
+        )
+        db.add(new_center)
+        await db.commit()
+    
+    except HTTPException as e:
+        raise e
+    
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 async def create_barangay_account(barangay_data: BarangayAccountCreate, db: AsyncSession) -> BarangayWithUserData:
     

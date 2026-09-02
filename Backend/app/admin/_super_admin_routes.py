@@ -10,10 +10,12 @@ from slowapi.errors import RateLimitExceeded
 from app.schemas.barangay_schema import BarangayAccountCreate
 from app.admin._super_admin_services import create_barangay_account, create_complaint_category,  create_lgu_account, delete_pinecone_data, get_user_rejected_complaints, verify_user_account, get_all_unverified_users, get_all_categories, get_all_users, update_category_configs, get_submission_restricted_users, get_suspended_users, lift_suspension, remove_submission_restriction,get_user_by_id
 from fastapi import status
-from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate
+from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate, EvacuationCenters
 from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
 from app.services.emergency_hotline_services import add_emergency_hotlines, get_emergency_hotlines
 from typing import Optional
+from app.admin._super_admin_services import create_evacuation_center
+
 
 router = APIRouter()
 
@@ -262,6 +264,22 @@ async def get_user_rejected_complaints_route(
 ):
     try:
         return await get_user_rejected_complaints(user_id, current_user, db)
+    except RateLimitExceeded as e:
+        raise rate_limit_exceeded_handler(None, e)
+    except HTTPException as e:
+        raise e
+    
+    
+@router.post("/create", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def create_evacuation_center_route(
+    request: Request,
+    evacuation_center_data: EvacuationCenters,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        return await create_evacuation_center(evacuation_center_data, db)
     except RateLimitExceeded as e:
         raise rate_limit_exceeded_handler(None, e)
     except HTTPException as e:

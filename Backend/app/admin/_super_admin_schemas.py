@@ -25,3 +25,10 @@ class CategoryConfigsUpdate(BaseModel):
     category_radius_km: Optional[float] = None
     similarity_threshold: Optional[float] = None
     
+class EvacuationCenters(BaseModel):
+    center_name: str
+    barangay_id: int
+    latitude: float
+    longitude: float
+    address: str
+    contact_number: Optional[str] = None

@@ -4,7 +4,9 @@ from fastapi import HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
+from app.services.emergency_queue import remove_emergency
 from app.schemas.response_schema import ResponseCreateSchema
 from app.constants.complaint_status import ComplaintStatus
 from app.models.incident_model import IncidentModel
@@ -244,9 +246,10 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
             await enqueue_response_attachments(attachments, response.id, responder_id, incident_id)
         
         result = await db.execute(
-            select(User).where(User.role == "lgu_official")
+            select(User).options(selectinload(User.push_subscriptions)).where(User.role == "lgu_official")
         )
         lgu_officials = result.scalars().all()
+
         for official in lgu_officials:
             send_notifications_task.delay(
                 user_id=official.id,
@@ -257,18 +260,22 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
                 notification_type="info",
                 event="info"
             )
+
             payload = {
                 "title": "New Incident Forwarded to LGU",
                 "body": f"A new incident with ID {incident.id} has been forwarded to the LGU.",
                 "icon": "https://cfms-stamaria.com/StaMariaLogo.jpg",
-                "url": f"https://cfms-stamaria.com/lgu/incidents/{incident_id}"
+                "url": f"https://cfms-stamaria.com/lgu/incidents/{incident.id}"
             }
+
             send_web_push_notification_task.delay(
                 user_id=official.id,
-                payload=payload,
+                payload=payload
             )
+
             incident.lgu_account_id = official.id
-            await db.commit()
+
+        await db.commit()
             
         # OPTIMIZED: Use new CacheInvalidator with pipeline
         await CacheInvalidator.invalidate_cache(
@@ -295,7 +302,7 @@ async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_
     
 
 
-async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
+async def mark_incident_as_viewed(user_id: int, incident_id: int, db: AsyncSession):
     """Mark an incident as viewed, resetting new complaint indicators"""
     try:
         result = await db.execute(
@@ -313,6 +320,9 @@ async def mark_incident_as_viewed(incident_id: int, db: AsyncSession):
         incident.has_new_complaints = False
         incident.new_complaint_count = 0
         incident.last_viewed_at = datetime.now(timezone.utc)
+        
+        if incident.is_emergency:
+            await remove_emergency(user_id, incident_id)
         
         await db.commit()
         

@@ -193,7 +193,7 @@ async def mark_incident_viewed(request: Request, incident_id: int, db: AsyncSess
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
-    return await mark_incident_as_viewed(incident_id, db)
+    return await mark_incident_as_viewed(current_user.id, incident_id, db)
 
 @router.post("/notify-hearing/{incident_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")

@@ -13,6 +13,7 @@ from app.dependencies.db_dependency import get_async_db
 from app.constants.roles import UserRole
 from app.schemas.response_schema import ResponseCreateSchema, RejectComplaintSchema
 from app.models.user import User
+from app.schemas.hearing_schema import RespondentsModel
 from app.utils.logger import logger
 from app.core.pagination_params import IncidentListParams, ListParams, PaginationParams
 
@@ -197,8 +198,16 @@ async def mark_incident_viewed(request: Request, incident_id: int, db: AsyncSess
 
 @router.post("/notify-hearing/{incident_id}", status_code=status.HTTP_200_OK)
 @limiter.limit("20/minute")
-async def notify_hearing(request: Request, incident_id: int, hearing_date: datetime = Form(...), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
-    await notify_user_for_hearing(incident_id, hearing_date, current_user.id, db)
+async def notify_hearing(request: Request, incident_id: int, hearing_date: datetime = Form(...), respondents: str = Form("[]"), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+    try:
+        respondent_payload = json.loads(respondents)
+        if not isinstance(respondent_payload, list):
+            raise ValueError("Respondents must be a list")
+        parsed_respondents = [RespondentsModel.model_validate(item) for item in respondent_payload]
+    except (TypeError, ValueError, json.JSONDecodeError) as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid respondents payload") from error
+
+    return await notify_user_for_hearing(incident_id, hearing_date, current_user.id, parsed_respondents, db)
 
 
 @router.post("/mark-hearing/{incident_id}", status_code=status.HTTP_200_OK)

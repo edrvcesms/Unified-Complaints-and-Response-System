@@ -33,6 +33,18 @@ from app.core.pagination_response import PaginatedResponse
 from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 
 
+def _has_lgu_forwarded_complaint(statuses):
+    return (
+        select(IncidentComplaintModel.incident_id)
+        .join(Complaint, Complaint.id == IncidentComplaintModel.complaint_id)
+        .where(
+            IncidentComplaintModel.incident_id == IncidentModel.id,
+            Complaint.status.in_(statuses),
+        )
+        .exists()
+    )
+
+
 async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
     try:
         cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), barangay_id=barangay_id, view="lgu_forwarded")
@@ -43,10 +55,8 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         
         statement = (
             select(IncidentModel)
-            .join(IncidentModel.complaint_clusters)
-            .join(IncidentComplaintModel.complaint)
             .where(
-                Complaint.status.in_([
+                _has_lgu_forwarded_complaint([
                     ComplaintStatus.FORWARDED_TO_LGU.value,
                     ComplaintStatus.REVIEWED_BY_LGU.value,
                     ComplaintStatus.RESOLVED_BY_LGU.value,
@@ -54,7 +64,6 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
                 IncidentModel.barangay_id == barangay_id
             )
             .options(*QueryOptions.incident_full())
-            .distinct()
             .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info(f"Executed query to get forwarded incidents for barangay ID: {barangay_id}")
@@ -81,14 +90,11 @@ async def get_all_forwarded_incidents(db: AsyncSession, params: ListParams) -> P
         
         statement = (
             select(IncidentModel)
-            .join(IncidentModel.complaint_clusters)
-            .join(IncidentComplaintModel.complaint)
-            .where(Complaint.status.in_([
+            .where(_has_lgu_forwarded_complaint([
                 ComplaintStatus.FORWARDED_TO_LGU.value,
                 ComplaintStatus.REVIEWED_BY_LGU.value,
             ]))
             .options(*QueryOptions.incident_full())
-            .distinct()
             .order_by(IncidentModel.first_reported_at.asc())
         )
         logger.info("Executed query to get all forwarded incidents")

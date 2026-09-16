@@ -1,5 +1,5 @@
 import calendar
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from app.models.user import User
@@ -18,6 +18,7 @@ from sqlalchemy import select, update, func
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData, ComplaintOut
 from datetime import datetime
 from app.utils.logger import logger
+from app.schemas.hearing_schema import RespondentsModel
 from app.constants.complaint_status import ComplaintStatus
 from fastapi.responses import JSONResponse
 from app.utils.caching import set_cache, get_cache
@@ -580,9 +581,10 @@ async def get_my_complaints(user_id: int, params: IncidentListParams, db: AsyncS
             detail=str(e),
         )
         
-async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user_id: int, db: AsyncSession):
+async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user_id: int, respondents: Optional[List[RespondentsModel]], db: AsyncSession):
     try:
         normalized_hearing_date = _normalize_hearing_datetime(hearing_date)
+        respondents = respondents or []
 
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
@@ -622,6 +624,7 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user
         incident.hearing_date = normalized_hearing_date
         incident.hearing_count = (incident.hearing_count or 0) + 1
         incident.is_hearing_successful = None
+        incident.hearing_respondents = [respondent.model_dump() for respondent in respondents]
         db.add(incident)
         await db.commit()
         await db.refresh(incident)
@@ -652,6 +655,26 @@ async def notify_user_for_hearing(incident_id: int, hearing_date: datetime, user
                 notified_year=datetime.now(timezone.utc).strftime("%Y"),
                 hearing_time=normalized_hearing_date.strftime("%I:%M %p")
             )
+        if respondents:
+            for respondent in respondents:
+                if not respondent.email:
+                    logger.warning(f"Respondent {respondent.name} does not have an email address. Skipping notification.")
+                    continue
+                notify_user_for_hearing_task.delay(
+                    recipient=respondent.email,
+                    barangay_name=complaints[0].barangay.barangay_name if complaints[0].barangay else "N/A",
+                    compliant_name=respondent.name,
+                    hearing_day=normalized_hearing_date.strftime("%d"),
+                    hearing_month=normalized_hearing_date.strftime("%B"),
+                    hearing_year=normalized_hearing_date.strftime("%Y"),
+                    issued_day=datetime.now(timezone.utc).strftime("%d"),
+                    issued_month=datetime.now(timezone.utc).strftime("%B"),
+                    issued_year=datetime.now(timezone.utc).strftime("%Y"),
+                    notified_day=datetime.now(timezone.utc).strftime("%d"),
+                    notified_month=datetime.now(timezone.utc).strftime("%B"),
+                    notified_year=datetime.now(timezone.utc).strftime("%Y"),
+                    hearing_time=normalized_hearing_date.strftime("%I:%M %p")
+                )
         
         if incident.is_hearing_successful is False and incident.hearing_count and incident.hearing_count >= 3:
             await db.execute(
@@ -731,6 +754,30 @@ async def reschedule_hearing(incident_id: int, hearing_date: datetime, user_id: 
         incident.is_hearing_successful = None
         db.add(incident)
         await db.commit()
+
+        saved_respondents = [RespondentsModel.model_validate(item) for item in (incident.hearing_respondents or [])]
+        first_complaint_result = await db.execute(
+            select(Complaint).where(Complaint.id == complaint_ids[0]).options(*QueryOptions.complaints())
+        )
+        first_complaint = first_complaint_result.scalars().first()
+        for respondent in saved_respondents:
+            if not respondent.email:
+                continue
+            notify_user_for_hearing_task.delay(
+                recipient=respondent.email,
+                barangay_name=first_complaint.barangay.barangay_name if first_complaint and first_complaint.barangay else "N/A",
+                compliant_name=respondent.name,
+                hearing_day=normalized_hearing_date.strftime("%d"),
+                hearing_month=normalized_hearing_date.strftime("%B"),
+                hearing_year=normalized_hearing_date.strftime("%Y"),
+                issued_day=datetime.now(timezone.utc).strftime("%d"),
+                issued_month=datetime.now(timezone.utc).strftime("%B"),
+                issued_year=datetime.now(timezone.utc).strftime("%Y"),
+                notified_day=datetime.now(timezone.utc).strftime("%d"),
+                notified_month=datetime.now(timezone.utc).strftime("%B"),
+                notified_year=datetime.now(timezone.utc).strftime("%Y"),
+                hearing_time=normalized_hearing_date.strftime("%I:%M %p"),
+            )
 
         if incident.is_hearing_successful is False and incident.hearing_count and incident.hearing_count >= 3:
             await db.execute(

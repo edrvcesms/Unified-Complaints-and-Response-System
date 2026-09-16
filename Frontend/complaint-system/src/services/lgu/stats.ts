@@ -1,4 +1,4 @@
-import { lguApi } from "../axios/apiServices";
+import { lguApi, reportApi } from "../axios/apiServices";
 
 interface DailyCounts {
   [date: string]: {
@@ -81,6 +81,22 @@ export const getComplaintCountsByBarangayCategory = async (): Promise<ComplaintC
     return await lguApi.get('/stats/complaints-by-barangay-category');
   } catch (error) {
     console.error("Error fetching complaint counts by barangay/category:", error);
+    throw error;
+  }
+};
+
+export const generateMunicipalComplaintReport = async (
+  fromDate: string,
+  toDate: string,
+): Promise<Blob> => {
+  try {
+    return await reportApi.post<Blob>(
+      "/complaints",
+      { from_date: fromDate, to_date: toDate },
+      { responseType: "blob" },
+    );
+  } catch (error) {
+    console.error("Error generating municipal complaint report:", error);
     throw error;
   }
 };

@@ -20,6 +20,8 @@ import {
 import { SkeletonCard } from "../../barangay/components/Skeletons";
 import { PendingIcon, ReviewIcon, ResolvedIcon } from "../../barangay/components/Icons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { Download, FileText, LoaderCircle, X } from "lucide-react";
+import { generateMunicipalComplaintReport } from "../../../services/lgu/stats";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartJsTooltip, ChartJsLegend);
 
@@ -70,6 +72,13 @@ const MONTHS = [
 ];
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 // ─── Transform helpers ─────────────────────────────────────────────────────
 
@@ -193,6 +202,14 @@ function PeriodSelector({
 export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLoading }) => {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const today = new Date();
+  const [reportFromDate, setReportFromDate] = useState(`${today.getFullYear()}-01-01`);
+  const [reportToDate, setReportToDate] = useState(formatDateInput(today));
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const [reportFileName, setReportFileName] = useState("municipal-complaint-report.pdf");
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
   const recent = [...incidents]
@@ -386,6 +403,48 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
     },
   };
 
+  const handleGenerateReport = async () => {
+    if (!reportFromDate || !reportToDate) {
+      setReportError("Please select both a start date and an end date.");
+      return;
+    }
+    if (reportFromDate > reportToDate) {
+      setReportError("The start date must not be after the end date.");
+      return;
+    }
+
+    setIsReportLoading(true);
+    setReportError(null);
+    try {
+      const reportBlob = await generateMunicipalComplaintReport(reportFromDate, reportToDate);
+      if (reportUrl) URL.revokeObjectURL(reportUrl);
+      setReportUrl(URL.createObjectURL(reportBlob));
+      setReportFileName(`municipal-complaint-report-${reportFromDate}-to-${reportToDate}.pdf`);
+      setIsReportDialogOpen(false);
+    } catch (error) {
+      const responseData = (error as { response?: { data?: Blob | { detail?: string } } })?.response?.data;
+      let responseDetail = typeof responseData === "object" && responseData && "detail" in responseData
+        ? responseData.detail
+        : undefined;
+      if (!responseDetail && responseData instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await responseData.text()) as { detail?: string };
+          responseDetail = parsed.detail;
+        } catch {
+          responseDetail = undefined;
+        }
+      }
+      setReportError(responseDetail || "Unable to generate the report. Please try again.");
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
+  const closeReportPreview = () => {
+    if (reportUrl) URL.revokeObjectURL(reportUrl);
+    setReportUrl(null);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -435,21 +494,31 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
             <h2 className="text-base font-semibold text-gray-700">{t('dashboard.lgu.categoryBreakdownTitle')}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{t('dashboard.lgu.categoryBreakdownDescription')}</p>
           </div>
-          <label className="text-sm text-gray-600 flex items-center gap-2">
-            <span>{t('dashboard.lgu.categoryFilterLabel')}</span>
-            <select
-              className="border border-gray-200 rounded-md px-2 py-1 text-sm text-gray-700 bg-white"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm text-gray-600 flex items-center gap-2">
+              <span>{t('dashboard.lgu.categoryFilterLabel')}</span>
+              <select
+                className="border border-gray-200 rounded-md px-2 py-1 text-sm text-gray-700 bg-white"
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+              >
+                <option value="all">{t('dashboard.lgu.categoryFilterAll')}</option>
+                {(categoryStats?.categories || []).map((category) => (
+                  <option key={category.id} value={String(category.id)}>
+                    {formatCategoryName(category.name)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={() => { setReportError(null); setIsReportDialogOpen(true); }}
+              className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
             >
-              <option value="all">{t('dashboard.lgu.categoryFilterAll')}</option>
-              {(categoryStats?.categories || []).map((category) => (
-                <option key={category.id} value={String(category.id)}>
-                  {formatCategoryName(category.name)}
-                </option>
-              ))}
-            </select>
-          </label>
+              <FileText size={16} aria-hidden="true" />
+              Generate Report
+            </button>
+          </div>
         </div>
         {isCategoryLoading ? (
           <div className="h-60 bg-gray-100 rounded animate-pulse" />
@@ -459,6 +528,60 @@ export const LguDashboardPage: React.FC<DashboardPageProps> = ({ incidents, isLo
           </div>
         )}
       </div>
+
+      {isReportDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="report-dialog-title" className="text-lg font-semibold text-gray-900">Generate municipal report</h2>
+                <p className="mt-1 text-sm text-gray-500">Choose the reporting period for all barangays.</p>
+              </div>
+              <button type="button" onClick={() => setIsReportDialogOpen(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" aria-label="Close report dialog">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-gray-700">
+                From date
+                <input type="date" value={reportFromDate} onChange={(event) => setReportFromDate(event.target.value)} className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </label>
+              <label className="text-sm font-medium text-gray-700">
+                To date
+                <input type="date" value={reportToDate} onChange={(event) => setReportToDate(event.target.value)} className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </label>
+            </div>
+            {reportError && <p className="mt-3 text-sm text-red-600" role="alert">{reportError}</p>}
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setIsReportDialogOpen(false)} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleGenerateReport} disabled={isReportLoading} className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                {isReportLoading && <LoaderCircle size={16} className="animate-spin" />}
+                {isReportLoading ? "Generating..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="report-preview-title">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:px-5">
+              <h2 id="report-preview-title" className="text-base font-semibold text-gray-900">Municipal complaint report</h2>
+              <div className="flex items-center gap-2">
+                <a href={reportUrl} download={reportFileName} className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                  <Download size={16} aria-hidden="true" />
+                  Download PDF
+                </a>
+                <button type="button" onClick={closeReportPreview} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800" aria-label="Close report preview">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <iframe src={reportUrl} title="Municipal complaint report PDF preview" className="min-h-0 flex-1 bg-gray-100" />
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">

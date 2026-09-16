@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from app.database.database import Base
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime,
-    ForeignKey, Text, Boolean, Index
+    ForeignKey, Text, Boolean, Index, JSON
 )
 from sqlalchemy.orm import relationship, DeclarativeBase    
 
@@ -33,6 +33,7 @@ class IncidentModel(Base):
     hearing_date = Column(DateTime(timezone=True), nullable=True)
     hearing_count = Column(Integer, nullable=True, default=0)
     is_hearing_successful = Column(Boolean, nullable=True, default=None)
+    hearing_respondents = Column(JSON, nullable=False, default=list)
     is_emergency = Column(Boolean, nullable=True, default=False)
     
     last_expiry_notif_user_id = Column(Integer, nullable=True, default=None)

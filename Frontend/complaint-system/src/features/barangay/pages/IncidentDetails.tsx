@@ -108,6 +108,7 @@ export const IncidentDetails: React.FC = () => {
   const [hearingDate, setHearingDate] = useState('');
   const [hearingActionMode, setHearingActionMode] = useState<'notify' | 'reschedule'>('notify');
   const [isHearingModalOpen, setIsHearingModalOpen] = useState(false);
+  const [additionalRespondents, setAdditionalRespondents] = useState<Array<{ name: string; email: string }>>([]);
   const isHearingMutationPending = notifyHearingMutation.isPending || rescheduleHearingMutation.isPending;
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [attachmentError, setAttachmentError] = useState('');
@@ -331,6 +332,7 @@ export const IncidentDetails: React.FC = () => {
   // Handle successful mark hearing
   useEffect(() => {
     if (markHearingMutation.isSuccess) {
+      confirmationModal.closeModal();
       const isSuccessful = markHearingMutation.variables === true;
       setSuccessModal({
         isOpen: true,
@@ -346,6 +348,7 @@ export const IncidentDetails: React.FC = () => {
   // Handle mark hearing error
   useEffect(() => {
     if (markHearingMutation.isError) {
+      confirmationModal.closeModal();
       const error = markHearingMutation.error as any;
       const errorMessage = error?.response?.data?.detail || 'Failed to update hearing status.';
       setErrorModal({ isOpen: true, title: 'Error', message: errorMessage });
@@ -441,11 +444,17 @@ export const IncidentDetails: React.FC = () => {
   };
 
   const handleMarkHearingOutcome = async (isSuccessful: boolean) => {
-    try {
-      await markHearingMutation.mutateAsync(isSuccessful);
-    } catch (err) {
-      console.error(err);
-    }
+    confirmationModal.openModal({
+      title: isSuccessful ? 'Mark Hearing Successful?' : 'Mark Hearing Unsuccessful?',
+      message: isSuccessful
+        ? 'This will resolve the incident and its related complaints. Continue?'
+        : 'This will record the hearing as unsuccessful and allow a new hearing to be scheduled. Continue?',
+      confirmText: isSuccessful ? 'Mark Successful' : 'Mark Unsuccessful',
+      confirmColor: isSuccessful ? 'green' : 'red',
+      onConfirm: async () => {
+        await markHearingMutation.mutateAsync(isSuccessful);
+      },
+    });
   };
 
   const handleOpenHearingModal = (mode: 'notify' | 'reschedule' = 'notify') => {
@@ -460,6 +469,7 @@ export const IncidentDetails: React.FC = () => {
       }
     } else {
       setHearingDate('');
+      setAdditionalRespondents([]);
     }
     setIsHearingModalOpen(true);
   };
@@ -483,6 +493,20 @@ export const IncidentDetails: React.FC = () => {
       } else {
         const hearingDateFormData = new FormData();
         hearingDateFormData.append("hearing_date", hearingDate);
+        const respondents = additionalRespondents
+          .map(({ name, email }) => ({ name: name.trim(), email: email.trim() }))
+          .filter(({ name, email }) => name || email);
+
+        if (respondents.some(({ name, email }) => !name || !email)) {
+          setErrorModal({
+            isOpen: true,
+            title: 'Incomplete Person Details',
+            message: 'Please provide both a name and email address for each additional person.',
+          });
+          return;
+        }
+
+        hearingDateFormData.append('respondents', JSON.stringify(respondents));
         await notifyHearingMutation.mutateAsync({
           incidentId: Number(incidentId),
           hearingDate: hearingDateFormData,
@@ -490,6 +514,7 @@ export const IncidentDetails: React.FC = () => {
       }
       setIsHearingModalOpen(false);
       setHearingDate('');
+      setAdditionalRespondents([]);
     } catch (err) {
       console.error(err);
       const error = err as any;
@@ -940,6 +965,55 @@ export const IncidentDetails: React.FC = () => {
                   minDate={startOfTomorrow()}
                 />
               </div>
+
+              {hearingActionMode === 'notify' && (
+                <div className="mb-5 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Additional people to notify</p>
+                      <p className="text-xs text-gray-500">Add another person involved in the complaint.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAdditionalRespondents((current) => [...current, { name: '', email: '' }])}
+                      className="shrink-0 px-3 py-1.5 text-xs font-medium text-primary-700 border border-primary-200 rounded-lg hover:bg-primary-50 transition-colors"
+                    >
+                      Add person
+                    </button>
+                  </div>
+
+                  {additionalRespondents.map((respondent, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1">
+                        <input
+                          type="text"
+                          value={respondent.name}
+                          onChange={(event) => setAdditionalRespondents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}
+                          placeholder="Full name"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          aria-label={`Additional person's name ${index + 1}`}
+                        />
+                        <input
+                          type="email"
+                          value={respondent.email}
+                          onChange={(event) => setAdditionalRespondents((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, email: event.target.value } : item))}
+                          placeholder="Email address"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          aria-label={`Additional person's email ${index + 1}`}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAdditionalRespondents((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        aria-label={`Remove additional person ${index + 1}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {hearingDate && (
                 <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-50 rounded-full text-xs text-primary-800 mb-5">

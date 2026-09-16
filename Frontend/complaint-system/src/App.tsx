@@ -38,6 +38,7 @@ import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
 import { AccountDeletionPage } from "./features/general/pages/AccountDeletionPage"
+import { MaryAppInstallPage } from "./features/general/pages/MaryAppInstallPage"
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 function App() {
@@ -63,10 +64,11 @@ function App() {
   }
   return (
     <>
-      {isAuthenticated && window.location.pathname !== "/delete-account" && <Navbar onLogout={clearAuth} />}
+      {isAuthenticated && !["/delete-account", "/mary-app"].includes(window.location.pathname) && <Navbar onLogout={clearAuth} />}
       <NetworkProvider>
         <Routes>
           <Route path="/delete-account" element={<AccountDeletionPage />} />
+          <Route path="/mary-app" element={<MaryAppInstallPage />} />
           <Route
             path="/"
             element={

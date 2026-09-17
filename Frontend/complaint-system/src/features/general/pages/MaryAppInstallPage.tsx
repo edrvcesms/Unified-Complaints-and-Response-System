@@ -1,26 +1,22 @@
-import { CheckCircle2, Download, FolderOpen, LockKeyhole, ShieldCheck, Smartphone } from "lucide-react";
+import { CheckCircle2, Download, ShieldCheck, Smartphone } from "lucide-react";
 import maryapp from "../../../assets/maryapp.jpg";
+import maryappqr from "../../../assets/maryappqr.png";
 
 const installationSteps = [
   {
     icon: Download,
-    title: "Tap the download button",
-    description: 'Your browser may ask you to confirm the download. Choose "Download anyway" or "Keep" when the APK is available.',
+    title: "Scan the QR code",
+    description: "Use your phone camera to scan the QR code and open the Mary App listing on Google Play Store.",
   },
   {
-    icon: FolderOpen,
-    title: "Open the downloaded file",
-    description: "Tap the download notification, or open your Files app and look inside the Downloads folder for MaryApp.apk.",
-  },
-  {
-    icon: LockKeyhole,
-    title: "Allow installs from your browser",
-    description: 'Android may ask you to open Settings. Turn on "Allow from this source" for the browser you downloaded with, then go back.',
+    icon: Smartphone,
+    title: "Install from Google Play Store",
+    description: "Tap Install on the Mary App page and wait for the app to finish downloading.",
   },
   {
     icon: CheckCircle2,
-    title: "Install, then open",
-    description: "Tap Install and wait a few seconds. When it finishes, tap Open and sign in with your Mary App account.",
+    title: "Open and sign in",
+    description: "Tap Open, then sign in with your Mary App account to start submitting complaints.",
   },
 ];
 
@@ -42,32 +38,11 @@ export const MaryAppInstallPage: React.FC = () => {
               <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">Report community concerns through Mary App and track your complaint from submission to resolution.</p>
             </header>
 
-            <section className="px-1 sm:px-3" aria-labelledby="android-title">
-            <div className="mb-8 flex items-start gap-3">
-              <Smartphone className="mt-1 h-6 w-6 shrink-0 text-[#17643b]" />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c25b35]">Android download</p>
-                <h2 id="android-title" className="mt-2 text-2xl font-bold text-[#123d2b]">Install Mary App</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-500">Requires Android 7.0 or newer.</p>
-              </div>
-            </div>
-
-            <button type="button" disabled title="The APK will be available here soon" className="mx-auto flex w-fit cursor-not-allowed items-center gap-2 rounded-lg bg-[#17643b] px-5 py-3.5 text-sm font-bold text-white opacity-60">
-              <Download className="h-4 w-4" />
-              APK coming soon
-            </button>
-            <div className="mt-4 border-t border-slate-100 pt-6">
-              <div className="flex gap-3 rounded-lg bg-[#edf7ef] px-4 py-3 text-sm leading-5 text-[#17643b]" role="note">
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-                <p><strong>This is safe to install.</strong> Android may show an unknown developer warning because the app is dedicated to the Municipality of Sta. Maria, Laguna.</p>
-              </div>
-            </div>
-            </section>
-          </div>
+            
 
           <section className="px-1 sm:px-3" aria-labelledby="install-title">
             <h2 id="install-title" className="text-2xl font-bold text-[#123d2b]">Installation steps</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">Four steps to start submitting complaints.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Three steps to start submitting complaints.</p>
             <ol className="mt-6 space-y-10">
               {installationSteps.map(({ icon: Icon, title, description }, index) => (
                 <li key={title} className="flex gap-3 text-sm">
@@ -80,6 +55,29 @@ export const MaryAppInstallPage: React.FC = () => {
               ))}
             </ol>
           </section>
+
+          </div>
+            <section className="px-1 sm:px-3" aria-labelledby="android-title">
+            <div className="mb-8 flex items-start gap-3">
+              <Smartphone className="mt-1 h-6 w-6 shrink-0 text-[#17643b]" />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#c25b35]">Available on Google Play</p>
+                <h2 id="android-title" className="mt-2 text-2xl font-bold text-[#123d2b]">Install Mary App</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">Requires Android 7.0 or newer.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 text-center">
+              <img src={maryappqr} alt="QR code to download Mary App from Google Play Store" className="h-52 w-52 rounded-lg border border-slate-200 bg-white p-2 shadow-sm" />
+              <p className="max-w-xs text-sm leading-6 text-slate-600">Scan the QR code to download Mary App from the Google Play Store.</p>
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-6">
+              <div className="flex gap-3 rounded-lg bg-[#edf7ef] px-4 py-3 text-sm leading-5 text-[#17643b]" role="note">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
+                <p><strong>Download safely from Google Play.</strong> Mary App is officially available through the Play Store for the Municipality of Sta. Maria, Laguna.</p>
+              </div>
+            </div>
+            </section>
         </div>
       </div>
     </main>

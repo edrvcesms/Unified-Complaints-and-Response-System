@@ -14,7 +14,7 @@ from app.schemas.barangay_schema import BarangayWithUserData, BarangayAccountCre
 from app.admin._super_admin_schemas import ComplaintCategoryCreate, LGUAccountCreate, CategoryConfigsUpdate, EvacuationCenters
 from sqlalchemy import select, func
 from app.core.security import hash_password
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import selectinload
 from app.constants.roles import UserRole
 from app.core.config import settings
@@ -131,6 +131,7 @@ async def get_all_users(
     page: int = 1,
     page_size: int = 10,
     is_verified: Optional[bool] = None,
+    search: Optional[str] = None,
 ):
     try:
         if not current_user:
@@ -146,6 +147,12 @@ async def get_all_users(
         filters = [User.role == UserRole.USER.value]
         if is_verified is not None:
             filters.append(User.is_verified == is_verified)
+        if search and search.strip():
+            search_pattern = f"%{search.strip()}%"
+            filters.append(
+                (User.first_name.ilike(search_pattern))
+                | (User.last_name.ilike(search_pattern))
+            )
 
         total_result = await db.execute(
             select(func.count()).select_from(User).where(*filters)
@@ -184,6 +191,56 @@ async def get_all_users(
         raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+async def get_user_registration_stats(current_user: User, db: AsyncSession):
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current user not found")
+
+    if current_user.role != UserRole.SUPERADMIN.value:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied. Superadmin privileges required.")
+
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    week_start = today - timedelta(days=today.weekday())
+    month_start = today.replace(day=1)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    year_start = today.replace(month=1, day=1)
+    next_year = year_start.replace(year=year_start.year + 1)
+
+    role_result = await db.execute(
+        select(User.role, func.count(User.id)).group_by(User.role)
+    )
+    role_counts = {role: count for role, count in role_result.all()}
+
+    total_result = await db.execute(select(func.count()).select_from(User))
+    total_users = total_result.scalar() or 0
+
+    async def grouped_counts(start_date, end_date, period):
+        result = await db.execute(
+            select(func.date_trunc(period, User.created_at).label("period"), func.count(User.id))
+            .where(User.created_at >= start_date, User.created_at < end_date)
+            .group_by("period")
+            .order_by("period")
+        )
+        return [
+            {"period": period_value.isoformat(), "count": count}
+            for period_value, count in result.all()
+        ]
+
+    return {
+        "total_users": total_users,
+        "role_counts": {
+            "user": role_counts.get(UserRole.USER.value, 0),
+            "barangay_official": role_counts.get("barangay_official", 0),
+            "lgu_official": role_counts.get("lgu_official", 0),
+        },
+        "registrations": {
+            "week": await grouped_counts(week_start, today + timedelta(days=1), "day"),
+            "month": await grouped_counts(month_start, next_month, "day"),
+            "year": await grouped_counts(year_start, next_year, "month"),
+        },
+    }
     
 async def get_all_categories(current_user: User, db: AsyncSession):
     try:

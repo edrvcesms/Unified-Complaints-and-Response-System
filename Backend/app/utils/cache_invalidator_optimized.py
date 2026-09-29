@@ -135,6 +135,7 @@ class CacheInvalidator:
             resources.add("complaints")
         if incident_ids or barangay_id:
             resources.add("incidents")
+            resources.add("scheduled_hearings")
         if user_ids:
             resources.add("users")
             resources.add("my_complaints")

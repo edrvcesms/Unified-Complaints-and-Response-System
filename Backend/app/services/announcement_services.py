@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from app.core.pagination import paginate
 from app.core.pagination_params import ListParams, PaginationParams
+from datetime import datetime, timezone
 from app.core.pagination_response import PaginatedResponse
 from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
 import base64
@@ -20,20 +21,42 @@ from app.utils.caching import get_cache, set_cache
 from app.constants.roles import UserRole
 from app.utils.attachments import validate_upload_files
 
-async def get_all_announcements(db: AsyncSession, params: ListParams) -> PaginatedResponse[AnnouncementOut]:
+async def get_all_announcements(db: AsyncSession, params: ListParams, barangay_name: Optional[str] = None) -> PaginatedResponse[AnnouncementOut]:
     try:
-        cache_key = build_list_cache_key("all_announcements", params.model_dump(mode="json"))
+        logger.info(f"Fetching all announcements with params: {params.model_dump(mode='json')} and barangay_name: {barangay_name}")
+        if barangay_name:
+            cache_key = build_list_cache_key("all_announcements", params.model_dump(mode="json"), barangay_name=barangay_name)
+        else:
+            cache_key = build_list_cache_key("all_announcements", params.model_dump(mode="json"))
         all_announcements_cache = await get_cache(cache_key)
         if all_announcements_cache is not None:
             logger.info("Cache hit for all announcements")
             return PaginatedResponse[AnnouncementOut].model_validate(all_announcements_cache)
         
-        statement = select(Announcement).options(
-            selectinload(Announcement.uploader),
-            selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
-            selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
-            selectinload(Announcement.media)
-        )
+        if not barangay_name:
+            logger.info("Fetching announcements from LGU officials only")
+        
+        # if barangay name is provided, it will fetch the announcement for that specific barangay as well as the announcements from users who has lgu_official role. If no barangay name is provided, it will only fetch announcements from users who has lgu_official role.
+        if barangay_name:
+            logger.info(f"Fetching announcements for barangay: {barangay_name} and LGU officials")
+            statement = select(Announcement).options(
+                selectinload(Announcement.uploader),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
+                selectinload(Announcement.media)
+            ).where(
+                (Announcement.barangay_account.has(BarangayAccount.barangay.has(barangay_name=barangay_name))) |
+                (Announcement.uploader.has(User.role == UserRole.LGU_OFFICIAL))
+            )
+        else:
+            statement = select(Announcement).options(
+                selectinload(Announcement.uploader),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.barangay),
+                selectinload(Announcement.barangay_account).selectinload(BarangayAccount.user),
+                selectinload(Announcement.media)
+            ).where(
+                Announcement.uploader.has(User.role == UserRole.LGU_OFFICIAL)
+            )
         if params.search:
             statement = statement.where(Announcement.title.ilike(f"%{params.search}%"))
         
@@ -51,6 +74,7 @@ async def get_all_announcements(db: AsyncSession, params: ListParams) -> Paginat
         raise
     
     except Exception as e:
+        logger.error(f"Error retrieving announcements: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving announcements: {str(e)}"
@@ -93,6 +117,7 @@ async def get_announcement_by_id(announcement_id: int, db: AsyncSession):
         
 async def get_announcement_by_uploader(uploader_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[AnnouncementOut]:
     try:
+        logger.info(f"Fetching announcements by uploader ID {uploader_id}")
         cache_key = build_list_cache_key("announcements", params.model_dump(mode="json"), uploader_id=uploader_id)
         announcement_by_uploader_cache = await get_cache(cache_key)
         if announcement_by_uploader_cache is not None:
@@ -143,7 +168,9 @@ async def create_announcement(announcement_data: AnnouncementCreate, media_files
             uploader_id=uploader_id,
             title=announcement_data.title,
             content=announcement_data.content,
-            barangay_account_id=barangay_account_id
+            barangay_account_id=barangay_account_id,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db.add(new_announcement)
         await db.commit()
@@ -243,7 +270,7 @@ async def edit_announcement(announcement_id: int, announcement_data: Announcemen
         
         announcement.title = announcement_data.title
         announcement.content = announcement_data.content
-        
+        announcement.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.flush()
         

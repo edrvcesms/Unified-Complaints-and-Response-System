@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.incidents_services import get_incidents_by_barangay, get_incident_by_id, mark_incident_as_viewed, get_all_incidents
 from app.dependencies.auth_dependency import get_current_user
 from app.services.complaint_services import get_complaints_by_incident, notify_user_for_hearing, reschedule_hearing, mark_hearing_as_successful
+from app.services.hearing_services import get_scheduled_hearings
 from app.services.incidents_services import forward_incident_to_lgu
 from app.services.complaint_actions_services import resolve_complaints_by_incident, review_complaints_by_incident, reject_complaints_by_incident, reject_incident
 from app.dependencies.db_dependency import get_async_db
@@ -69,6 +70,26 @@ async def get_all_incidents_endpoint(params: IncidentListParams = Depends(), db:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
 
     return await get_all_incidents(current_user, db, params)
+
+@router.get("/scheduled-hearings", status_code=status.HTTP_200_OK)
+async def get_scheduled_hearings_endpoint(
+    params: ListParams = Depends(),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.BARANGAY_OFFICIAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Scheduled hearings are only available to barangay officials.",
+        )
+    if not current_user.barangay_account:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Barangay account is required.")
+
+    return await get_scheduled_hearings(
+        db,
+        params,
+        current_user.barangay_account.barangay_id,
+    )
 
 @router.get("/{incident_id}", status_code=status.HTTP_200_OK)
 async def get_incident(incident_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):

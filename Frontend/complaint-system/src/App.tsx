@@ -16,6 +16,7 @@ import SuperAdminDashboardLayout from "./layouts/SuperAdminDashboardLayout"
 import { IncidentPage } from "./features/barangay/pages/Incident"
 import { IncidentDetails } from "./features/barangay/pages/IncidentDetails"
 import { IncidentComplaints } from "./features/barangay/pages/IncidentComplaints"
+import { ScheduledHearings } from "./features/barangay/pages/ScheduledHearings"
 import { ArchiveIncidents as BarangayArchiveIncidents } from "./features/barangay/pages/ArchiveIncidents"
 import { ComplaintDetails } from "./features/barangay/pages/ComplaintDetails"
 import { AnnouncementsPage } from "./features/barangay/pages/Announcements"
@@ -33,7 +34,7 @@ import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayRepo
 import { EmergencyIncidentsPage } from "./features/barangay/pages/EmergencyIncidents"
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
-import { SuperAdminAccounts, SuperAdminCategories, SuperAdminEmergencyHotlines, SuperAdminEvacuationCenters, SuperAdminResidentAccountManagement, SuperAdminUserDetails, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
+import { SuperAdminAccounts, SuperAdminCategories, SuperAdminDashboard, SuperAdminEmergencyHotlines, SuperAdminEvacuationCenters, SuperAdminResidentAccountManagement, SuperAdminUserDetails, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
 import { NotificationsPage } from "./features/general/pages/NotificationsPage"
 import { FeedbacksPage } from "./features/general/pages/FeedbacksPage"
 import KnowledgeBase from "./features/superadmin/pages/KnowledgeBase"
@@ -52,7 +53,7 @@ function App() {
 
   const getDefaultDashboardPath = (role: string | null) => {
     if (role === "lgu_official") return "/lgu/dashboard";
-    if (role === "superadmin") return "/superadmin/accounts";
+    if (role === "superadmin") return "/superadmin/dashboard";
     return "/dashboard";
   };
 
@@ -85,6 +86,7 @@ function App() {
             <Route path="/dashboard/*" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="incidents" element={<IncidentPage />} />
+              <Route path="scheduled-hearings" element={<ScheduledHearings />} />
               <Route path="archive" element={<BarangayArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
@@ -121,7 +123,8 @@ function App() {
           {/* Super Admin Routes */}
           <Route element={<SuperAdminRoute />}>
             <Route path="/superadmin/*" element={<SuperAdminDashboardLayout />}>
-              <Route index element={<SuperAdminAccounts />} />
+              <Route index element={<SuperAdminDashboard />} />
+              <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="accounts" element={<SuperAdminAccounts />} />
               <Route path="resident-account-management" element={<SuperAdminResidentAccountManagement />} />
               <Route path="resident-account-management/rejected-complaints/:userId" element={<SuperAdminUserRejectedComplaints />} />

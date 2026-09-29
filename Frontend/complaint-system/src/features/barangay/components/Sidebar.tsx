@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Archive, MessageSquare } from "lucide-react";
+import { Archive, CalendarClock, MessageSquare } from "lucide-react";
 import { Sidebar as GenericSidebar } from "../../general";
 import { DashboardIcon, ComplaintsIcon, AnnouncementsIcon, EventsIcon } from "./Icons";
 
@@ -14,6 +14,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const NAV_ITEMS = [
     { path: "/dashboard", label: t('sidebar.barangay.dashboard'), icon: <DashboardIcon />, end: true, group: "Dashboard" },
     { path: "/dashboard/incidents", label: t('sidebar.barangay.incidents'), icon: <ComplaintsIcon />, group: "Manage Incidents" },
+    { path: "/dashboard/scheduled-hearings", label: "Scheduled Hearings", icon: <CalendarClock className="w-5 h-5" />, group: "Manage Incidents" },
     { path: "/dashboard/archive", label: "Archive", icon: <Archive className="w-5 h-5" />, group: "Manage Incidents" },
     { path: "/dashboard/feedbacks", label: "Feedbacks", icon: <MessageSquare className="w-5 h-5" />, group: "Manage Incidents" },
     { path: "/dashboard/announcements", label: t('sidebar.barangay.announcements'), icon: <AnnouncementsIcon />, group: "Communication" },

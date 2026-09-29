@@ -28,7 +28,7 @@ export const useLoginForm = () => {
         return;
       }
       if (role === 'superadmin') {
-        navigate("/superadmin/accounts");
+        navigate("/superadmin/dashboard");
         return;
       }
       navigate("/dashboard");

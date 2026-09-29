@@ -46,7 +46,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
       return <Navigate to="/lgu/dashboard" replace />;
     }
     if (userRole === 'superadmin') {
-      return <Navigate to="/superadmin/accounts" replace />;
+      return <Navigate to="/superadmin/dashboard" replace />;
     }
     return <Navigate to="/officials-login" replace />;
   }
@@ -102,7 +102,7 @@ export const AuthRoutes: React.FC<{ children?: React.ReactNode }> = ({ children 
       return <Navigate to="/lgu/dashboard" replace />;
     }
     if (userRole === 'superadmin') {
-      return <Navigate to="/superadmin/accounts" replace />;
+      return <Navigate to="/superadmin/dashboard" replace />;
     }
   }
 

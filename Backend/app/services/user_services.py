@@ -15,7 +15,7 @@ from app.core.security import hash_password, decrypt_password
 from fastapi.responses import JSONResponse
 from app.tasks.email_tasks import send_otp_email_task
 from app.utils.logger import logger
-from app.utils.caching import set_cache, get_cache, delete_cache
+from app.utils.caching import set_cache, get_cache, delete_cache, delete_cache_prefix
 from app.core.config import settings
 import httpx
 
@@ -224,18 +224,15 @@ async def update_user_location(user_id: int, location_data: UserLocationData, db
         if barangay_info:
             user.barangay = barangay_info["name"]
         else:
-            user.barangay = None  # or handle as needed if no barangay is found
-            
-        
-        # user.barangay = "Currently Disabled for Testing Purposes"  # Disable barangay detection for testing
+            user.barangay = None 
         logger.info(f"User ID {user_id} location updated to latitude {user.latitude}, longitude {user.longitude}, barangay {user.barangay}")
         
         full_address_info = await reverse_geocode(location_data.latitude, location_data.longitude, user.barangay)
-        # full_address_info = "Currently Disabled for Testing Purposes"  # Disable reverse geocoding for testing
         user.full_address = full_address_info.get("display_name", "Unknown Location")
-        # user.full_address = full_address_info  # Set to the placeholder string for testing
        
         await delete_cache(f"user_profile:{user_id}")
+        await delete_cache(f"auth_user:{user_id}")
+        await delete_cache_prefix(f"all_announcements")
 
 
         await db.commit()

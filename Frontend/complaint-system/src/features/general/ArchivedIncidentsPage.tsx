@@ -37,7 +37,7 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
   const { t } = useTranslation();
 
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
   const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("none");
   const [dateFrom, setDateFrom] = useState("");
@@ -45,26 +45,21 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(id);
-  }, [search]);
-
-  useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, filterComplaintStatus, sortBy, dateFrom, dateTo]);
+  }, [submittedSearch, filterComplaintStatus, sortBy, dateFrom, dateTo]);
 
   const queryParams: IncidentQueryParams = useMemo(() => {
     const params: IncidentQueryParams = {
       page: currentPage,
       page_size: PAGE_SIZE,
     };
-    if (debouncedSearch) params.search = debouncedSearch;
+    if (submittedSearch) params.search = submittedSearch;
     if (filterComplaintStatus !== "all") params.complaint_status = filterComplaintStatus;
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;
     if (sortBy !== "none") Object.assign(params, SORT_MAP[sortBy]);
     return params;
-  }, [currentPage, debouncedSearch, filterComplaintStatus, dateFrom, dateTo, sortBy]);
+  }, [currentPage, submittedSearch, filterComplaintStatus, dateFrom, dateTo, sortBy]);
 
   const { incidents, pagination, isLoading, isFetching, error: isError } = useAllIncidents(queryParams);
 
@@ -87,7 +82,7 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
       <PageHeader title={title} description={description} />
 
       <div>
-        <SearchInput value={search} onChange={handleSearch} placeholder={t('search.placeholder')} />
+        <SearchInput value={search} onChange={handleSearch} onSearch={() => setSubmittedSearch(search.trim())} placeholder={t('search.placeholder')} />
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">

@@ -12,6 +12,7 @@ import LoadingIndicator from "../../general/LoadingIndicator";
 import { Pagination } from "../../barangay/components/Pagination";
 import { TableSkeleton } from "../../barangay/components/Skeletons";
 import type { UserData } from "../../../types/general/user";
+import { Search } from "lucide-react";
 
 
 interface PaginatedResponse {
@@ -31,6 +32,8 @@ export const SuperAdminVerifyUsers: React.FC = () => {
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: "", message: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [verificationFilter, setVerificationFilter] = useState<VerificationFilter>("all");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [search, setSearch] = useState("");
   const itemsPerPage = 8;
 
   const {
@@ -40,12 +43,14 @@ export const SuperAdminVerifyUsers: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["superadmin", "users", verificationFilter, currentPage, itemsPerPage],
+    queryKey: ["superadmin", "users", verificationFilter, search, currentPage, itemsPerPage],
     queryFn: async () => {
-      const params: { page: number; page_size: number; is_verified?: boolean } = {
+        const params: { page: number; page_size: number; is_verified?: boolean; search?: string } = {
           page: currentPage,
           page_size: itemsPerPage,
       };
+
+        if (search.trim()) params.search = search.trim();
 
       if (verificationFilter === "verified") {
         params.is_verified = true;
@@ -128,6 +133,34 @@ export const SuperAdminVerifyUsers: React.FC = () => {
               <p className="text-xs text-gray-500">{total} users found</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <form
+                className="flex w-full sm:w-80"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setCurrentPage(1);
+                  setSearch(searchDraft.trim());
+                }}
+              >
+                <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={searchDraft}
+                  onChange={(event) => setSearchDraft(event.target.value)}
+                  placeholder="Search by name"
+                  aria-label="Search users by name"
+                  className="w-full rounded-l-lg border border-r-0 border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+                </div>
+                <button
+                  type="submit"
+                  aria-label="Search users"
+                  title="Search users"
+                  className="inline-flex items-center justify-center rounded-r-lg border border-blue-600 bg-blue-600 px-3 text-white transition-colors hover:bg-blue-700"
+                >
+                  <Search className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </form>
               <button
                 type="button"
                 onClick={() => {

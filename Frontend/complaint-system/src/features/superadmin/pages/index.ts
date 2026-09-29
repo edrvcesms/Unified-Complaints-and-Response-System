@@ -6,3 +6,4 @@ export { SuperAdminCategories } from "./Categories";
 export { SuperAdminEmergencyHotlines } from "./EmergencyHotlines";
 export { SuperAdminEvacuationCenters } from "./EvacuationCenters";
 export { SuperAdminVerifyUsers } from "./VerifyUsers";
+export { SuperAdminDashboard } from "./Dashboard";

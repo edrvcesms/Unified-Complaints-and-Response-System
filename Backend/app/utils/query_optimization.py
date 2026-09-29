@@ -97,7 +97,12 @@ class QueryOptions:
                 Complaint.status,
                 Complaint.is_rejected_by_lgu,
                 Complaint.created_at,
-            )
+                Complaint.user_id,
+            ),
+            selectinload(IncidentModel.complaint_clusters)
+            .selectinload(IncidentComplaintModel.complaint)
+            .selectinload(Complaint.user)
+            .load_only(User.id, User.first_name, User.last_name, User.email, User.phone_number),
         )
 
     # Incident with responses (for detail views showing officer responses)
@@ -317,6 +322,20 @@ class PaginationParams:
 class BatchLoader:
     """Batch load related objects to avoid N+1 queries."""
     
+    @staticmethod
+    async def get_all_incidents_with_scheduled_hearings(db: AsyncSession, barangay_id: int) -> List[IncidentModel]:
+        """Fetch all incidents of the barangay with scheduled hearings in one query."""
+        # this will only fetch incidents that have data in field scheduled_hearing_date
+        result = await db.execute(
+            select(IncidentModel)
+            .where(
+                IncidentModel.barangay_id == barangay_id,
+                IncidentModel.hearing_date.isnot(None)
+            )
+            .options(*QueryOptions.incident_minimal())
+        )
+        return result.scalars().all()
+
     @staticmethod
     async def fetch_user_devices_by_user_ids(
         db: AsyncSession,

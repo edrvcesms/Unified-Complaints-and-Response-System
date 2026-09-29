@@ -23,36 +23,30 @@ export const IncidentPage: React.FC = () => {
   const { t } = useTranslation();
 
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("none");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Debounce search so we don't fire a request per keystroke
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(id);
-  }, [search]);
-
   // Any filter change should reset back to page 1
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, filterStatus, sortBy, dateFrom, dateTo]);
+  }, [submittedSearch, filterStatus, sortBy, dateFrom, dateTo]);
 
   const queryParams: IncidentQueryParams = useMemo(() => {
     const params: IncidentQueryParams = {
       page: currentPage,
       page_size: PAGE_SIZE,
     };
-    if (debouncedSearch) params.search = debouncedSearch;
+    if (submittedSearch) params.search = submittedSearch;
     if (filterStatus !== "all") params.severity_level = filterStatus;
     if (dateFrom) params.date_from = dateFrom;
     if (dateTo) params.date_to = dateTo;
     if (sortBy !== "none") Object.assign(params, SORT_MAP[sortBy]);
     return params;
-  }, [currentPage, debouncedSearch, filterStatus, dateFrom, dateTo, sortBy]);
+  }, [currentPage, submittedSearch, filterStatus, dateFrom, dateTo, sortBy]);
 
   const { incidents, pagination, isLoading, isFetching, error: isError } = useIncidents(queryParams);
 
@@ -84,7 +78,7 @@ export const IncidentPage: React.FC = () => {
       </div>
 
       <div>
-        <SearchInput value={search} onChange={handleSearch} />
+        <SearchInput value={search} onChange={handleSearch} onSearch={() => setSubmittedSearch(search.trim())} />
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">

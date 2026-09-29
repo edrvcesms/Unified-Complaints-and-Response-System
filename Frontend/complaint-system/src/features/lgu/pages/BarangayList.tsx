@@ -16,6 +16,7 @@ export const BarangayList: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
   const handlePageChange = (page: number) => {
@@ -24,12 +25,12 @@ export const BarangayList: React.FC = () => {
 
   const filteredBarangays = useMemo(() => {
     if (!barangays) return [];
-    if (!searchTerm.trim()) return barangays;
+    if (!submittedSearch.trim()) return barangays;
     
     return barangays.filter((barangay) =>
-      barangay.barangay_name.toLowerCase().includes(searchTerm.toLowerCase())
+      barangay.barangay_name.toLowerCase().includes(submittedSearch.toLowerCase())
     );
-  }, [barangays, searchTerm]);
+  }, [barangays, submittedSearch]);
 
   const paginatedBarangays = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -37,10 +38,10 @@ export const BarangayList: React.FC = () => {
     return filteredBarangays.slice(startIndex, endIndex);
   }, [filteredBarangays, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when search term changes
+  // Reset to page 1 when a search is submitted
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [submittedSearch]);
 
   const barangaysWithNewIncidents = useMemo(() => {
     if (!barangays) return 0;
@@ -89,6 +90,7 @@ export const BarangayList: React.FC = () => {
       <SearchInput
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        onSearch={() => setSubmittedSearch(searchTerm.trim())}
         placeholder="Search barangays..."
       />
 
@@ -106,7 +108,7 @@ export const BarangayList: React.FC = () => {
             ))
           ) : (
             <div className="col-span-full text-center py-12 text-gray-500">
-              {searchTerm ? t('empty.noMatch') : t('empty.noBarangays')}
+              {submittedSearch ? t('empty.noMatch') : t('empty.noBarangays')}
             </div>
           )}
         </div>

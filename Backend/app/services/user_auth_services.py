@@ -12,6 +12,7 @@ from app.core.security import hash_password, decrypt_password, verify_token, is_
 from datetime import datetime, timezone
 from app.utils.otp_handler import generate_otp
 from app.utils.cookies import set_cookies, clear_cookies
+from app.utils.cache_invalidator_optimized import invalidate_cache
 from app.utils.caching import set_cache, get_cache, delete_cache
 from app.tasks.email_tasks import send_otp_email_task, send_otp_device_verification
 from fastapi.responses import JSONResponse
@@ -688,6 +689,30 @@ async def logout_user(request: Request):
             detail="An error occurred during logout. Please try again later."
         )
         
+async def logout_resident(user_id: int):
+    try:
+        await delete_cache(f"user_data:{user_id}")
+        await delete_cache(f"auth_user:{user_id}")
+        await invalidate_cache(include_global=True, user_ids=[user_id])
+        logger.info(f"Resident with user_id: {user_id} logged out successfully and cache cleared.")
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "success": True,
+                "message": "Logout successful"
+            }
+        )
+        
+    except HTTPException:
+        raise
+        
+    except Exception as e:
+        logger.exception(f"Error during resident logout for user_id: {user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during logout. Please try again later."
+        )
         
 
 

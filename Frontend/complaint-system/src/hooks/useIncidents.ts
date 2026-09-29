@@ -1,4 +1,4 @@
-import { getIncidents, getAllIncidents, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
+import { getIncidents, getAllIncidents, getScheduledHearings, getIncidentById, getComplaintsByIncidentId, resolveIncident, rejectIncident, reviewIncident, markIncidentAsViewed, notifyHearing } from "../services/incidents/incidents";
 import { endorseIncidentToLgu } from "../services/endorsement/incidentEndorsement";
 import { getForwardedIncidents, getAllForwardedIncidents } from "../services/lgu/forwardedIncidents";
 import { fetchRejectionCategories } from "../services/category/rejectionCategory";
@@ -234,6 +234,7 @@ export const useNotifyHearing = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", variables.incidentId] });
+      queryClient.invalidateQueries({ queryKey: ["scheduledHearings"] });
     }
   });
   return mutation;
@@ -260,7 +261,32 @@ export const useRescheduleHearing = (incidentId: number) => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId, "complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduledHearings"] });
     }
   });
   return mutation;
+};
+
+export const useScheduledHearings = (params: IncidentQueryParams) => {
+  const { data, isLoading, isFetching, error } = useQuery<PaginatedResponse<Incident>>({
+    queryKey: [
+      "scheduledHearings",
+      params.page,
+      params.page_size,
+      params.search,
+      params.order,
+      params.date_from,
+      params.date_to,
+    ],
+    queryFn: () => getScheduledHearings(params),
+    placeholderData: keepPreviousData,
+  });
+
+  return {
+    incidents: data?.data ?? [],
+    pagination: data?.pagination,
+    isLoading,
+    isFetching,
+    error,
+  };
 };

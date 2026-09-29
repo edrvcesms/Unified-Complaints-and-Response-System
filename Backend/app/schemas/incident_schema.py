@@ -34,6 +34,7 @@ class IncidentData(IncidentBaseModel):
     first_reported_at: datetime
     last_reported_at: datetime
     hearing_count: Optional[int] = 0
+    hearing_date: Optional[datetime] = None
     is_hearing_successful: Optional[bool] = None
     category: Optional[CategoryModel] = None
     barangay: Optional[BarangayModel] = None
@@ -59,6 +60,7 @@ class IncidentOut(BaseModel):
     complaint_count: int
     severity_level: str
     hearing_count: Optional[int] = 0
+    hearing_date: Optional[datetime] = None
     is_hearing_successful: Optional[bool] = None
     category: Optional[CategoryModel] = None   
     complaint_count: int

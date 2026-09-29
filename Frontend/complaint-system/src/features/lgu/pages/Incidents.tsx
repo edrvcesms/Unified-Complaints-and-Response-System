@@ -19,7 +19,7 @@ export const LguIncidents: React.FC = () => {
     return Boolean(incident);
   });
   const {
-    search,
+    searchInput,
     filterStatus,
     sortBy,
     dateFrom,
@@ -29,6 +29,7 @@ export const LguIncidents: React.FC = () => {
     paginated,
     filtered,
     handleSearch,
+    handleSearchSubmit,
     handleFilterChange,
     handleSortChange,
     handleDateFromChange,
@@ -52,7 +53,7 @@ export const LguIncidents: React.FC = () => {
       </div>
 
       <div>
-        <SearchInput value={search} onChange={handleSearch} placeholder={t('search.placeholder')} />
+        <SearchInput value={searchInput} onChange={handleSearch} onSearch={handleSearchSubmit} placeholder={t('search.placeholder')} />
       </div>
 
       {/* Filters */}

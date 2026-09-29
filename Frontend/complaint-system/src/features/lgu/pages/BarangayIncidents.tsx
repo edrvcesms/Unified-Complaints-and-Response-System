@@ -8,6 +8,7 @@ import { LguIncidentsTable } from "../components/LguIncidentsTable";
 import { useTranslation } from "react-i18next";
 import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
 import { ErrorMessage, BackButton } from "../../general";
+import { SearchInput } from "../../general";
 import type { IncidentQueryParams } from "../../../services/incidents/incidents";
 
 export const BarangayIncidents: React.FC = () => {
@@ -34,6 +35,7 @@ export const BarangayIncidents: React.FC = () => {
 
   const {
     filterStatus,
+    searchInput,
     sortBy,
     dateFrom,
     dateTo,
@@ -41,6 +43,8 @@ export const BarangayIncidents: React.FC = () => {
     maxDate,
     paginated,
     handleFilterChange,
+    handleSearch,
+    handleSearchSubmit,
     handleSortChange,
     handleDateFromChange,
     handleDateToChange,
@@ -73,6 +77,7 @@ export const BarangayIncidents: React.FC = () => {
       </div>
 
       {/* Filters */}
+      <SearchInput value={searchInput} onChange={handleSearch} onSearch={handleSearchSubmit} placeholder={t('search.placeholder')} />
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
           <div className="flex flex-col gap-1.5 min-w-0">

@@ -34,15 +34,30 @@ async def reverse_geocode(latitude: float, longitude: float, barangay_name: str)
               )
         
           barangay = get_barangay(latitude, longitude)
-          if barangay and barangay["name"].lower() != barangay_name.lower():
+          if barangay and barangay_name and barangay["name"].lower() != barangay_name.lower():
               raise HTTPException(
                   status_code=status.HTTP_400_BAD_REQUEST,
                   detail=f"Coordinates do not match the provided barangay name. Detected barangay: {barangay['name']}",
               )
-              
+
+          display_name = data.get("display_name", "Unknown Location")
+          if barangay:
+              subdivision_values = {
+                  value
+                  for key in ("barangay", "neighbourhood", "quarter", "suburb", "village")
+                  if (value := address.get(key))
+              }
+              address_parts = [
+                  part.strip()
+                  for part in display_name.split(",")
+                  if part.strip() not in subdivision_values
+              ]
+              insert_at = 1 if address_parts else 0
+              address_parts.insert(insert_at, barangay["name"])
+              display_name = ", ".join(address_parts)
 
           return {
-              "display_name": data.get("display_name", "Unknown Location"),
+              "display_name": display_name,
               "geometry": barangay['geometry'] if barangay else None
           }
     except HTTPException:

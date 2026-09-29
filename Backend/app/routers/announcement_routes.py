@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile,
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.db_dependency import get_async_db
-from app.dependencies.auth_dependency import get_current_user
+from app.dependencies.auth_dependency import get_current_user, get_current_user_optional
 from app.services.announcement_services import create_announcement, get_all_announcements, get_announcement_by_id, get_announcement_by_uploader, delete_announcement, edit_announcement
 from app.schemas.announcement_schema import AnnouncementCreate
 from app.dependencies.rate_limiter import limiter
@@ -14,8 +14,14 @@ router = APIRouter()
 
 @router.get("/", status_code=status.HTTP_200_OK)
 @limiter.limit("30/minute")
-async def read_announcements(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db)):
-    return await get_all_announcements(db, params)
+# this route will return all announcements of lgu if the current_user is not provided, otherwise it will return all announcements of the current_user's barangay and the lgu announcements
+# so i must check if the current_user is provided, if not, return all announcements of lgu, otherwise return all announcements of the current_user's barangay and the lgu announcements
+# but the dependency get_current_user will raise an exception if the user is not authenticated, even if the route is public, so i must make the current_user dependency optional, and check if the current_user is None, if so, return all announcements of lgu, otherwise return all announcements of the current_user's barangay and the lgu announcements, but it always returns 401 unauthorized if the user is not authenticated, so i must make the current_user dependency optional, and check if the current_user is None, if so, return all announcements of lgu, otherwise return all announcements of the current_user's barangay and the lgu announcements
+async def read_announcements(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: Optional[User] = Depends(get_current_user_optional)):
+    if current_user is None:
+        # If no current_user, return all announcements of lgu
+        return await get_all_announcements(db, params, None)
+    return await get_all_announcements(db, params, current_user.barangay)
 
 @router.get("/my-announcements", status_code=status.HTTP_200_OK)
 @limiter.limit("50/minute")

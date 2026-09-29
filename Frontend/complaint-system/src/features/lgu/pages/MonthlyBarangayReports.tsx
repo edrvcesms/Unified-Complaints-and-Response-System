@@ -13,18 +13,19 @@ export const MonthlyBarangayReports: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [submittedSearch, setSubmittedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const filteredBarangays = useMemo(() => {
     if (!barangays) return [];
-    if (!searchTerm.trim()) return barangays;
+    if (!submittedSearch.trim()) return barangays;
     
     return barangays.filter((barangay) =>
-      barangay.barangay_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      barangay.barangay_address?.toLowerCase().includes(searchTerm.toLowerCase())
+      barangay.barangay_name.toLowerCase().includes(submittedSearch.toLowerCase()) ||
+      barangay.barangay_address?.toLowerCase().includes(submittedSearch.toLowerCase())
     );
-  }, [barangays, searchTerm]);
+  }, [barangays, submittedSearch]);
 
   const totalPages = Math.ceil((filteredBarangays?.length || 0) / itemsPerPage);
   
@@ -34,10 +35,10 @@ export const MonthlyBarangayReports: React.FC = () => {
     return filteredBarangays.slice(startIndex, endIndex);
   }, [filteredBarangays, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when search term changes
+  // Reset to page 1 when a search is submitted
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [submittedSearch]);
 
   if (error) {
     return <ErrorMessage message="Failed to load barangays. Please refresh." />;
@@ -66,6 +67,7 @@ export const MonthlyBarangayReports: React.FC = () => {
           <SearchInput
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onSearch={() => setSubmittedSearch(searchTerm.trim())}
             placeholder="Search barangays..."
           />
         </div>

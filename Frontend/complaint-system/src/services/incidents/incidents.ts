@@ -143,3 +143,13 @@ export const rescheduleHearing = async (incidentId: number, hearingDate: FormDat
     throw error;
   }
 };
+
+export const getScheduledHearings = async (params?: IncidentQueryParams): Promise<PaginatedResponse<Incident>> => {
+  try {
+    const queryString = buildQueryString(params || {});
+    return await incidentsApi.get(`/scheduled-hearings?${queryString}`);
+  } catch (error) {
+    console.error("Error fetching scheduled hearings:", error);
+    throw error;
+  }
+};

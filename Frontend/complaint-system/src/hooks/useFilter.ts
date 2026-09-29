@@ -54,6 +54,7 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortOption>(() => {
     const sortParam = searchParams.get("sort");
     return isSortOption(sortParam) ? sortParam : "date_oldest_first";
@@ -199,7 +200,11 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    setSearch(searchInput.trim());
     setCurrentPage(1);
   };
 
@@ -226,6 +231,7 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
 
   return {
     search,
+    searchInput,
     filterStatus,
     filterComplaintStatus,
     filterSeverityScore,
@@ -239,6 +245,7 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
     filtered,
     totalPages,
     handleSearch,
+    handleSearchSubmit,
     handleFilterChange,
     handleComplaintStatusFilterChange,
     handleSeverityScoreFilterChange,

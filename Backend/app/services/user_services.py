@@ -133,6 +133,19 @@ async def request_reset_password(email_data: VerifyEmailData, db: AsyncSession):
         logger.exception(f"Error requesting reset password for email {normalized_email}: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+async def request_change_password(user: User):
+    try:
+        generated_otp = generate_otp()
+        await set_cache(f"otp_reset_password:{user.email}", generated_otp, expiration=300)
+        send_otp_email_task.delay(user.email, generated_otp, purpose="Change Password")
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"email": user.email, "message": "OTP sent to your email. Please verify to proceed."}
+        )
+    except Exception as e:
+        logger.exception(f"Error requesting password change for user ID {user.id}: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to send password change OTP")
+
 async def verify_otp_reset_password(otp_data: OTPData, db: AsyncSession):
     try:
         normalized_email = otp_data.email.strip().lower()

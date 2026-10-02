@@ -46,6 +46,9 @@ def _apply_incident_filters_and_sort(statement, params: IncidentListParams):
         )
         statement = statement.where(complaint_status_filter)
 
+    if params.category_name:
+        statement = statement.where(IncidentModel.category.has(Category.category_name == params.category_name))
+
     if params.search:
         term = f"%{params.search}%"
         statement = statement.where(or_(

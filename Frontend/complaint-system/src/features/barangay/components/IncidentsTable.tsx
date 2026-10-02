@@ -45,28 +45,31 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const formatStatus = (status: string) => {
-  if (!status) return "N/A";
+const formatStatus = (status: string, t: (key: string) => string) => {
+  if (!status) return t('common.na');
   const lowerStatus = status.toLowerCase();
 
   if (lowerStatus === 'forwarded_to_lgu') {
-    return "FORWARDED TO LGU";
+    return t('status.forwarded');
   }
 
   if (lowerStatus === 'resolved_by_barangay') {
-    return "RESOLVED";
+    return t('status.resolved');
   }
 
   if (lowerStatus === 'reviewed_by_barangay') {
-    return "UNDER REVIEW";
+    return t('status.underReview');
   }
 
-  return status.replace("_", " ").toUpperCase();
+  if (lowerStatus === 'submitted') return t('status.submitted');
+  if (lowerStatus === 'rejected') return t('status.rejected');
+  return t('status.unknown');
 };
 
 export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
   incident,
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleView = () => {
@@ -78,25 +81,21 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">
-        #{incident.id}
-      </td>
-
-      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        <div className="truncate max-w-[11rem] sm:max-w-sm md:max-w-md mx-auto" title={incident.title}>
-          {incident.title}
-        </div>
-      </td>
+      <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">#{incident.id}</td>
 
       <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">
         {formatCategoryName(incident.category?.category_name)}
+      </td>
+
+      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
+        <div className="truncate max-w-[11rem] sm:max-w-sm md:max-w-md mx-auto" title={incident.title}>{incident.title}</div>
       </td>
 
       <td className="px-4 py-3 text-center">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(incident.severity_level)}`}
         >
-          {incident.severity_level.replace("_", " ")}
+          {incident.severity_level === "LOW" ? t('incidents.severity.low') : incident.severity_level === "MODERATE" ? t('incidents.severity.moderate') : incident.severity_level === "HIGH" ? t('incidents.severity.high') : t('incidents.severity.veryHigh')}
         </span>
       </td>
 
@@ -104,7 +103,7 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incident.complaint_clusters[0]?.complaint?.status || "")}`}
         >
-          {formatStatus(incident.complaint_clusters[0]?.complaint?.status || "")}
+          {formatStatus(incident.complaint_clusters[0]?.complaint?.status || "", t)}
         </span>
       </td>
 
@@ -116,9 +115,9 @@ export const IncidentTableRow: React.FC<IncidentTableRowProps> = ({
         <button
           onClick={handleView}
           className="relative inline-flex min-h-9 items-center justify-center px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
-          title={hasNewComplaints && newComplaintCount > 0 ? `${newComplaintCount} new complaint${newComplaintCount > 1 ? 's' : ''}` : undefined}
+          title={hasNewComplaints && newComplaintCount > 0 ? `${newComplaintCount} ${t('incidents.newComplaint')}` : undefined}
         >
-          View
+          {t('incidents.view')}
           {hasNewComplaints && (
             <span className="absolute -top-2 -right-2 flex min-w-5 h-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white">
               {newComplaintCount > 0 ? newComplaintCount : ''}
@@ -151,8 +150,8 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
 
   const TABLE_HEADERS = [
     { label: t('incidents.columns.incidentId'), className: "text-center" },
-    { label: t('incidents.columns.title'), className: "text-center" },
     { label: t('incidents.columns.category'), className: "hidden md:table-cell text-center" },
+    { label: t('incidents.columns.title'), className: "text-center" },
     { label: t('incidents.columns.severity'), className: "text-center" },
     { label: t('incidents.columns.status'), className: "text-center" },
     { label: t('incidents.columns.complaintCounts'), className: "hidden sm:table-cell text-center" },
@@ -162,7 +161,7 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
-        Swipe horizontally to view all columns.
+        {t('incidents.swipeHint')}
       </div>
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
@@ -190,7 +189,7 @@ export const IncidentsTable: React.FC<IncidentsTableProps> = ({
                       colSpan={7}
                       className="px-4 py-16 text-center text-sm text-gray-500"
                     >
-                      No incidents found.
+                      {t('incidents.noResults')}
                     </td>
                   </tr>
                 ) : (

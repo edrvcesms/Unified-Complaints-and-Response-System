@@ -65,7 +65,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
     <button
       type="button"
       onClick={onToggle}
-      aria-label={showPassword ? "Hide password" : "Show password"}
+      aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
       className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition"
     >
       {showPassword ? <EyeOffIcon /> : <EyeIcon />}

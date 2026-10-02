@@ -5,16 +5,14 @@ from zoneinfo import ZoneInfo
 from app.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from app.models.response import Response
 from sqlalchemy.orm import selectinload
 from app.models.incident_model import IncidentModel
-from app.models.category import Category
 from app.models.complaint_logs import ComplaintLogs
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData, ComplaintOut
 from datetime import datetime
 from app.utils.logger import logger
@@ -25,7 +23,6 @@ from app.utils.caching import set_cache, get_cache
 from app.domain.application.use_cases.cluster_complaint import ClusterComplaintInput
 from app.domain.repository.incident_repository import IncidentRepository
 from app.tasks.incident_tasks import cluster_complaint_task
-from app.tasks.notification_tasks import send_notifications_task
 from app.tasks.email_tasks import notify_user_for_hearing_task
 from app.utils.reverse_geocoding import reverse_geocode
 from app.utils.query_optimization import PaginationParams, QueryOptions, BatchLoader, StatisticsHelper, RestrictSubmissionHelper
@@ -44,31 +41,6 @@ def _normalize_hearing_datetime(hearing_date: datetime) -> datetime:
     if hearing_date.tzinfo is None or hearing_date.utcoffset() is None:
         return hearing_date.replace(tzinfo=APP_TIMEZONE)
     return hearing_date.astimezone(APP_TIMEZONE)
-
-
-def _empty_status_counts():
-    return {"submitted": 0, "resolved": 0, "forwarded": 0, "under_review": 0}
-
-
-def _increment_status(bucket: dict, complaint_status: str):
-    """Increment the correct status key for a complaint."""
-    if complaint_status == ComplaintStatus.SUBMITTED.value:
-        bucket["submitted"] += 1
-    elif complaint_status == ComplaintStatus.RESOLVED_BY_BARANGAY.value:
-        bucket["resolved"] += 1
-    elif complaint_status == ComplaintStatus.FORWARDED_TO_LGU.value:
-        bucket["forwarded"] += 1
-    elif complaint_status == ComplaintStatus.REVIEWED_BY_BARANGAY.value:
-        bucket["under_review"] += 1
-
-
-def _build_category_map(complaints, categories):
-    """Returns { category_name: count } for the given complaint list."""
-    return {
-        cat.category_name: sum(1 for c in complaints if c.category_id == cat.id)
-        for cat in categories
-    }
-
 
 async def get_complaint_by_id(complaint_id: int, db: AsyncSession):
     try:
@@ -195,8 +167,15 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
     if cached:
         return cached
 
-    since = datetime.now(timezone.utc) - timedelta(days=7)
-    until = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    days_since_sunday = (now.weekday() - 6) % 7
+    since = (now - timedelta(days=days_since_sunday)).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+    until = now
 
     # Get status counts from database aggregation
     status_totals, date_status_rows = await StatisticsHelper.get_status_counts_by_date_range(
@@ -212,7 +191,7 @@ async def get_weekly_stats(barangay_id: int, db: AsyncSession):
     daily_counts: dict = {}
     daily_by_category: dict = {}
     for i in range(7):
-        day = (datetime.now(timezone.utc) - timedelta(days=6 - i)).strftime("%Y-%m-%d")
+        day = (since + timedelta(days=i)).strftime("%Y-%m-%d")
         daily_counts[day] = {
             "submitted": 0,
             "resolved": 0,

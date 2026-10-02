@@ -3,8 +3,26 @@ import type { Incident } from "../../types/complaints/incident";
 import { Pagination } from "../barangay/components/Pagination";
 import { TableSkeleton } from "../barangay/components/Skeletons";
 import { formatCategoryName } from "../../utils/categoryFormatter";
-import { getStatusColor, formatStatus } from "../../utils/incidentHelpers";
+import { getStatusColor } from "../../utils/incidentHelpers";
 import { useAuthStore } from "../../store/authStore";
+import { useTranslation } from "react-i18next";
+
+const translateStatus = (status: string, t: (key: string) => string) => {
+  switch (status.toLowerCase()) {
+    case "submitted": return t('status.submitted');
+    case "under_review":
+    case "reviewed_by_barangay":
+    case "reviewed_by_lgu": return t('status.underReview');
+    case "forwarded_to_lgu": return t('status.forwarded');
+    case "resolved":
+      return t('status.resolved');
+    case "resolved_by_barangay": return t('status.resolvedByBarangay');
+    case "resolved_by_lgu": return t('status.resolvedByLgu');
+    case "rejected":
+    case "rejected_by_lgu": return t('status.rejected');
+    default: return t('status.unknown');
+  }
+};
 
 interface ArchivedIncidentTableRowProps {
   incident: Incident;
@@ -12,6 +30,7 @@ interface ArchivedIncidentTableRowProps {
 }
 
 const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ incident, detailPathBase }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
   const handleView = () => {
@@ -28,7 +47,7 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
       <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">{formatCategoryName(incident.category?.category_name)}</td>
       <td className="px-4 py-3 text-center">
         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incidentStatus, userRole || undefined)}`}>
-          {formatStatus(incidentStatus, userRole || undefined)}
+          {translateStatus(incidentStatus, t)}
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">{incident.complaint_count}</td>
@@ -40,7 +59,7 @@ const ArchivedIncidentTableRow: React.FC<ArchivedIncidentTableRowProps> = ({ inc
           onClick={handleView}
           className="min-h-9 px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
         >
-          View
+          {t('incidents.view')}
         </button>
       </td>
     </tr>
@@ -68,21 +87,22 @@ export const ArchivedIncidentsTable: React.FC<ArchivedIncidentsTableProps> = ({
   detailPathBase,
   emptyMessage = "No archived incidents found.",
 }) => {
+  const { t } = useTranslation();
   const TABLE_HEADERS = [
-    { label: "Incident ID", className: "text-center" },
-    { label: "Complaint", className: "text-center" },
-    { label: "Barangay", className: "hidden sm:table-cell text-center" },
-    { label: "Category", className: "hidden md:table-cell text-center" },
-    { label: "Status", className: "text-center" },
-    { label: "Complaints", className: "hidden sm:table-cell text-center" },
-    { label: "Date Reported", className: "hidden md:table-cell text-center" },
-    { label: "Actions", className: "text-center" },
+    { label: t('incidents.columns.incidentId'), className: "text-center" },
+    { label: t('incidents.columns.title'), className: "text-center" },
+    { label: t('table.headers.barangay'), className: "hidden sm:table-cell text-center" },
+    { label: t('table.headers.category'), className: "hidden md:table-cell text-center" },
+    { label: t('table.headers.status'), className: "text-center" },
+    { label: t('table.headers.complaintCounts'), className: "hidden sm:table-cell text-center" },
+    { label: t('table.headers.dateReported'), className: "hidden md:table-cell text-center" },
+    { label: t('table.headers.action'), className: "text-center" },
   ];
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
-        Swipe horizontally to view all columns.
+        {t('incidents.swipeHint')}
       </div>
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <table className="w-full min-w-[700px]">

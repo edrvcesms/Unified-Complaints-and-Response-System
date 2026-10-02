@@ -1,5 +1,5 @@
 from app.models.emergency_contacts import EmergencyContact
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from app.schemas.emergency_hotline import CreateEmergencyHotlineModel
 from app.models.emergency_agencies import EmergencyAgency

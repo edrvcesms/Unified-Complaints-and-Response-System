@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useScheduledHearings } from "../../../hooks/useIncidents";
+import { useTranslation } from "react-i18next";
 import type { IncidentQueryParams } from "../../../services/incidents/incidents";
 import { SearchInput } from "../../general/SearchInput";
 import { ErrorMessage } from "../../general/ErrorMessage";
@@ -10,6 +11,7 @@ import { ScheduledHearingsTable } from "../components/ScheduledHearingsTable";
 const PAGE_SIZE = 8;
 
 export const ScheduledHearings: React.FC = () => {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -32,21 +34,21 @@ export const ScheduledHearings: React.FC = () => {
   const { incidents, pagination, isLoading, isFetching, error } = useScheduledHearings(queryParams);
 
   if (error) {
-    return <ErrorMessage message="Failed to load scheduled hearings. Please refresh." />;
+    return <ErrorMessage message={t('errors.loadScheduledHearings')} />;
   }
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Scheduled Hearings"
-        description="Review upcoming hearings for incidents in your barangay."
+        title={t('hearings.title')}
+        description={t('hearings.description')}
       />
 
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} onSearch={() => setSubmittedSearch(search.trim())} placeholder="Search incidents" />
+        <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} onSearch={() => setSubmittedSearch(search.trim())} placeholder={t('hearings.searchPlaceholder')} />
 
       <div className="w-full lg:w-auto">
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Hearing date range</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">{t('hearings.dateRange')}</label>
         <DateFilter
           dateFrom={dateFrom}
           dateTo={dateTo}

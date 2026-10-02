@@ -11,6 +11,7 @@
   },
   "nav": {
     "logout": "Logout",
+    "changePassword": "Change password",
     "confirmLogout": "Are you sure you want to logout?",
     "notifications": "Notifications",
     "notificationsPageSubtitle": "See all of your latest notification updates.",
@@ -28,6 +29,9 @@
     "barangay": {
       "dashboard": "Dashboard",
       "incidents": "Manage Incidents",
+      "scheduledHearings": "Scheduled Hearings",
+      "archive": "Archive",
+      "feedbacks": "Feedbacks",
       "announcements": "Announcements",
       "events": "Events",
       "notifications": "Notifications"
@@ -36,6 +40,8 @@
       "dashboard": "Dashboard",
       "barangayIncidents": "Barangay Incidents",
       "forwardedIncidents": "Forwarded Incidents",
+      "archive": "Archive",
+      "feedbacks": "Feedbacks",
       "monthlyReports": "Monthly Barangay Reports",
       "announcements": "Announcements",
       "navLabel": "LGU Navigation",
@@ -82,7 +88,7 @@
   "btn": {
     "backIncidents": "Back to Incidents",
     "backIncident": "Back to Incident Details",
-    "backComplaints": "Back to Complaints",
+    "backComplaints": "Back to Associated Complaints",
     "viewIncidents": "View Incidents",
     "open": "Open"
   },
@@ -90,6 +96,8 @@
     "submitted": "Submitted",
     "underReview": "Under Review",
     "resolved": "Resolved",
+    "resolvedByBarangay": "Resolved by Barangay",
+    "resolvedByLgu": "Resolved by LGU",
     "forwarded": "Forwarded",
     "unknown": "Unknown",
     "pending": "Pending",
@@ -119,6 +127,7 @@
       "address": "Address",
       "contact": "Contact",
       "email": "Email",
+      "dateReported": "Date Reported",
       "action": "Action",
       "severity": "Severity",
       "complaintCounts": "Complaint Counts",
@@ -132,25 +141,34 @@
     "title": "Dashboard",
     "subtitle": "Overview of complaint activity in Sta. Maria, Laguna",
     "totalComplaints": "Total Complaints",
-    "submitted": "Total Complaints Submitted",
+    "submitted": "Submitted",
     "underReview": "Under Review",
     "forwarded": "Forwarded",
     "resolved": "Resolved",
     "weeklyActivity": "Weekly Complaint Activity",
     "weeklySubtitle": "Complaints submitted vs. resolved this week",
-    "recentComplaints": "Recent Complaints",
-    "noRecentActivities": "No Recent Activities",
-    "noRecentActivitiesMessage": "No complaints have been submitted yet.",
+    "activityOverview": "Activity Overview",
+    "complaintTrends": "Complaint trends by status and category",
+    "refreshing": "Refreshing...",
+    "complaintsByStatus": "Complaints by Status",
+    "complaintIssues": "Complaint Issues",
+    "residentSatisfactionByCategory": "Resident Satisfaction by Category",
+    "statsLoadFailed": "Failed to load stats. Please try again later.",
+    "recentBarangayActivities": "Recent Barangay Activities",
+    "noRecentBarangayActivities": "No Recent Barangay Activities",
+    "noRecentBarangayActivitiesMessage": "No complaints have been resolved or forwarded to the LGU yet.",
     "columns": {
       "id": "ID",
       "title": "Title",
       "category": "Category",
       "status": "Status",
-      "total": "Total"
+      "total": "Total",
+      "action": "Action"
     },
     "statuses": {
       "submitted": "Submitted",
       "underReview": "Under Review",
+      "resolved": "Resolved",
       "resolved_by_lgu": "Resolved by LGU",
       "resolved_by_barangay": "Resolved by Barangay",
       "resolved_by_department": "Resolved by Department",
@@ -183,6 +201,7 @@
       "pending": "Pending",
       "underReview": "Under Review",
       "resolved_by_department": "Resolved by Department",
+      "resolved": "Resolved",
       "weeklyTitle": "Weekly Activity",
       "weeklyDescription": "Incidents assigned and resolved in the last 7 days"
     }
@@ -190,12 +209,23 @@
   "chart": {
     "forwarded": "Forwarded",
     "resolved_by_lgu": "Resolved by LGU",
+    "resolved": "Resolved",
     "underReview": "Under Review"
   },
   "incidents": {
     "manage": "Manage Incidents",
     "viewInstruction": "Click the view icon to review incident details and related complaints.",
     "severityLevel": "Severity Level:",
+    "swipeHint": "Swipe horizontally to view all columns.",
+    "noResults": "No incidents found.",
+    "view": "View",
+    "newComplaint": "new complaint",
+    "severity": {
+      "low": "Low",
+      "moderate": "Moderate",
+      "high": "High",
+      "veryHigh": "Very High"
+    },
     "columns": {
       "incidentId": "Incident ID",
       "title": "Complaint",
@@ -210,12 +240,37 @@
       "additionalDetails": "Additional Details",
       "firstReported": "First Reported",
       "lastReported": "Last Reported",
-      "relatedComplaints": "Related Complaints",
+      "relatedComplaints": "Complaints Associated with the Incident",
       "viewAllComplaints": "View All Complaints",
       "backToIncidents": "Back to Incidents",
       "totalComplaints": "Total Complaints",
-      "remarks": "Remarks"
+      "remarks": "Remarks",
+      "assignedTo": "Assigned to"
     }
+  },
+  "hearings": {
+    "title": "Scheduled Hearings",
+    "description": "Review upcoming hearings for incidents in your barangay.",
+    "searchPlaceholder": "Search incidents",
+    "dateRange": "Hearing date range",
+    "noUpcoming": "No upcoming hearings found.",
+    "hearing": "hearing",
+    "swipeHint": "Swipe horizontally to view all columns.",
+    "headers": {
+      "incident": "Incident",
+      "firstReporter": "First Reporter",
+      "barangay": "Barangay",
+      "category": "Category",
+      "complaints": "Complaints",
+      "dateReported": "Date Reported",
+      "hearingDate": "Hearing Date"
+    }
+  },
+  "archive": {
+    "title": "Incident Archive",
+    "description": "Browse all incidents recorded across the system.",
+    "emptyBarangay": "No archived incidents found for barangay users.",
+    "emptyLgu": "No archived incidents found for LGU users."
   },
   "complaint": {
     "id": "Complaint #{{id}}",
@@ -417,6 +472,7 @@
     "loadComplaint": "Failed to load complaint details. Please try again.",
     "complaintNotFound": "Complaint not found.",
     "loadAssignedIncidents": "Failed to load assigned incidents. Please try again.",
+    "loadScheduledHearings": "Failed to load scheduled hearings. Please refresh.",
     "mediaFailed": "Failed",
     "invalidFileType": "Only JPG, PNG images and MP4, MPEG, MOV videos are allowed"
   },
@@ -437,7 +493,7 @@
     "lguLoginInstruction": "Sign in with your official LGU credentials.",
     "signinInstruction": "Sign in with your official credentials to access the system.",
     "usernameOrEmail": "Email Address",
-    "usernamePlaceholder": "e.g. user.official@sta-maria.gov.ph",
+    "usernamePlaceholder": "e.g. user.official@gmail.com",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
     "forgotPassword": "Forgot Password?",
@@ -458,7 +514,29 @@
     "passwordResetSuccess": "Your password has been updated. You can now sign in.",
     "login": "Login",
     "contactInfo": "For account issues, contact your Municipal IT Officer.",
-    "unauthorizedAccess": "Unauthorized access is a violation of RA 10175."
+    "unauthorizedAccess": "Unauthorized access is a violation of RA 10175.",
+    "requestFailed": "Request failed. Please try again.",
+    "verificationFailed": "Verification failed. Please try again.",
+    "passwordResetFailed": "Password reset failed. Please try again.",
+    "changePasswordHelp": "Choose a new password. We will send a verification code to your email.",
+    "otpRequired": "Verification code is required.",
+    "invalidOtp": "Please enter a valid verification code.",
+    "confirmPasswordRequired": "Please confirm your password.",
+    "passwordMismatch": "Passwords do not match.",
+    "loginFailed": "Login failed. Please try again.",
+    "turnstileRequired": "Please complete the Turnstile challenge.",
+    "genericError": "An error occurred. Please try again.",
+    "emailRequired": "Email is required.",
+    "emailTooLong": "Email is too long.",
+    "emailRepeated": "Email contains invalid repeated characters.",
+    "invalidEmailDomain": "Please enter a valid email domain.",
+    "invalidEmail": "Please enter a valid email address.",
+    "passwordRequired": "Password is required.",
+    "passwordTooShort": "Password is too short.",
+    "passwordTooLong": "Password is too long.",
+    "passwordRepeated": "Password contains too many repeated characters.",
+    "hidePassword": "Hide password",
+    "showPassword": "Show password"
   },
   "footer": {
     "copyright": "© 2026 Municipality of Sta. Maria, Laguna. All rights reserved."

@@ -5,6 +5,7 @@ import { ErrorMessage } from "./ErrorMessage";
 import { PasswordInput } from "./PasswordInputs";
 import { SubmitButton } from "./SubmitButton";
 import type { LoginRequestData, LoginFormErrors } from "../../../types/auth/login";
+import { translateAuthError } from "../authErrorMessages";
 
 interface LoginFormProps {
   formData: LoginRequestData;
@@ -78,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               : "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
             }`}
         />
-        {errors.email && <ErrorMessage id="email-error" message={errors.email} />}
+        {errors.email && <ErrorMessage id="email-error" message={translateAuthError(errors.email, t)} />}
       </div>
 
       <div className="space-y-1">
@@ -94,7 +95,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           onChange={onChange}
           onToggle={onTogglePassword}
         />
-        {errors.password && <ErrorMessage id="password-error" message={errors.password} />}
+        {errors.password && <ErrorMessage id="password-error" message={translateAuthError(errors.password, t)} />}
       </div>
 
       <div className="flex items-center justify-end gap-4">

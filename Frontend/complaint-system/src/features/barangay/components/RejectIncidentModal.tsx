@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { validateAttachments } from "../../../utils/attachmentHelper";
 import type { RejectionCategory } from "../../../types/general/category";
+import { BarangayMemberDropdown } from "./BarangayMemberDropdown";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -10,13 +11,14 @@ interface RejectIncidentModalProps {
   title: string;
   confirmText: string;
   confirmColor: "red" | "green" | "yellow" | "blue";
-  onConfirm: (actionsTaken: string, rejectionCategoryId: number, attachments: File[]) => void;
+  onConfirm: (actionsTaken: string, rejectionCategoryId: number, attachments: File[], barangayMemberIds: number[]) => void;
   onCancel: () => void;
   isLoading?: boolean;
   description?: string;
   rejectionCategories: RejectionCategory[];
   isLoadingCategories?: boolean;
   categoryError?: string;
+  barangayMembers?: Array<{ id: number; name: string; position: string }>;
 }
 
 const colorClasses = {
@@ -44,6 +46,7 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
   rejectionCategories,
   isLoadingCategories = false,
   categoryError,
+  barangayMembers = [],
 }) => {
   const { t } = useTranslation();
   const [actionsTaken, setActionsTaken] = useState("");
@@ -51,6 +54,7 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [fileError, setFileError] = useState("");
   const [categorySelectionError, setCategorySelectionError] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
       setFileError("");
       setCategorySelectionError("");
       setSelectedCategoryId(rejectionCategories[0]?.id ? String(rejectionCategories[0].id) : "");
+      setSelectedMemberIds([]);
     }
   }, [isOpen, rejectionCategories]);
 
@@ -112,13 +117,24 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
               return;
             }
             try {
-              onConfirm(actionsTaken, Number(selectedCategoryId), selectedFiles);
+              onConfirm(actionsTaken, Number(selectedCategoryId), selectedFiles, selectedMemberIds.map(Number));
             } catch (err) {
               console.error("Submit failed:", err);
             }
           }}
         >
           {description && <p className="text-sm text-gray-600 mb-2">{description}</p>}
+          {barangayMembers.length > 0 && (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Responsible Barangay Member</label>
+              <BarangayMemberDropdown
+                members={barangayMembers}
+                selectedMemberIds={selectedMemberIds}
+                onChange={setSelectedMemberIds}
+                disabled={isLoading}
+              />
+            </div>
+          )}
           <label className="block text-sm font-medium text-gray-700 mb-2">Rejection reason</label>
           <select
             className="w-full border text-sm border-gray-300 rounded-md p-2 mb-2 bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"

@@ -3,10 +3,11 @@ const MAX_UPLOAD_FILES = 3;
 export const buildIncidentActionFormData = (
   actionsTaken: string,
   rejectionCategoryId?: number,
-  attachments?: File[]
+  attachments?: File[],
+  barangayMemberIds: number[] = []
 ): FormData => {
   const formData = new FormData();
-  formData.append("response_data", JSON.stringify({ actions_taken: actionsTaken }));
+  formData.append("response_data", JSON.stringify({ actions_taken: actionsTaken, barangay_member_ids: barangayMemberIds }));
   formData.append("actions_taken", actionsTaken);
 
   if (typeof rejectionCategoryId === "number") {

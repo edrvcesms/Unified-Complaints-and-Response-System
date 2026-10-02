@@ -1,19 +1,15 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.barangay_schema import BarangayWithUserData
-from app.models.incident_model import IncidentModel
 from app.models.incident_complaint import IncidentComplaintModel
-from app.schemas.response_schema import ResponseCreateSchema
-from app.utils.cache_invalidator_optimized import invalidate_cache
-from app.tasks.notification_tasks import send_notifications_task
-from app.tasks.response_tasks import save_response_task
-from fastapi.responses import JSONResponse
 from app.models.barangay import Barangay
 from app.models.barangay_account import BarangayAccount
-from app.models.complaint import Complaint
+from app.models.complaint import Complaint, complaint_barangay_members
+from app.models.response import response_barangay_members
 from app.models.incident_complaint import IncidentComplaintModel
 from app.constants.complaint_status import ComplaintStatus
-from sqlalchemy import select, func, update
+from sqlalchemy import delete, insert, select, func, update
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import selectinload
 from app.utils.caching import set_cache, get_cache
 from app.utils.logger import logger
@@ -23,6 +19,8 @@ from datetime import datetime, timezone
 from app.core.pagination import paginate
 from app.core.pagination_params import ListParams
 from app.core.pagination_response import PaginatedResponse
+from app.schemas.barangay_members_schema import BarangayMemberBase, BarangayMemberCreate
+from app.models.barangay_members import BarangayMember
 
 async def get_barangay_account(user_id: int, db: AsyncSession) -> BarangayWithUserData:
     try:
@@ -219,4 +217,122 @@ async def mark_barangay_incidents_viewed(user_id: int, barangay_id: int):
     except Exception:
         logger.exception("Error marking barangay as viewed")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-   
+    
+async def add_barangay_member(db: AsyncSession, barangay_member_data: BarangayMemberCreate):
+    try:
+        new_member = BarangayMember(
+            barangay_id=barangay_member_data.barangay_id,
+            name=barangay_member_data.name,
+            position=barangay_member_data.position,
+        )
+        db.add(new_member)
+        await db.commit()
+        await db.refresh(new_member)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Barangay member added successfully", "member_id": new_member.id}) 
+    except Exception:
+        await db.rollback()
+        logger.exception("Error adding barangay member")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+async def remove_barangay_member(db: AsyncSession, member_id: int):
+    try:
+        result = await db.execute(
+            select(BarangayMember).where(BarangayMember.id == member_id)
+        )
+        member = result.scalars().first()
+        if not member:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay member not found")
+        
+        await db.delete(member)
+        await db.commit()
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Barangay member removed successfully"})
+    
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Error removing barangay member")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
+async def get_barangay_members(db: AsyncSession, barangay_id: int) -> List[BarangayMemberBase]:
+    try:
+        result = await db.execute(
+            select(BarangayMember).where(BarangayMember.barangay_id == barangay_id)
+        )
+        members = result.scalars().all()
+        return [BarangayMemberBase.model_validate(member, from_attributes=True) for member in members]
+    except Exception:
+        logger.exception("Error fetching barangay members")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
+# this function will be used to assign single or multiple barangay members to a single or multiple 
+async def assign_barangay_members_to_complaints(db: AsyncSession, complaint_ids: List[int], barangay_member_ids: List[int]):
+    try:
+        # Fetch the complaint
+        result = await db.execute(select(Complaint.id).where(Complaint.id.in_(complaint_ids)))
+        
+        if not result:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Complaint not found")
+        
+        complaints = result.scalars().all()
+        
+        if not barangay_member_ids:
+            return None
+
+        # Fetch the barangay members
+        result = await db.execute(
+            select(BarangayMember).where(BarangayMember.id.in_(barangay_member_ids))
+        )
+        
+        if not result:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay member not found")
+        
+        barangay_members = result.scalars().all()
+        
+        if len(barangay_members) != len(set(barangay_member_ids)):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay member not found")
+
+        await db.execute(
+            delete(complaint_barangay_members).where(
+                complaint_barangay_members.c.complaint_id.in_(complaint_ids)
+            )
+        )
+        await db.execute(
+            insert(complaint_barangay_members),
+            [
+                {"complaint_id": complaint_id, "barangay_member_id": member_id}
+                for complaint_id in complaint_ids
+                for member_id in set(barangay_member_ids)
+            ],
+        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Barangay members assigned to complaints successfully"})
+    
+    except HTTPException:
+        raise
+
+    except Exception:
+        logger.exception("Error assigning barangay members to complaints")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+
+async def assign_barangay_members_to_response(db: AsyncSession, response, barangay_member_ids: List[int]):
+    if not barangay_member_ids:
+        return
+
+    result = await db.execute(
+        select(BarangayMember).where(BarangayMember.id.in_(barangay_member_ids))
+    )
+    members = result.scalars().all()
+    if len(members) != len(set(barangay_member_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay member not found")
+
+    await db.flush()
+    await db.execute(
+        insert(response_barangay_members),
+        [
+            {"response_id": response.id, "barangay_member_id": member_id}
+            for member_id in set(barangay_member_ids)
+        ],
+    )
+    
+    

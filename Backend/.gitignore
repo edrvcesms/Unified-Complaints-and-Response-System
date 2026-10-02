@@ -11,3 +11,6 @@ locustfile.py
 LOAD_TESTING_GUIDE.md
 private_key.pem
 public_key.pem
+app/utils/dummy_test_case.py
+app/routers/dummy_account.py
+app/utils/change_pass.py

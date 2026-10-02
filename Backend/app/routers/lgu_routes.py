@@ -4,18 +4,18 @@ from app.services.lgu_services import get_forwarded_incidents_by_barangay, get_a
 from app.dependencies.auth_dependency import get_current_user
 from app.dependencies.db_dependency import get_async_db
 from app.models.user import User
-from app.core.pagination_params import ListParams
+from app.core.pagination_params import IncidentListParams
 
 router = APIRouter()
 
 
 @router.get("/forwarded-incidents", status_code=status.HTTP_200_OK)
-async def get_all_forwarded_incidents_route(params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def get_all_forwarded_incidents_route(params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     return await get_all_forwarded_incidents(db, params)
 
 @router.get("/forwarded-incidents/{barangay_id}", status_code=status.HTTP_200_OK)
-async def get_forwarded_incidents_route(barangay_id: int, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
+async def get_forwarded_incidents_route(barangay_id: int, params: IncidentListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     
     return await get_forwarded_incidents_by_barangay(barangay_id, db, params)
 

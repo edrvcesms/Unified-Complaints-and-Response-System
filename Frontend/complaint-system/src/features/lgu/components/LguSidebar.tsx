@@ -15,8 +15,8 @@ export const LguSidebar: React.FC<LguSidebarProps> = ({ isOpen, onClose }) => {
     { path: "/lgu/dashboard", label: t('sidebar.lgu.dashboard'), icon: <DashboardIcon />, end: true, group: "Dashboard" },
     { path: "/lgu/barangay-incidents", label: t('sidebar.lgu.barangayIncidents'), icon: <MapPin className="w-5 h-5" />, group: "Manage Incidents" },
     { path: "/lgu/incidents", label: t('sidebar.lgu.forwardedIncidents'), icon: <ComplaintsIcon />, group: "Manage Incidents" },
-    { path: "/lgu/archive", label: "Archive", icon: <Archive className="w-5 h-5" />, group: "Manage Incidents" },
-    { path: "/lgu/feedbacks", label: "Feedbacks", icon: <ComplaintsIcon />, group: "Manage Incidents" },
+    { path: "/lgu/archive", label: t('sidebar.lgu.archive'), icon: <Archive className="w-5 h-5" />, group: "Manage Incidents" },
+    { path: "/lgu/feedbacks", label: t('sidebar.lgu.feedbacks'), icon: <ComplaintsIcon />, group: "Manage Incidents" },
     { path: "/lgu/monthly-reports", label: t('sidebar.lgu.monthlyReports'), icon: <FileText className="w-5 h-5" />, group: "Reports" },
     { path: "/lgu/announcements", label: t('sidebar.lgu.announcements'), icon: <AnnouncementsIcon />, group: "Communication" },
   ];

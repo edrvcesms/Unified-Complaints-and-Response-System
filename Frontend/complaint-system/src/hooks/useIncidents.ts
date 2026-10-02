@@ -14,6 +14,7 @@ import type { IncidentQueryParams } from "../services/incidents/incidents";
 type ReviewIncidentPayload = {
   actions_taken: string;
   attachments?: File[];
+  barangay_member_ids?: number[];
   signal?: AbortSignal;
 };
 
@@ -25,6 +26,9 @@ export const useIncidents = (params: IncidentQueryParams) => {
       params.sort,
       params.order,
       params.severity_level,
+      params.complaint_status,
+      params.category_name,
+      params.search,
       params.date_from,
       params.date_to,],
     queryFn: () => getIncidents(params),
@@ -50,6 +54,7 @@ export const useAllIncidents = (params: IncidentQueryParams) => {
       params.sort,
       params.order,
       params.complaint_status,
+      params.category_name,
       params.date_from,
       params.date_to,
     ],
@@ -102,7 +107,7 @@ export const useIncidentComplaints = (
 export const useResolveIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["resolveIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string; attachments?: File[] }) =>
+    mutationFn: (payload: { actions_taken: string; attachments?: File[]; barangay_member_ids?: number[] }) =>
       resolveIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
@@ -122,7 +127,7 @@ export const useReviewIncident = (incidentId: number) => {
     mutationFn: (payload: ReviewIncidentPayload) =>
       reviewIncident(
         incidentId,
-        { actions_taken: payload.actions_taken, attachments: payload.attachments },
+        { actions_taken: payload.actions_taken, attachments: payload.attachments, barangay_member_ids: payload.barangay_member_ids },
         payload.signal
       ),
     onSuccess: () => {
@@ -154,7 +159,7 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
 export const useRejectIncident = (incidentId: number) => {
   const mutation = useMutation({
     mutationKey: ["rejectIncident", incidentId],
-    mutationFn: (payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[] }) =>
+    mutationFn: (payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[]; barangay_member_ids?: number[] }) =>
       rejectIncident(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
@@ -181,9 +186,9 @@ export const useRejectionCategories = () => {
   };
 };
 
-export const useForwardedIncidents = (barangayId: number, params: PaginationQueryParams) => {
+export const useForwardedIncidents = (barangayId: number, params: IncidentQueryParams) => {
   const { data, isLoading, isFetching, error } = useQuery<PaginatedResponse<Incident>>({
-    queryKey: ["forwardedIncidents", barangayId, params.page, params.page_size, params.search],
+    queryKey: ["forwardedIncidents", barangayId, params.page, params.page_size, params.search, params.complaint_status, params.category_name, params.severity_level, params.date_from, params.date_to],
     queryFn: () => getForwardedIncidents(barangayId, params),
     placeholderData: keepPreviousData,
     enabled: !!barangayId,
@@ -198,9 +203,9 @@ export const useForwardedIncidents = (barangayId: number, params: PaginationQuer
   };
 };
 
-export const useAllForwardedIncidents = (params: PaginationQueryParams) => {
+export const useAllForwardedIncidents = (params: IncidentQueryParams) => {
   const { data, isLoading, isFetching, error } = useQuery<PaginatedResponse<Incident>>({
-    queryKey: ["allForwardedIncidents", params.page, params.page_size, params.search],
+    queryKey: ["allForwardedIncidents", params.page, params.page_size, params.search, params.complaint_status, params.category_name, params.severity_level, params.date_from, params.date_to],
     queryFn: () => getAllForwardedIncidents(params),
     placeholderData: keepPreviousData,
   });

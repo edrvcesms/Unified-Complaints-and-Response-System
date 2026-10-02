@@ -60,6 +60,14 @@ export const requestResetPassword = async (
   }
 };
 
+export const requestChangePassword = async (): Promise<{ email: string; message?: string }> => {
+  try {
+    return await usersApi.post("/request-change-password", {});
+  } catch (error: any) {
+    throw handleApiError(error);
+  }
+};
+
 export const verifyResetPasswordOtp = async (
   data: VerifyResetPasswordOtp
 ): Promise<{ message?: string }> => {

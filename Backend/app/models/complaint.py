@@ -1,7 +1,15 @@
 from app.database.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float, Index
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, Float, Index, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
+
+
+complaint_barangay_members = Table(
+    "complaint_barangay_members",
+    Base.metadata,
+    Column("complaint_id", ForeignKey("complaint.id", ondelete="CASCADE"), primary_key=True),
+    Column("barangay_member_id", ForeignKey("barangay_members.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class Complaint(Base):
@@ -14,6 +22,7 @@ class Complaint(Base):
     barangay_account_id = Column(Integer, ForeignKey("barangay_account.id"), nullable=True, index=True)
     category_id = Column(Integer, ForeignKey("category.id"), nullable=False, index=True)
     rejection_category_id = Column(Integer, ForeignKey("rejection_categories.id"), nullable=True, index=True)
+    barangay_member_id = Column(Integer, ForeignKey("barangay_members.id"), nullable=True, index=True)
 
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
@@ -41,6 +50,11 @@ class Complaint(Base):
     notifications = relationship("Notification", back_populates="complaint")
     logs = relationship("ComplaintLogs", back_populates="complaint", cascade="all, delete-orphan")
     rejection_category = relationship("RejectionCategory", back_populates="complaint")
+    barangay_members = relationship(
+        "BarangayMember",
+        secondary=complaint_barangay_members,
+        back_populates="complaints",
+    )
 
    
     incident_links = relationship(

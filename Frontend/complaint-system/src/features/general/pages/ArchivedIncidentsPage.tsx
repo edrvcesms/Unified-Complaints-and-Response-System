@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { useAllIncidents } from "../../../hooks/useIncidents";
-import { SearchInput } from "../../general/SearchInput";
-import { ErrorMessage } from "../../general/ErrorMessage";
-import { PageHeader } from "../../general/PageHeader";
-import { ComplaintStatusFilterDropdown, CategoryFilterDropdown, DateFilter } from "../components/Filters";
+import { SearchInput } from "../SearchInput";
+import { ErrorMessage } from "../ErrorMessage";
+import { PageHeader } from "../PageHeader";
+import { ComplaintStatusFilterDropdown, CategoryFilterDropdown, DateFilter } from "../../barangay/components/Filters";
 import { CATEGORY } from "../../../types/general/category";
-import { ArchivedIncidentsTable } from "../../general/ArchivedIncidentsTable";
+import { ArchivedIncidentsTable } from "../ArchivedIncidentsTable";
 import type { ComplaintStatusFilter } from "../../../types/complaints/complaint";
 import type { IncidentQueryParams } from "../../../services/incidents/incidents";
 import { COMPLAINT_STATUS_FILTERS } from "../../../types/complaints/complaint";
@@ -29,6 +30,7 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
   statusOptions = COMPLAINT_STATUS_FILTERS,
 }) => {
   const { t } = useTranslation();
+  const location = useLocation();
 
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
@@ -37,6 +39,12 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const status = new URLSearchParams(location.search).get("complaint_status");
+    const isValidStatus = statusOptions.some((option) => option.value === status);
+    setFilterComplaintStatus(isValidStatus ? status as ComplaintStatusFilter : "all");
+  }, [location.search, statusOptions]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -86,11 +94,11 @@ export const ArchivedIncidentsPage: React.FC<ArchivedIncidentsPageProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">Status</label>
+            <label className="text-sm font-medium text-gray-700">{t('table.headers.status')}</label>
             <ComplaintStatusFilterDropdown current={filterComplaintStatus} options={statusOptions} onChange={handleComplaintStatusFilterChange} />
           </div>
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">Category</label>
+            <label className="text-sm font-medium text-gray-700">{t('table.headers.category')}</label>
             <CategoryFilterDropdown current={filterCategory} categories={Object.keys(CATEGORY)} onChange={handleCategoryChange} />
           </div>
         </div>

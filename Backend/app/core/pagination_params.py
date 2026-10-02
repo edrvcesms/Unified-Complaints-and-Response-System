@@ -44,4 +44,5 @@ class IncidentListParams(ListParams):
     severity_score_min: float | None = Query(default=None, ge=0)
     severity_score_max: float | None = Query(default=None, ge=0)
     complaint_status: str | None = Query(default=None, max_length=100)
+    category_name: str | None = Query(default=None, max_length=100)
     sort: Literal["priority", "first_reported_at", "last_reported_at"] | None = Query(default=None)

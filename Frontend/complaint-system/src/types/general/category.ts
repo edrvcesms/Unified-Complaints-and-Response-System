@@ -7,7 +7,7 @@ export const CATEGORY = {
   illegal_dumping: "Illegal Dumping",
   road_damage: "Road Damage",
   street_light_outage: "Street Light Outage",
-  fooding_drainage: "Flooding/Drainage Issues",
+  flooding_drainage: "Flooding/Drainage Issues",
   illegal_construction: "Illegal Construction",
   stray_animals: "Stray Animals",
   public_intoxication: "Public Intoxication",

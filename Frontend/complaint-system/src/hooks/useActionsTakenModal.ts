@@ -6,7 +6,7 @@ interface ActionsTakenModalState {
   description?: string;
   confirmText: string;
   confirmColor: "red" | "green" | "yellow" | "blue";
-  onConfirm: (actionsTaken: string, attachments: File[]) => void;
+  onConfirm: (actionsTaken: string, attachments: File[], barangayMemberIds: number[]) => void;
   onCancel?: () => void;
   isLoading: boolean;
 }
@@ -35,7 +35,7 @@ export function useActionsTakenModal() {
       title: string;
       confirmText: string;
       confirmColor?: "red" | "green" | "yellow" | "blue";
-      onConfirm: (actionsTaken: string, attachments: File[]) => void;
+      onConfirm: (actionsTaken: string, attachments: File[], barangayMemberIds: number[]) => void;
       onCancel?: () => void;
       description?: string;
     }) => {

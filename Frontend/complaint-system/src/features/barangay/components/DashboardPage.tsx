@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArcElement,
@@ -13,6 +14,7 @@ import {
   Tooltip as ChartJsTooltip,
   Legend as ChartJsLegend,
   type ChartOptions,
+  type Plugin,
 } from "chart.js";
 import { Line, Bar as ChartJsBar, Pie as ChartJsPie } from "react-chartjs-2";
 
@@ -23,11 +25,11 @@ import {
   useMonthlyStats,
   useYearlyStats,
 } from "../../../hooks/useComplaintStats";
+import { useCategoryFeedbackRates } from "../../../hooks/useCategoryFeedbackRates";
 import {
   transformWeekly,
   transformMonthly,
   transformYearly,
-  getCategoryNames,
   getCategoryColor,
 } from "../../../utils/statsTransformer";
 
@@ -45,6 +47,12 @@ interface DashboardPageProps {
   complaints: Complaint[];
   isLoading: boolean;
 }
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
+
+// Minimalist card with a thicker bottom/right edge to give a subtle 3D look
+const CHART_CARD_CLASS =
+  "bg-white rounded-lg border border-gray-300 border-b-4 border-r-4 p-4 sm:p-5";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -136,22 +144,40 @@ interface StatusChartProps {
   data: ReturnType<typeof transformWeekly>;
 }
 
+// Status trend — line chart
 function StatusChart({ data }: StatusChartProps) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
-  const barData = {
+  const makeLine = (label: string, key: "submitted" | "under_review" | "forwarded" | "resolved", color: string) => ({
+    label,
+    data: data.map((row) => row[key]),
+    borderColor: color,
+    backgroundColor: color,
+    borderWidth: 5,
+    pointRadius: 5,
+    pointHoverRadius: 7,
+    pointBorderColor: "#ffffff",
+    pointBorderWidth: 2,
+    tension: 0.35,
+  });
+
+  const lineData = {
     labels: data.map((row) => row.label),
     datasets: [
-      { label: "Submitted", data: data.map((row) => row.submitted), backgroundColor: "#eab308", borderRadius: 4 },
-      { label: "Under Review", data: data.map((row) => row.under_review), backgroundColor: "#6366f1", borderRadius: 4 },
-      { label: "Forwarded", data: data.map((row) => row.forwarded), backgroundColor: "#f97316", borderRadius: 4 },
-      { label: "Resolved", data: data.map((row) => row.resolved), backgroundColor: "#22c55e", borderRadius: 4 },
+      makeLine("Submitted", "submitted", "#eab308"),
+      makeLine("Under Review", "under_review", "#6366f1"),
+      makeLine("Forwarded", "forwarded", "#f97316"),
+      makeLine("Resolved", "resolved", "#22c55e"),
     ],
   };
 
-  const options: ChartOptions<"bar"> = {
+  const options: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: "index",
+      intersect: false,
+    },
     plugins: {
       legend: {
         position: "bottom",
@@ -173,28 +199,34 @@ function StatusChart({ data }: StatusChartProps) {
     },
     scales: {
       x: {
+        border: { display: true, color: "#374151", width: 2 },
         ticks: {
-          color: "#9ca3af",
+          color: "#374151",
           font: {
             size: isMobile ? 11 : 14,
+            weight: "bold",
           },
           maxRotation: isMobile ? 0 : 45,
         },
         grid: {
-          display: false,
+          color: "#d1d5db",
+          lineWidth: 1.5,
         },
       },
       y: {
         beginAtZero: true,
+        border: { display: true, color: "#374151", width: 2 },
         ticks: {
-          color: "#9ca3af",
+          color: "#374151",
           font: {
             size: isMobile ? 11 : 14,
+            weight: "bold",
           },
           precision: 0,
         },
         grid: {
-          color: "#f0f0f0",
+          color: "#d1d5db",
+          lineWidth: 1.5,
         },
       },
     },
@@ -202,7 +234,7 @@ function StatusChart({ data }: StatusChartProps) {
 
   return (
     <div className="w-full h-full min-w-0 min-h-[300px]">
-      <ChartJsBar data={barData} options={options} />
+      <Line data={lineData} options={options} />
     </div>
   );
 }
@@ -210,6 +242,41 @@ function StatusChart({ data }: StatusChartProps) {
 interface CategoryChartProps {
   totalByCategory: Record<string, number>;
 }
+
+// Draws the percentage of each slice on the pie
+const piePercentPlugin: Plugin<"pie"> = {
+  id: "piePercent",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const values = chart.data.datasets[0].data as number[];
+
+    // Only count slices that aren't hidden via the legend
+    const total = values.reduce(
+      (sum, v, i) => (chart.getDataVisibility(i) ? sum + v : sum),
+      0
+    );
+    if (total === 0) return;
+
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+    ctx.shadowBlur = 3;
+
+    meta.data.forEach((arc, i) => {
+      if (!chart.getDataVisibility(i)) return;
+      const pct = (values[i] / total) * 100;
+      if (pct < 4) return; // too small to fit a label
+      const { x, y } = (arc as ArcElement).tooltipPosition(false);
+      ctx.fillText(`${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`, x, y);
+    });
+
+    ctx.restore();
+  },
+};
 
 function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
@@ -234,7 +301,8 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
         data: pieEntries.map((entry) => entry.value),
         backgroundColor: pieEntries.map((_, index) => getCategoryColor(index)),
         borderColor: "#ffffff",
-        borderWidth: 2,
+        borderWidth: 3,
+        hoverOffset: 6,
       },
     ],
   };
@@ -259,105 +327,105 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
       },
       tooltip: {
         backgroundColor: "#111827",
+        callbacks: {
+          label: (ctx) => {
+            const values = ctx.dataset.data as number[];
+            const total = values.reduce((a, b) => a + b, 0);
+            const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : "0";
+            return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+          },
+        },
       },
     },
   };
 
   return (
     <div className="w-full h-full min-w-0 min-h-[240px]">
-      <ChartJsPie data={pieData} options={options} />
+      <ChartJsPie data={pieData} options={options} plugins={[piePercentPlugin]} />
     </div>
   );
 }
 
-interface CategoryBarChartProps {
-  data: ReturnType<typeof transformWeekly>;
-  categoryNames: string[];
+interface CategoryFeedbackChartProps {
+  categories: {
+    category_name: string;
+    average_rating: number;
+  }[];
 }
 
-function CategoryLineChart({ data, categoryNames }: CategoryBarChartProps) {
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
-
-  if (categoryNames.length === 0) {
+function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
+  if (categories.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-base text-gray-400">
-        No category data for this period.
+        No feedback data by category.
       </div>
     );
   }
 
-  const lineData = {
-    labels: data.map((row) => row.label),
-    datasets: categoryNames.map((name, i) => ({
-      label: formatCategoryName(name),
-      data: data.map((row) => Number(row[name] ?? 0)),
-      borderColor: getCategoryColor(i),
-      backgroundColor: getCategoryColor(i),
-      borderWidth: 3,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      tension: 0.35,
-    })),
+  const barData = {
+    labels: categories.map((category) => formatCategoryName(category.category_name)),
+    datasets: [{
+      label: "Average rating",
+      data: categories.map((category) => Math.max(0, Math.min(5, category.average_rating))),
+      backgroundColor: "#fbbf24",
+      borderColor: "#92400e",
+      borderWidth: 2,
+      borderSkipped: false,
+      borderRadius: 4,
+      barThickness: 22,
+    }],
   };
 
-  const options: ChartOptions<"line"> = {
+  const options: ChartOptions<"bar"> = {
+    indexAxis: "x",
     responsive: true,
     maintainAspectRatio: false,
-    interaction: {
-      mode: "index",
-      intersect: false,
-    },
     plugins: {
-      legend: {
-        position: "bottom",
-        maxHeight: isMobile ? 92 : 120,
-        labels: {
-          font: {
-            size: isMobile ? 10 : 13,
-          },
-          boxWidth: isMobile ? 10 : 14,
-          boxHeight: isMobile ? 10 : 14,
-          usePointStyle: true,
-          pointStyle: "rectRounded",
-          padding: isMobile ? 8 : 12,
-        },
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: "#111827",
+        callbacks: {
+          label: (context) => ` ${Number(context.raw).toFixed(1)} / 5`,
+        },
       },
     },
     scales: {
       x: {
         ticks: {
-          color: "#9ca3af",
-          font: {
-            size: isMobile ? 11 : 14,
-          },
-          maxRotation: isMobile ? 0 : 45,
+          color: "#374151",
+          font: { weight: "bold" },
         },
+        border: { display: true, color: "#374151", width: 2 },
         grid: {
-          display: false,
+          display: true,
+          color: "#d1d5db",
+          lineWidth: 1.5,
         },
       },
       y: {
         beginAtZero: true,
+        max: 5,
         ticks: {
-          color: "#9ca3af",
-          font: {
-            size: isMobile ? 11 : 14,
-          },
-          precision: 0,
+          stepSize: 1,
+          color: "#374151",
+          font: { weight: "bold" },
         },
+        border: { display: true, color: "#374151", width: 2 },
         grid: {
-          color: "#f0f0f0",
+          color: "#d1d5db",
+          lineWidth: 1.5,
+        },
+        title: {
+          display: true,
+          text: "Average rating (1–5)",
+          color: "#4b5563",
         },
       },
     },
   };
 
   return (
-    <div className="w-full h-full min-w-0 min-h-[300px]">
-      <Line data={lineData} options={options} />
+    <div className="h-[21rem] w-full min-w-0">
+      <ChartJsBar data={barData} options={options} />
     </div>
   );
 }
@@ -402,6 +470,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   isLoading,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   // Period state
   const now = new Date();
@@ -431,15 +500,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     return transformYearly(data);
   }, [data]);
 
-  const categoryNames = useMemo(
-    () => (data ? getCategoryNames(data.total_by_category) : []),
-    [data]
-  );
+  const categoryFeedbackRates = useCategoryFeedbackRates();
 
-  // Recent complaints list
-  const recent = useMemo(
+  const recentActivities = useMemo(
     () =>
       [...complaints]
+        .filter(
+          (complaint) =>
+            complaint.status === "resolved_by_barangay" ||
+            complaint.status === "forwarded_to_lgu"
+        )
         .sort(
           (a, b) =>
             utcToLocal(b.created_at).getTime() -
@@ -465,11 +535,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t("dashboard.totalComplaints")} value={cardStats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} />
-            <StatCard label={t("dashboard.submitted")} value={cardStats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} />
-            <StatCard label={t("dashboard.underReview")} value={cardStats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} />
-            <StatCard label="Forwarded" value={cardStats.forwarded} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} />
-            <StatCard label={t("dashboard.resolved")} value={cardStats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} />
+            <StatCard label={t("dashboard.totalComplaints")} value={cardStats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} onClick={() => navigate("/dashboard/incidents")} />
+            <StatCard label={t("dashboard.submitted")} value={cardStats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} onClick={() => navigate("/dashboard/incidents?complaint_status=submitted")} />
+            <StatCard label={t("dashboard.underReview")} value={cardStats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} onClick={() => navigate("/dashboard/incidents?complaint_status=reviewed_by_barangay")} />
+            <StatCard label={t("dashboard.forwarded")} value={cardStats.forwarded} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} onClick={() => navigate("/dashboard/archive?complaint_status=forwarded_to_lgu")} />
+            <StatCard label={t("dashboard.resolved")} value={cardStats.resolved} color="text-green-700" bg="bg-green-50" border="border-green-100" icon={<ResolvedIcon />} onClick={() => navigate("/dashboard/archive?complaint_status=resolved_by_barangay")} />
           </>
         )}
       </div>
@@ -480,16 +550,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-gray-700">
-              Activity Overview
+              {t("dashboard.activityOverview")}
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Complaint trends by status and category
+              {t("dashboard.complaintTrends")}
             </p>
           </div>
           <div className="flex items-center gap-2">
             {isFetching && !statsLoading && (
               <span className="text-sm text-gray-400 animate-pulse">
-                Refreshing…
+                {t("dashboard.refreshing")}
               </span>
             )}
             <PeriodSelector
@@ -508,18 +578,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <ErrorBanner
             message={
               error?.message ??
-              "Failed to load stats. Please try again later."
+              t("dashboard.statsLoadFailed")
             }
           />
         )}
 
-        {/* Status chart */}
+        {/* Status trend (line) */}
         {statsLoading ? (
           <SkeletonChart />
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
+          <div className={CHART_CARD_CLASS}>
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
-              Complaints by Status
+              {t("dashboard.complaintsByStatus")}
             </h3>
             <div className="w-full min-w-0 h-[21rem] sm:h-80">
               <StatusChart data={chartData} />
@@ -533,9 +603,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           {statsLoading ? (
             <SkeletonPieChart />
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
+            <div className={CHART_CARD_CLASS}>
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
-                Total by Category
+                {t("dashboard.complaintIssues")}
               </h3>
               <div className="w-full min-w-0 h-72 sm:h-64">
                 <CategoryPieChart
@@ -545,18 +615,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           )}
 
-          {/* Stacked bar: category over time */}
-          {statsLoading ? (
+          {/* Bar: category over time */}
+          {statsLoading || categoryFeedbackRates.isLoading ? (
             <SkeletonChart />
+          ) : categoryFeedbackRates.isError ? (
+            <ErrorBanner message={t("dashboard.statsLoadFailed")} />
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
+            <div className="bg-white rounded-lg border border-gray-300 p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
-                Category Trend
+                {t("dashboard.residentSatisfactionByCategory")}
               </h3>
               <div className="w-full min-w-0 h-[22rem] sm:h-80">
-                <CategoryLineChart
-                  data={chartData}
-                  categoryNames={categoryNames}
+                <CategoryFeedbackChart
+                  categories={categoryFeedbackRates.data?.by_category ?? []}
                 />
               </div>
             </div>
@@ -564,14 +635,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       </div>
 
-      {/* Recent Complaints table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Recent Barangay Activities table */}
+      <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden">
         <div className="px-4 sm:px-5 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <h2 className="text-base font-semibold text-gray-700">
-            {t("dashboard.recentComplaints")}
+            {t("dashboard.recentBarangayActivities")}
           </h2>
           <span className="text-sm text-gray-500">
-            {complaints.length} {t("dashboard.columns.total").toLowerCase()}
+            {recentActivities.length} {t("dashboard.columns.total").toLowerCase()}
           </span>
         </div>
 
@@ -581,7 +652,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />
             ))}
           </div>
-        ) : recent.length === 0 ? (
+        ) : recentActivities.length === 0 ? (
           <div className="p-12 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-md bg-gray-100 mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,10 +661,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </svg>
             </div>
             <p className="text-base font-medium text-gray-900 mb-1">
-              {t("dashboard.noRecentActivities")}
+              {t("dashboard.noRecentBarangayActivities")}
             </p>
             <p className="text-sm text-gray-500">
-              {t("dashboard.noRecentActivitiesMessage")}
+              {t("dashboard.noRecentBarangayActivitiesMessage")}
             </p>
           </div>
         ) : (
@@ -604,27 +675,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
                     {t("dashboard.columns.id")}
                   </th>
-                  <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                    {t("dashboard.columns.title")}
-                  </th>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide hidden md:table-cell">
                     {t("dashboard.columns.category")}
                   </th>
                   <th className="px-5 py-3 text-left text-sm font-semibold text-gray-600 uppercase tracking-wide">
-                    {t("dashboard.columns.status")}
+                    {t("dashboard.columns.action")}
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {recent.map((c) => (
+                {recentActivities.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-mono text-sm text-gray-500">
                       #{c.id}
-                    </td>
-                    <td className="px-5 py-3 text-gray-900 font-medium text-base">
-                      <div className="truncate max-w-xs sm:max-w-sm">
-                        {c.title}
-                      </div>
                     </td>
                     <td className="px-5 py-3 text-gray-600 text-base hidden md:table-cell">
                       {formatCategoryName(c.category?.category_name)}

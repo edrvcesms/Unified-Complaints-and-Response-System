@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, X } from "lucide-react";
+import { Bell, KeyRound, Users, X } from "lucide-react";
 import StaMariaLogo from "../assets/StaMariaLogo.jpg";
 import { useUserRole } from "../hooks/useUserRole";
 import { LanguageSwitcher } from "../features/general/LanguageSwitcher";
@@ -13,6 +13,9 @@ import { ToastContainer } from "../components/Toast";
 import type { Notification } from "../types/notifications/notification";
 import { formatTimeAgo } from "../utils/dateUtils";
 import { subscribeToPushNotifications, savePushSubscription } from "../services/notifications/pushNotification";
+import { useAddBarangayMember, useBarangayMembers, useRemoveBarangayMember } from "../hooks/useBarangays";
+import { BarangayMembersModal } from "../features/barangay/components/BarangayMembersModal";
+import { ChangePasswordModal } from "../features/general/ChangePasswordModal";
 
 interface NavbarProps {
   onLogout: () => void;
@@ -29,7 +32,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRole, getDisplayName } = useUserRole();
+  const { userRole, getDisplayName, getUserData } = useUserRole();
+  const barangayId = userRole === "barangay_official" ? getUserData()?.id : undefined;
+  const { members, isLoading: isLoadingMembers, refetch: refetchMembers } = useBarangayMembers(barangayId);
+  const addMemberMutation = useAddBarangayMember(barangayId ?? 0);
+  const removeMemberMutation = useRemoveBarangayMember(barangayId ?? 0);
 
   const displayName = getDisplayName();
 
@@ -43,6 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   const confirmationModal = useConfirmationModal();
   const { notifications, isLoading, markAsRead, markAllAsRead } = useNotificationData();
@@ -421,6 +430,32 @@ const handleBellClick = () => {
                     <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
                     <p className="text-xs text-gray-500 truncate mt-0.5">{ROLES[userRole as keyof typeof ROLES] || userRole || 'User'}</p>
                   </div>
+                  {userRole === "barangay_official" && barangayId && (
+                    <button
+                      role="menuitem"
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        setIsMembersModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-green-50 transition duration-150 text-left cursor-pointer"
+                    >
+                      <Users className="h-4 w-4 text-green-600" />
+                      Members
+                    </button>
+                  )}
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setIsChangePasswordModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-green-50 transition duration-150 text-left cursor-pointer"
+                  >
+                    <KeyRound className="h-4 w-4 text-green-600" />
+                    {t('nav.changePassword')}
+                  </button>
                   <LanguageSwitcher />
                   <div className="h-px bg-gray-100 mx-4" />
                   <button
@@ -441,6 +476,29 @@ const handleBellClick = () => {
           </div>
         </nav>
       </header>
+
+      {isMembersModalOpen && barangayId && (
+        <BarangayMembersModal
+          members={members}
+          isLoading={isLoadingMembers}
+          isAdding={addMemberMutation.isPending}
+          removingMemberId={removeMemberMutation.isPending ? removeMemberMutation.variables : undefined}
+          onAdd={async (payload) => {
+            await addMemberMutation.mutateAsync(payload);
+            await refetchMembers();
+          }}
+          onRemove={async (memberId) => {
+            await removeMemberMutation.mutateAsync(memberId);
+            await refetchMembers();
+          }}
+          onClose={() => setIsMembersModalOpen(false)}
+        />
+      )}
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+      />
 
       {/* MOBILE: full-screen overlay notification panel */}
       {isMobile && notificationDropdownOpen && (

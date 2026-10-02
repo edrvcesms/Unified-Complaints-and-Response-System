@@ -26,3 +26,4 @@ from .rejection_categories import RejectionCategory
 from .push_token import PushToken
 from .user_device import UserDevice
 from .push_subscriptions import PushSubscription
+from .barangay_members import BarangayMember

@@ -28,9 +28,10 @@ from typing import List
 from app.services.complaint_services import log_status_change
 from app.utils.query_optimization import QueryOptions, BatchLoader, StatisticsHelper
 from app.core.pagination import paginate
-from app.core.pagination_params import ListParams
+from app.core.pagination_params import IncidentListParams
 from app.core.pagination_response import PaginatedResponse
 from app.utils.caching import DEFAULT_LIST_CACHE_TTL_SECONDS, EMPTY_LIST_CACHE_TTL_SECONDS, build_list_cache_key
+from app.utils.incident_filter import _apply_incident_filters_and_sort
 
 
 def _has_lgu_forwarded_complaint(statuses):
@@ -45,7 +46,7 @@ def _has_lgu_forwarded_complaint(statuses):
     )
 
 
-async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
+async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentData]:
     try:
         cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), barangay_id=barangay_id, view="lgu_forwarded")
         forwarded_incidents_cache = await get_cache(cache_key)
@@ -66,6 +67,7 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
             .options(*QueryOptions.incident_full())
             .order_by(IncidentModel.first_reported_at.asc())
         )
+        statement = _apply_incident_filters_and_sort(statement, params)
         logger.info(f"Executed query to get forwarded incidents for barangay ID: {barangay_id}")
         
         page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
@@ -80,7 +82,7 @@ async def get_forwarded_incidents_by_barangay(barangay_id: int, db: AsyncSession
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
       
       
-async def get_all_forwarded_incidents(db: AsyncSession, params: ListParams) -> PaginatedResponse[IncidentData]:
+async def get_all_forwarded_incidents(db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentData]:
     try:
         cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), view="lgu_forwarded")
         forwarded_incidents = await get_cache(cache_key)
@@ -97,6 +99,7 @@ async def get_all_forwarded_incidents(db: AsyncSession, params: ListParams) -> P
             .options(*QueryOptions.incident_full())
             .order_by(IncidentModel.first_reported_at.asc())
         )
+        statement = _apply_incident_filters_and_sort(statement, params)
         logger.info("Executed query to get all forwarded incidents")
         page = await paginate(db, statement, params, mapper=lambda item: IncidentData.model_validate(item, from_attributes=True))
         response = PaginatedResponse[IncidentData].model_validate(page)

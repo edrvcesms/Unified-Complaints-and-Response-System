@@ -12,6 +12,7 @@ export interface IncidentQueryParams extends PaginationQueryParams {
   severity_score_min?: number;
   severity_score_max?: number;
   complaint_status?: string;
+  category_name?: string;
   date_from?: string; // YYYY-MM-DD
   date_to?: string;   // YYYY-MM-DD
 }
@@ -59,10 +60,10 @@ export const getComplaintsByIncidentId = async (incidentId: number, params: Pagi
 
 export const resolveIncident = async (
   incidentId: number,
-  payload: { actions_taken: string; attachments?: File[] }
+  payload: { actions_taken: string; attachments?: File[]; barangay_member_ids?: number[] }
 ): Promise<void> => {
   try {
-    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments);
+    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments, payload.barangay_member_ids);
     await incidentsApi.patch(`/${incidentId}/resolve`, formData);
   } catch (error) {
     console.error("Error resolving incident:", error);
@@ -72,11 +73,11 @@ export const resolveIncident = async (
 
 export const reviewIncident = async (
   incidentId: number,
-  payload: { actions_taken: string; attachments?: File[] },
+  payload: { actions_taken: string; attachments?: File[]; barangay_member_ids?: number[] },
   signal?: AbortSignal
 ): Promise<void> => {
   try {
-    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments);
+    const formData = buildIncidentActionFormData(payload.actions_taken, undefined, payload.attachments, payload.barangay_member_ids);
     await incidentsApi.patch(`/${incidentId}/review`, formData, { signal });
   } catch (error) {
     console.error("Error reviewing incident:", error);
@@ -86,13 +87,14 @@ export const reviewIncident = async (
 
 export const rejectIncident = async (
   incidentId: number,
-  payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[] }
+  payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[]; barangay_member_ids?: number[] }
 ): Promise<void> => {
   try {
     const formData = buildIncidentActionFormData(
       payload.actions_taken,
       payload.rejection_category_id,
-      payload.attachments
+      payload.attachments,
+      payload.barangay_member_ids
     );
     const endpoint =
       typeof payload.rejection_category_id === "number"

@@ -423,23 +423,30 @@ async def login_user(login_data: UserLoginData, db: AsyncSession):
         if any(device.device_id == login_data.device_id for device in user_devices):
             return await _build_login_response(user)
 
-        generate_device_otp = generate_otp()
-        logger.info(f"Device not recognized for user {login_data.email}. OTP generated.")
-        await set_cache(f"device_otp:{login_data.email}", generate_device_otp, expiration=300)
-        send_otp_device_verification.delay(login_data.email, generate_device_otp, device_info={
-            "device_id": login_data.device_id,
-            "model": login_data.model,
-            "brand": login_data.brand,
-            "system_name": login_data.system_name,
-            "app_version": login_data.app_version,
-            "build_number": login_data.build_number
-        })
+        # generate_device_otp = generate_otp()
+        # logger.info(f"Device not recognized for user {login_data.email}. OTP generated.")
+        # await set_cache(f"device_otp:{login_data.email}", generate_device_otp, expiration=300)
+        # send_otp_device_verification.delay(login_data.email, generate_device_otp, device_info={
+        #     "device_id": login_data.device_id,
+        #     "model": login_data.model,
+        #     "brand": login_data.brand,
+        #     "system_name": login_data.system_name,
+        #     "app_version": login_data.app_version,
+        #     "build_number": login_data.build_number
+        # })
+        
         await set_cache(f"user_login_info:{login_data.email}", login_data.dict(), expiration=300)
+        
+
+        refresh_token = create_refresh_token(data={"user_id": user.id})
+        access_token = create_access_token(data={"user_id": user.id})
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content=jsonable_encoder({
-                "is_verified": False,
-                "message": "Device OTP sent successfully"
+                "is_verified": True,
+                "message": "Device OTP sent successfully",
+                "access_token": access_token,
+                "refresh_token": refresh_token if user.role == UserRole.USER else None
             })
         )
 

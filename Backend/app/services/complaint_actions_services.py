@@ -18,6 +18,8 @@ from app.utils.cache_invalidator_optimized import invalidate_cache
 from app.tasks.notification_tasks import send_notifications_task, send_push_notification_task, send_web_push_notification_task
 from app.models.response import Response
 from app.services.attachment_services import enqueue_response_attachments
+from app.tasks.response_tasks import assign_barangay_members_task
+from app.services.barangay_services import assign_barangay_members_to_response
 from app.services.complaint_services import log_status_change
 from fastapi.responses import JSONResponse
 from app.utils.logger import logger
@@ -58,6 +60,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="This incident is already under review"
                 )
+                
 
         await db.execute(
             update(Complaint)
@@ -71,6 +74,8 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
             changed_by_user_id=responder_id,
             db=db
         )
+        
+        assign_barangay_members_task.delay(complaint_ids=complaint_ids, barangay_member_ids=response_data.barangay_member_ids)
 
         await db.commit()
         
@@ -81,6 +86,7 @@ async def review_complaints_by_incident(response_data: ResponseCreateSchema, inc
             response_date=datetime.now(timezone.utc),
         )
         db.add(response)
+        await assign_barangay_members_to_response(db, response, response_data.barangay_member_ids)
         await db.commit()
         await db.refresh(response)
 
@@ -216,6 +222,8 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
             changed_by_user_id=responder_id,
             db=db
         )
+
+        assign_barangay_members_task.delay(complaint_ids=complaint_ids, barangay_member_ids=response_data.barangay_member_ids)
             
         await db.commit()
     
@@ -226,6 +234,7 @@ async def resolve_complaints_by_incident(response_data: ResponseCreateSchema, in
             response_date=datetime.now(timezone.utc),
         )
         db.add(response)
+        await assign_barangay_members_to_response(db, response, response_data.barangay_member_ids)
         await db.commit()
         await db.refresh(response)
 
@@ -407,6 +416,8 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
                 changed_by_user_id=rejector_id,
                 db=db
             )
+
+        assign_barangay_members_task.delay(complaint_ids=complaint_ids, barangay_member_ids=response_data.barangay_member_ids)
         
         response = Response(
             incident_id=incident_id,
@@ -415,6 +426,7 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
             response_date=datetime.now(timezone.utc),
         )
         db.add(response)
+        await assign_barangay_members_to_response(db, response, response_data.barangay_member_ids)
         await db.commit()
         await db.refresh(response)
 
@@ -680,6 +692,7 @@ async def reject_incident(incident_id: int, rejector_id: int, response_data: Res
             response_date=datetime.now(timezone.utc),
         )
         db.add(response)
+        await assign_barangay_members_to_response(db, response, response_data.barangay_member_ids)
         await db.commit()
         await db.refresh(response)
 

@@ -5,6 +5,7 @@ interface StatCardProps {
   bg?: string;
   border?: string;
   icon?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ 
@@ -13,7 +14,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   color, 
   bg, 
   border = "border-gray-200", 
-  icon 
+  icon,
+  onClick,
 }) => {
   if (!icon) {
     return (
@@ -25,7 +27,18 @@ export const StatCard: React.FC<StatCardProps> = ({
   }
 
   return (
-    <div className={`bg-white rounded-lg border ${border} p-5 flex items-center gap-4`}>
+    <div
+    className={`bg-white rounded-lg border-2 ${border} p-5 flex items-center gap-4 ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <div className={`w-12 h-12 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
         <span className={color}>{icon}</span>
       </div>

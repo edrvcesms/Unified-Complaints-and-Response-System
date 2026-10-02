@@ -152,6 +152,7 @@ async def review_incident_complaints(
 async def reject_incident_complaints(
     request: Request,
     incident_id: int,
+    response_data: Optional[str] = Form(None),
     actions_taken: Optional[str] = Form(None),
     rejection_category_id: int = Form(...),
     attachments: List[UploadFile] = File([]),
@@ -163,9 +164,11 @@ async def reject_incident_complaints(
         logger.warning(f"Unauthorized access attempt by user ID: {current_user.id} with role: {current_user.role}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this resource.")
     
+    parsed_response = parse_response_data(response_data, actions_taken)
     response_payload = RejectComplaintSchema(
-        actions_taken=actions_taken.strip() if actions_taken else "",
+        actions_taken=parsed_response.actions_taken,
         rejection_category_id=rejection_category_id,
+        barangay_member_ids=parsed_response.barangay_member_ids,
     )
     return await reject_complaints_by_incident(incident_id, current_user.id, response_payload, attachments=attachments, db=db)
 

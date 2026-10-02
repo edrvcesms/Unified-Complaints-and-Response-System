@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { validateAttachments } from "../../utils/attachmentHelper";
 import { validateActionsTaken } from "../../utils/validators";
+import { BarangayMemberDropdown } from "../barangay/components/BarangayMemberDropdown";
 
 const MAX_UPLOAD_FILES = 3;
 
@@ -10,11 +11,12 @@ interface ActionsTakenModalProps {
   title: string;
   confirmText: string;
   confirmColor: "red" | "green" | "yellow" | "blue";
-  onConfirm: (actionsTaken: string, attachments: File[]) => void;
+  onConfirm: (actionsTaken: string, attachments: File[], barangayMemberIds: number[]) => void;
   onCancel: () => void;
   isLoading?: boolean;
   description?: string;
   externalError?: string;
+  barangayMembers?: Array<{ id: number; name: string; position: string }>;
 }
 
 const colorClasses = {
@@ -34,12 +36,14 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
   isLoading = false,
   description,
   externalError,
+  barangayMembers = [],
 }) => {
   const { t } = useTranslation();
   const [actionsTaken, setActionsTaken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState("");
   const [actionsTakenError, setActionsTakenError] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
       setSelectedFiles([]);
       setFileError("");
       setActionsTakenError("");
+      setSelectedMemberIds([]);
     }
   }, [isOpen]);
 
@@ -113,7 +118,7 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
               return;
             }
             try {
-               onConfirm(actionsTaken, selectedFiles);
+               onConfirm(actionsTaken, selectedFiles, selectedMemberIds.map(Number));
             } catch (err) {
               console.error("Submit failed:", err);
             }
@@ -121,6 +126,17 @@ export const ActionsTakenModal: React.FC<ActionsTakenModalProps> = ({
         >
           {description && (
             <p className="text-sm text-gray-600 mb-2">{description}</p>
+          )}
+          {barangayMembers.length > 0 && (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Responsible Barangay Member</label>
+              <BarangayMemberDropdown
+                members={barangayMembers}
+                selectedMemberIds={selectedMemberIds}
+                onChange={setSelectedMemberIds}
+                disabled={isLoading}
+              />
+            </div>
           )}
           <label className="block text-lg font-medium text-gray-700 mb-2">{t('frontend.actionsTaken.label')}</label>
           <textarea

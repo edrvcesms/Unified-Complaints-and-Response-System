@@ -4,9 +4,9 @@ import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, UserRound, Building2, Clock, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
-import { formatDateTime } from "../../../utils/dateUtils";
+import { formatDate, formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useResolveIncident, useReviewIncident, useForwardIncidentToLgu, useNotifyHearing, useRejectIncident, useRescheduleHearing, useMarkHearingSuccess } from '../../../hooks/useIncidents';
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
@@ -21,6 +21,19 @@ import type { ComplaintStatus } from '../../../types/complaints/complaint';
 import { validateAttachments } from '../../../utils/attachmentHelper';
 import { RejectIncidentModal } from "../components/RejectIncidentModal";
 import { startOfTomorrow } from "date-fns";
+import { useBarangayMembers } from "../../../hooks/useBarangays";
+
+const btnBase =
+  "inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed";
+const btnOutline = `${btnBase} bg-gray-50 text-gray-700 border-gray-400 hover:bg-gray-200`;
+const btnYellow = `${btnBase} bg-yellow-500 text-white border-yellow-400 hover:bg-yellow-700`;
+const btnBlue = `${btnBase} bg-blue-500 text-white border-blue-400 hover:bg-blue-700`;
+const btnGreen = `${btnBase} bg-green-500 text-white border-green-400 hover:bg-green-700`;
+const btnDanger = `${btnBase} bg-red-500 text-white border-red-400 hover:bg-red-700`;
+const btnSolid = `${btnBase} bg-green-600 text-white border-green-600 hover:bg-green-700`;
+
+// Shared card style used by each section
+const card = "bg-white border border-gray-200 rounded-xl shadow-sm p-5";
 
 const getResponseAuthorName = (response: any, incident: any) => {
   if (response?.user) {
@@ -96,6 +109,7 @@ export const IncidentDetails: React.FC = () => {
   const navigate = useNavigate();
 
   const { incident, isLoading, error } = useIncidentDetails(Number(incidentId));
+  const { members: barangayMembers } = useBarangayMembers(incident?.barangay?.id);
 
   const resolveIncidentMutation = useResolveIncident(Number(incidentId));
   const reviewIncidentMutation = useReviewIncident(Number(incidentId));
@@ -334,6 +348,10 @@ export const IncidentDetails: React.FC = () => {
     if (markHearingMutation.isSuccess) {
       confirmationModal.closeModal();
       const isSuccessful = markHearingMutation.variables === true;
+      if (isSuccessful) {
+        navigate('/dashboard/incidents');
+        return;
+      }
       setSuccessModal({
         isOpen: true,
         title: 'Success!',
@@ -343,7 +361,7 @@ export const IncidentDetails: React.FC = () => {
         shouldNavigateOnClose: false,
       });
     }
-  }, [markHearingMutation.isSuccess, markHearingMutation.variables]);
+  }, [markHearingMutation.isSuccess, markHearingMutation.variables, navigate]);
 
   // Handle mark hearing error
   useEffect(() => {
@@ -365,7 +383,7 @@ export const IncidentDetails: React.FC = () => {
       description: "Please describe the actions taken to resolve this incident. This will be recorded and visible to complainants.",
       confirmText: "Resolve",
       confirmColor: "green",
-      onConfirm: async (actionsTaken: string, attachments: File[]) => {
+      onConfirm: async (actionsTaken: string, attachments: File[], barangayMemberIds: number[]) => {
         const validationError = validateAttachments(attachments);
         if (validationError) {
           setAttachmentError(validationError);
@@ -373,7 +391,7 @@ export const IncidentDetails: React.FC = () => {
         }
 
         actionsTakenModal.setIsLoading(true);
-        await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments });
+        await resolveIncidentMutation.mutateAsync({ actions_taken: actionsTaken, attachments, barangay_member_ids: barangayMemberIds });
         actionsTakenModal.setIsLoading(false);
       },
     });
@@ -386,7 +404,7 @@ export const IncidentDetails: React.FC = () => {
       description: "Please describe the actions taken or the reason this incident is being flagged for further review.",
       confirmText: "Confirm",
       confirmColor: "yellow",
-      onConfirm: async (actionsTaken: string, attachments: File[]) => {
+      onConfirm: async (actionsTaken: string, attachments: File[], barangayMemberIds: number[]) => {
         try {
           const validationError = validateAttachments(attachments);
           if (validationError) {
@@ -397,6 +415,7 @@ export const IncidentDetails: React.FC = () => {
           await reviewIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
             attachments,
+            barangay_member_ids: barangayMemberIds,
             signal: abortController.signal,
           });
         } catch (err) {
@@ -566,6 +585,7 @@ export const IncidentDetails: React.FC = () => {
   const shouldShowHearingControls = !isResolved && !isRejected && !isForwardedToLgu;
   const hearingDateLabel = getHearingDateLabel(hearingCount);
   const showNewComplaintBadge = Boolean(incident.has_new_complaints) || Number(incident.new_complaint_count ?? 0) > 0;
+  const severityLabel = String(incident.severity_level ?? '').replace(/_/g, ' ');
   const titleStatusBadge = isResolved
     ? { label: 'Resolved', className: 'bg-green-50 text-green-700 border-green-200', dotClassName: 'bg-green-600' }
     : isRejected 
@@ -588,250 +608,290 @@ export const IncidentDetails: React.FC = () => {
     if (!dateString) return '';
     const date = new Date(dateString);
     if (Number.isNaN(date.getTime())) return dateString;
-    return format(date, "MMMM d, yyyy 'at' hh:mm a");
+    return format(date, "M/d/yyyy 'at' hh:mm a");
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      {/* Top bar */}
+      <div className="flex items-center justify-between">
         <button
           onClick={() => navigate("/dashboard/incidents")}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="inline-flex items-center gap-1.5 text-sm border border-green-300 bg-green-500 rounded-md px-3 py-2 text-white hover:text-white-900 hover:bg-green-600 transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} />
           {t('incidents.details.backToIncidents')}
         </button>
+        <span className="text-sm text-slate-500">Incident #{incident.id}</span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 wrap-break-word">{incident.title}</h1>
-                  {titleStatusBadge && (
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${titleStatusBadge.className}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${titleStatusBadge.dotClassName}`} />
-                      {titleStatusBadge.label}
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-primary-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Category</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatCategoryName(incident.category?.category_name)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <MapPin className="text-purple-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Barangay</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.barangay?.barangay_name || "N/A"}
-                  </p>
-                  {hasLocation && (
-                    <button
-                      className="mt-2 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors"
-                      onClick={() => setIsMapOpen(true)}
-                    >
-                      View Incident Location
-                    </button>
-                  )}
-                  {/* Directions are shown inside the map modal when available */}
-                </div>
-              </div>
-              {/* Map Modal */}
-              {hasLocation && (
-                <MapModal
-                  open={isMapOpen}
-                  onClose={() => setIsMapOpen(false)}
-                  latitude={incident.latitude}
-                  longitude={incident.longitude}
-                  originLatitude={incident.barangay?.latitude ?? null}
-                  originLongitude={incident.barangay?.longitude ?? null}
-                  incidentTitle={incident.title}
-                />
-              )}
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-orange-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Severity Level</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.severity_level.replace("_", " ")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <Users className="text-green-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.totalComplaints')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.complaint_count}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-slate-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.firstReported')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatDateTime(incident.first_reported_at)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-slate-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.lastReported')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatDateTime(incident.last_reported_at)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {incident.description}
-            </p>
-          </div>
-        </div>
-
-
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t('incidents.details.remarks')}
-            </h2>
-            {sortedResponses.length === 0 ? (
-              <p className="text-sm text-gray-600">No responses yet.</p>
-            ) : (
-              <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
-                {sortedResponses.map((response) => {
-                  const attachments = response.response_attachments ?? [];
-
-                  return (
-                    <div key={response.id} className="rounded-md border border-gray-200 p-3">
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap leading-6">
-                        {response.actions_taken}
-                      </p>
-
-                      {attachments.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {attachments.map((attachment: any, idx: number) => (
-                            <ResponseMediaAction
-                              key={attachment.id ?? idx}
-                              attachment={attachment}
-                              onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-xs text-gray-500">
-                          {getResponseAuthorName(response, incident)}
-                        </p>
-                        <p className="text-[11px] text-gray-400">
-                          {formatDateTime(response.response_date)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+      {/* Title, badges, location (card) */}
+      <div className={`${card} col-span-1 sm:col-span-2 lg:col-span-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4`}>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold text-gray-900 wrap-break-word">{incident.title}</h1>
+            {titleStatusBadge && (
+              <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-sm font-medium ${titleStatusBadge.className}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${titleStatusBadge.dotClassName}`} />
+                {titleStatusBadge.label}
               </div>
             )}
-
-            <div className="border-t pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                  {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
-                </h3>
-                <button
-                  onClick={handleViewAllComplaints}
-                  className="relative px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                >
-                  {t('incidents.details.viewAllComplaints')}
-                  {showNewComplaintBadge && (
-                    <span className="absolute -top-2.5 -right-2.5 flex items-center justify-center">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
-                      <span className="relative flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-orange-500 text-white text-[15px] font-bold">
-                        {incident.complaint_count}
-                      </span>
-                    </span>
-                  )}
-                </button>
-              </div>
-              <p className="text-sm text-gray-600">
-                View all the related complaints in this incident.
-              </p>
-            </div>
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-50 text-sm font-medium text-primary-700 border border-primary-100">
+              <AlertCircle size={14} />
+              Category: {formatCategoryName(incident.category?.category_name)}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 text-sm font-medium text-orange-700 border border-orange-100 capitalize">
+              <AlertCircle size={14} />
+              severity: {severityLabel}
+            </span>
+            
+          </div>
+          {hasScheduledHearingDate && (
+              <span className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 text-sm text-gray-700">
+                <CalendarIcon size={14} className="text-gray-500" />
+                {hearingDateLabel}: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
+              </span>
+            )}
         </div>
+
+        {hasLocation && (
+          <button onClick={() => setIsMapOpen(true)} className={btnGreen}>
+            <MapPin size={15} />
+            View incident location
+          </button>
+        )}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        {isResolved || isRejected || isForwardedToLgu ? null : (
-          <>
+      {/* Map modal (directions are shown inside the modal when available) */}
+      {hasLocation && (
+        <MapModal
+          open={isMapOpen}
+          onClose={() => setIsMapOpen(false)}
+          latitude={incident.latitude}
+          longitude={incident.longitude}
+          originLatitude={incident.barangay?.latitude ?? null}
+          originLongitude={incident.barangay?.longitude ?? null}
+          incidentTitle={incident.title}
+        />
+      )}
+
+      {/* Metadata cards */}
+      <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-11 h-11 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+            <MapPin size={20} />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">Barangay</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900 truncate">
+              {incident.barangay?.barangay_name || "N/A"}
+            </dd>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-11 h-11 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center shrink-0">
+            <Users size={20} />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">{t('incidents.details.totalComplaints')}</dt>
+            <dd className="mt-0.5 text-base font-semibold text-primary-700">{incident.complaint_count}</dd>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <CalendarIcon size={20} />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">{t('incidents.details.firstReported')}</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900">
+              {formatDate(incident.first_reported_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}
+            </dd>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-11 h-11 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+            <Clock size={20} />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">{t('incidents.details.lastReported')}</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900">
+              {formatDate(incident.last_reported_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}
+            </dd>
+          </div>
+        </div>
+      </dl>
+
+      {/* Description + remarks */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+        <div className="lg:col-span-3 space-y-6">
+          {/* Description card */}
+          <section className={card}>
+            <h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.description')}</h2>
+            <p className="text-base text-slate-800 leading-relaxed whitespace-pre-wrap">
+              {incident.description}
+            </p>
+          </section>
+
+          {/* Related complaints card */}
+          <section className={`${card} flex items-center justify-between gap-3`}>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-primary-700">
+                {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
+              </h3>
+              <p className="text-sm text-slate-600">View all complaints associated with this incident.</p>
+            </div>
+            <button onClick={handleViewAllComplaints} className={`${btnOutline} relative shrink-0`}>
+              <Users size={15} />
+              {t('incidents.details.viewAllComplaints')}
+              {showNewComplaintBadge && (
+                <span className="absolute -top-2 -right-2 flex items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
+                  <span className="relative flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-orange-500 text-white text-xs font-bold">
+                    {incident.complaint_count}
+                  </span>
+                </span>
+              )}
+            </button>
+          </section>
+        </div>
+
+        {/* Remarks card */}
+        <section className={`${card} lg:col-span-2`}>
+          <h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.remarks')}</h2>
+
+          {sortedResponses.length === 0 ? (
+            <p className="text-base text-slate-500">No responses yet.</p>
+          ) : (
+            <div className={`${sortedResponses.length > 2 ? 'max-h-80 overflow-y-auto' : ''} space-y-3 pr-1`}>
+              {sortedResponses.map((response) => {
+                const attachments = response.response_attachments ?? [];
+                const assignedMembers = response.barangay_members ?? [];
+
+                return (
+                  <div key={response.id} className="rounded-lg border border-gray-300 bg-slate-50 p-4 shadow-sm">
+                    <p className="text-base text-slate-800 whitespace-pre-wrap leading-6">
+                      {response.actions_taken}
+                    </p>
+
+                    {attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {attachments.map((attachment: any, idx: number) => (
+                          <ResponseMediaAction
+                            key={attachment.id ?? idx}
+                            attachment={attachment}
+                            onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {assignedMembers.length > 0 && (
+                      <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-600">
+                        <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {t('incidents.details.assignedTo')}: {assignedMembers.map((member: any) => member.name).join(", ")}
+                      </p>
+                    )}
+
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      
+                      <p className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                        <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {getResponseAuthorName(response, incident)}
+                      </p>
+                      <p className="text-xs text-slate-400">{formatDateTime(response.response_date, { year: 'numeric', month: 'numeric', day: 'numeric' })}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* Action bar card: incident actions and hearing controls in one place */}
+      {shouldShowHearingControls && (
+        <div className={`${card} flex flex-wrap items-center justify-between gap-3`}>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleReview}
-              disabled={isUnderReviewByBarangay ||  isUnderReviewByLgu || reviewIncidentMutation.isPending || isForwardedToLgu || isResolved || isRejectedByLgu}
-              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isUnderReviewByBarangay || isUnderReviewByLgu || reviewIncidentMutation.isPending || isForwardedToLgu || isResolved || isRejectedByLgu}
+              className={btnYellow}
             >
-              {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
+              {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for review"}
             </button>
             <button
               onClick={handleForwardToLgu}
-              disabled={forwardToLguMutation.isPending || isSubmitted || isResolved ||  isUnderReviewByLgu || isForwardedToLgu || isRejectedByLgu || isRejected}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={forwardToLguMutation.isPending || isSubmitted || isResolved || isUnderReviewByLgu || isForwardedToLgu || isRejectedByLgu || isRejected}
+              className={btnBlue}
             >
               {forwardToLguMutation.isPending ? "Forwarding..." : "Escalate to LGU"}
             </button>
             <button
               onClick={handleReject}
-              disabled={!isUnderReviewByBarangay  || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved || isRejected}
-              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!isUnderReviewByBarangay || isForwardedToLgu || rejectIncidentMutation.isPending || isResolved || isRejected}
+              className={btnDanger}
             >
-              {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
+              {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject"}
             </button>
+            
             <button
               onClick={handleResolve}
               disabled={isUnderReviewByLgu || resolveIncidentMutation.isPending || isSubmitted || isResolved || isForwardedToLgu || isRejected}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={btnSolid}
             >
-              {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
+              {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve"}
             </button>
-          </>
-        )}
-      </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {hasScheduledHearingDate && (
+              <>
+                <button
+                  onClick={() => handleMarkHearingOutcome(true)}
+                  disabled={markHearingMutation.isPending || hearingOutcome !== null}
+                  className={btnOutline}
+                >
+                  {markHearingMutation.isPending ? 'Updating...' : 'Hearing successful'}
+                </button>
+                <button
+                  onClick={() => handleMarkHearingOutcome(false)}
+                  disabled={markHearingMutation.isPending || hearingOutcome !== null}
+                  className={btnDanger}
+                >
+                  {markHearingMutation.isPending ? 'Updating...' : 'Hearing unsuccessful'}
+                </button>
+              </>
+            )}
+
+            {!hasScheduledHearingDate && (
+              <button
+                onClick={() => handleOpenHearingModal('notify')}
+                disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByLgu || isForwardedToLgu || isRejected}
+                className={btnOutline}
+              >
+                <CalendarIcon size={15} />
+                {isHearingMutationPending ? 'Notifying...' : 'Notify for hearing'}
+              </button>
+            )}
+
+            {canScheduleFollowUpHearing && (
+              <button
+                onClick={() => handleOpenHearingModal('reschedule')}
+                disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByLgu || isForwardedToLgu || isRejected}
+                className={btnOutline}
+              >
+                <CalendarIcon size={15} />
+                {isHearingMutationPending ? 'Rescheduling...' : 'Schedule new hearing'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {lightboxAttachment && (
         <ResponseMediaLightbox
@@ -850,6 +910,7 @@ export const IncidentDetails: React.FC = () => {
         onCancel={actionsTakenModal.cancelModal}
         isLoading={actionsTakenModal.isLoading}
         externalError={attachmentError}
+        barangayMembers={barangayMembers}
       />
 
       <RejectIncidentModal
@@ -866,65 +927,16 @@ export const IncidentDetails: React.FC = () => {
         rejectionCategories={rejectionCategories ?? []}
         isLoadingCategories={isLoadingRejectionCategories}
         categoryError={rejectionCategoriesError ? 'Failed to load rejection reasons. Please try again.' : undefined}
-        onConfirm={async (actionsTaken: string, rejectionCategoryId: number, attachments: File[]) => {
+        barangayMembers={barangayMembers}
+        onConfirm={async (actionsTaken: string, rejectionCategoryId: number, attachments: File[], barangayMemberIds: number[]) => {
           await rejectIncidentMutation.mutateAsync({
             actions_taken: actionsTaken,
             rejection_category_id: rejectionCategoryId,
             attachments,
+            barangay_member_ids: barangayMemberIds,
           });
         }}
       />
-
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        {hasScheduledHearingDate && shouldShowHearingControls && (
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-primary-50 rounded-full text-sm text-primary-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0" />
-            {hearingDateLabel}: <span className="font-medium">{formatHearingDate(incidentHearingDate as string)}</span>
-          </div>
-        )}
-
-        {hasScheduledHearingDate && shouldShowHearingControls && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleMarkHearingOutcome(true)}
-              disabled={markHearingMutation.isPending || hearingOutcome !== null}
-              className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >   
-              {markHearingMutation.isPending ? 'Updating...' : 'Mark Hearing Successful'}
-            </button>
-            <button
-              onClick={() => handleMarkHearingOutcome(false)}
-              disabled={markHearingMutation.isPending || hearingOutcome !== null}
-              className="px-3 py-2 bg-rose-600 text-white text-sm font-medium rounded-md hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {markHearingMutation.isPending ? 'Updating...' : 'Mark Hearing Unsuccessful'}
-            </button>
-          </div>
-        )}
-
-        {!hasScheduledHearingDate && shouldShowHearingControls && (
-          <button
-            onClick={() => handleOpenHearingModal('notify')}
-            disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByLgu || isForwardedToLgu || isRejected}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <CalendarIcon className="w-4 h-4 text-primary-200" />
-            {isHearingMutationPending ? 'Notifying...' : 'Notify Complainants for Hearing'}
-          </button>
-        )}
-
-        {canScheduleFollowUpHearing && shouldShowHearingControls && (
-          <button
-            onClick={() => handleOpenHearingModal('reschedule')}
-            disabled={isHearingMutationPending || isSubmitted || isResolved || isUnderReviewByLgu || isForwardedToLgu || isRejected}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-700 text-white text-sm font-medium rounded-xl hover:bg-primary-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <CalendarIcon className="w-4 h-4 text-primary-200" />
-            {isHearingMutationPending ? 'Rescheduling...' : 'Schedule a New Hearing'}
-          </button>
-        )}
-      </div>
 
       {/* Modal */}
       {isHearingModalOpen && (

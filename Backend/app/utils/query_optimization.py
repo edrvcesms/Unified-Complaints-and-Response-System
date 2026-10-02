@@ -147,6 +147,7 @@ class QueryOptions:
         QueryOptions._response_attachment_summary_load(
             selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
         ),
+        selectinload(IncidentModel.responses).selectinload(Response.barangay_members),
         selectinload(IncidentModel.complaint_clusters)
         .selectinload(IncidentComplaintModel.complaint)
         .load_only(
@@ -193,6 +194,7 @@ class QueryOptions:
             QueryOptions._response_attachment_summary_load(
                 selectinload(IncidentModel.responses).selectinload(Response.response_attachments)
             ),
+            selectinload(IncidentModel.responses).selectinload(Response.barangay_members),
             selectinload(IncidentModel.complaint_clusters)
             .selectinload(IncidentComplaintModel.complaint)
             .load_only(
@@ -259,6 +261,10 @@ class QueryOptions:
             .selectinload(IncidentComplaintModel.incident)
             .selectinload(IncidentModel.responses)
             .selectinload(Response.user),
+            selectinload(Complaint.incident_links)
+            .selectinload(IncidentComplaintModel.incident)
+            .selectinload(IncidentModel.responses)
+            .selectinload(Response.barangay_members),
             selectinload(Complaint.incident_links)
             .selectinload(IncidentComplaintModel.incident)
             .selectinload(IncidentModel.responses)

@@ -4,6 +4,13 @@ import type { PaginatedResponse } from "../../types/general/pagination";
 import type { PaginationQueryParams } from "../../types/general/pagination";
 import { buildQueryString } from "../../utils/buildQuery";
 
+export interface BarangayMember {
+  id: number;
+  barangay_id: number;
+  name: string;
+  position: string;
+}
+
 export const getAllBarangays = async (params?: PaginationQueryParams): Promise<PaginatedResponse<BarangayAccountData>> => {
   try {
     const queryString = buildQueryString(params || {});
@@ -30,4 +37,21 @@ export const markBarangayIncidentsViewed = async (barangayId: number): Promise<{
     console.error("Error marking barangay incidents as viewed:", error);
     throw error;
   }
+};
+
+export const getBarangayMembers = async (barangayId: number): Promise<BarangayMember[]> => {
+  try {
+    return await barangayApi.get(`/${barangayId}/members`);
+  } catch (error) {
+    console.error("Error fetching barangay members:", error);
+    throw error;
+  }
+};
+
+export const addBarangayMember = async (barangayId: number, payload: { name: string; position: string }) => {
+  return await barangayApi.post(`/${barangayId}/add-member`, payload);
+};
+
+export const removeBarangayMember = async (barangayId: number, memberId: number) => {
+  return await barangayApi.delete(`/${barangayId}/remove-member/${memberId}`);
 };

@@ -1,12 +1,14 @@
-import { ArchivedIncidentsPage } from "../../general/ArchivedIncidentsPage";
+import { ArchivedIncidentsPage } from "../../general/pages/ArchivedIncidentsPage";
+import { useTranslation } from "react-i18next";
 
 export const LguArchiveIncidents: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <ArchivedIncidentsPage
-      title="Incident Archive"
-      description="Browse all incidents recorded across the system."
+      title={t('archive.title')}
+      description={t('archive.description')}
       detailPathBase="/lgu/incidents"
-      emptyMessage="No archived incidents found for LGU users."
+      emptyMessage={t('archive.emptyLgu')}
     />
   );
 };

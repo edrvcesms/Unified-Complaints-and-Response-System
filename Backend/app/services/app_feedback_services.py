@@ -15,6 +15,7 @@ from app.schemas.app_feedback_schema import AppFeedbackCreate, AppFeedbackRespon
 from datetime import datetime, timezone
 from app.utils.logger import logger
 from app.utils.caching import delete_cache, delete_cache_prefix
+from app.services.category_feedback_rates import CATEGORY_FEEDBACK_RATES_CACHE_KEY
 from app.core.pagination import paginate
 from app.core.pagination_params import ListParams
 from app.core.pagination_response import PaginatedResponse
@@ -130,10 +131,11 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
             created_at=datetime.now(timezone.utc)
         )
         db.add(new_feedback)
-        
+        await db.commit()
+
         await delete_cache(f"complaint:{feedbackData.complaint_id}")
         await delete_cache_prefix("post_incident_feedback")
-        await db.commit()
+        await delete_cache(CATEGORY_FEEDBACK_RATES_CACHE_KEY)
         
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,

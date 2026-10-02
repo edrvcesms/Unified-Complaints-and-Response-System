@@ -69,7 +69,7 @@ export type StatusFilter = "all" | "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
 
 export type SeverityScoreFilter = "all" | "0-3.9" | "4.0-5.9" | "6.0-7.9" | "8.0+";
 
-export type ComplaintStatusFilter = "all" | "submitted" | "resolved" | "forwarded_to_lgu"  |"resolved_by_barangay" |"reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu";
+export type ComplaintStatusFilter = "all" | "submitted" | "resolved" | "forwarded_to_lgu" | "resolved_by_barangay" | "reviewed_by_barangay" | "reviewed_by_lgu" | "resolved_by_lgu" | "rejected";
 
 export interface ComplaintsPageProps {
   complaints: Complaint[];
@@ -108,6 +108,23 @@ export const COMPLAINT_STATUS_FILTERS: { label: string; value: ComplaintStatusFi
   { label: "Reviewed by Barangay", value: "reviewed_by_barangay" },
   { label: "Reviewed by LGU", value: "reviewed_by_lgu" },
   { label: "Resolved by LGU", value: "resolved_by_lgu" },
+  { label: "Rejected", value: "rejected" },
 ];
+
+export const BARANGAY_ARCHIVE_STATUS_FILTERS: { label: string; value: ComplaintStatusFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "Resolved by Barangay", value: "resolved_by_barangay" },
+  { label: "Resolved by LGU", value: "resolved_by_lgu" },
+  { label: "Forwarded to LGU", value: "forwarded_to_lgu" },
+  { label: "Rejected", value: "rejected" },
+];
+
+export const BARANGAY_INCIDENT_STATUS_FILTERS = COMPLAINT_STATUS_FILTERS.filter(({ value }) =>
+  value === "all" || value === "submitted" || value === "reviewed_by_barangay"
+);
+
+export const LGU_INCIDENT_STATUS_FILTERS = COMPLAINT_STATUS_FILTERS.filter(({ value }) =>
+  value === "all" || value === "forwarded_to_lgu" || value === "reviewed_by_lgu"
+);
 
 export const ITEMS_PER_PAGE = 8;

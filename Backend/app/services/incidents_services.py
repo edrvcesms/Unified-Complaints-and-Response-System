@@ -102,6 +102,9 @@ async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: 
             )
             statement = statement.where(complaint_status_filter)
 
+        if params.category_name:
+            statement = statement.where(IncidentModel.category.has(Category.category_name == params.category_name))
+
         if params.search:
             term = f"%{params.search}%"
             statement = statement.where(or_(

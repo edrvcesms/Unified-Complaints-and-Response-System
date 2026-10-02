@@ -4,14 +4,31 @@ import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "../../barangay/components/Pagination";
 import { TableSkeleton } from "../../barangay/components/Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
-import { getSeverityColor, getStatusColor, formatStatus } from "../../../utils/incidentHelpers";
+import { getSeverityColor, getStatusColor } from "../../../utils/incidentHelpers";
 import { useAuthStore } from "../../../store/authStore";
+
+const translateStatus = (status: string, t: (key: string) => string) => {
+  switch (status.toLowerCase()) {
+    case "submitted": return t('status.submitted');
+    case "under_review":
+    case "reviewed_by_barangay":
+    case "reviewed_by_lgu": return t('status.underReview');
+    case "forwarded_to_lgu": return t('status.forwarded');
+    case "resolved":
+    case "resolved_by_barangay":
+    case "resolved_by_lgu": return t('status.resolved');
+    case "rejected":
+    case "rejected_by_lgu": return t('status.rejected');
+    default: return t('status.unknown');
+  }
+};
 
 interface LguIncidentTableRowProps {
   incident: Incident;
 }
 
 const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const userRole = useAuthStore(state => state.userRole);
   const hasNewComplaints = incident.has_new_complaints || (incident.new_complaint_count ?? 0) > 0;
@@ -25,28 +42,20 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">
-        #{incident.id}
-      </td>
-      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center">
-        <span className="block truncate max-w-[11rem] sm:max-w-sm" title={incident.title}>
-          {incident.title}
-        </span>
-      </td>
+      <td className="px-4 py-3 text-xs text-gray-500 font-mono text-center">#{incident.id}</td>
+      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">{formatCategoryName(incident.category?.category_name)}</td>
+      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-center"><span className="block truncate max-w-[11rem] sm:max-w-sm" title={incident.title}>{incident.title}</span></td>
       <td className="px-4 py-3 text-sm text-gray-600 text-center hidden sm:table-cell">
         {incident.barangay?.barangay_name || "N/A"}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600 hidden md:table-cell text-center">
-        {formatCategoryName(incident.category?.category_name)}
-      </td>
       <td className="px-4 py-3 text-center">
         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getSeverityColor(incident.severity_level)}`}>
-          {incident.severity_level.replace("_", " ")}
+          {incident.severity_level === "LOW" ? t('incidents.severity.low') : incident.severity_level === "MODERATE" ? t('incidents.severity.moderate') : incident.severity_level === "HIGH" ? t('incidents.severity.high') : t('incidents.severity.veryHigh')}
         </span>
       </td>
       <td className="px-4 py-3 text-center">
         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${getStatusColor(incidentStatus, userRole || undefined)}`}>
-          {formatStatus(incidentStatus, userRole || undefined)}
+          {translateStatus(incidentStatus, t)}
         </span>
       </td>
       <td className="px-4 py-3 text-sm text-gray-700 font-semibold hidden sm:table-cell text-center">
@@ -58,7 +67,7 @@ const LguIncidentTableRow: React.FC<LguIncidentTableRowProps> = ({ incident }) =
           className="relative inline-flex min-h-9 items-center justify-center px-3 py-1 bg-primary-100 text-primary-800 rounded-md text-xs font-medium hover:bg-primary-200 transition-colors"
           title={hasNewComplaints && newComplaintCount > 0 ? `${newComplaintCount} new complaint${newComplaintCount > 1 ? 's' : ''}` : undefined}
         >
-          View
+          {t('incidents.view')}
           {hasNewComplaints && (
             <span className="absolute -top-2 -right-2 flex min-w-5 h-5 items-center justify-center rounded-full bg-orange-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-white">
               {newComplaintCount > 0 ? newComplaintCount : ''}
@@ -91,9 +100,9 @@ export const LguIncidentsTable: React.FC<LguIncidentsTableProps> = ({
 
   const TABLE_HEADERS = [
     { label: t('incidents.columns.incidentId'), className: "text-center" },
-    { label: t('incidents.columns.title'), className: "text-center" },
-    { label: 'Barangay', className: "hidden sm:table-cell text-center" },
     { label: t('incidents.columns.category'), className: "hidden md:table-cell text-center" },
+    { label: t('incidents.columns.title'), className: "text-center" },
+    { label: t('table.headers.barangay'), className: "hidden sm:table-cell text-center" },
     { label: t('incidents.columns.severity'), className: "text-center" },
     { label: t('incidents.columns.status'), className: "text-center" },
     { label: t('incidents.columns.complaintCounts'), className: "hidden sm:table-cell text-center" },
@@ -103,7 +112,7 @@ export const LguIncidentsTable: React.FC<LguIncidentsTableProps> = ({
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
-        Swipe horizontally to view all columns.
+        {t('incidents.swipeHint')}
       </div>
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <table className="w-full min-w-[700px]">
@@ -126,7 +135,7 @@ export const LguIncidentsTable: React.FC<LguIncidentsTableProps> = ({
             ) : incidents.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-4 py-16 text-center text-sm text-gray-500">
-                  No incidents found.
+                  {t('incidents.noResults')}
                 </td>
               </tr>
             ) : (

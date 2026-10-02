@@ -4,7 +4,7 @@ import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, Play, X, Image as ImageIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
-import { formatDateTime } from "../../../utils/dateUtils";
+import { formatDate, formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { useState, useEffect } from "react";
 import { ActionsTakenModal } from "../../general/ActionsTakenModal";
@@ -16,6 +16,13 @@ import { isAbortError } from "../../../utils/axiosException";
 import { SuccessModal } from "../../general/SuccessModal";
 import { ErrorModal } from "../../general/ErrorModal";
 import { validateAttachments } from '../../../utils/attachmentHelper';
+
+const glassButtonBase = "inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md border backdrop-blur-md shadow-lg transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed";
+const glassOutlineButton = `${glassButtonBase} bg-gray-50/70 text-gray-700 border-gray-400/70 hover:bg-gray-200/80`;
+const glassYellowButton = `${glassButtonBase} bg-yellow-500/75 text-white border-yellow-400/70 hover:bg-yellow-700/80`;
+const glassGreenButton = `${glassButtonBase} bg-green-600/80 text-white border-green-600/80 hover:bg-green-700/80`;
+const glassDangerButton = `${glassButtonBase} bg-red-500/75 text-white border-red-400/70 hover:bg-red-700/80`;
+const card = "bg-white border border-gray-200 rounded-xl shadow-sm p-5";
 
 const getResponseAuthorName = (response: any, incident: any) => {
   if (response?.user) {
@@ -300,230 +307,53 @@ export const LguIncidentDetails: React.FC = () => {
     return bTime - aTime;
   });
 
-  // formatHearingDate removed — not used in this view
+  const hasLocation =
+    typeof incident.latitude === 'number' &&
+    typeof incident.longitude === 'number' &&
+    !Number.isNaN(incident.latitude) &&
+    !Number.isNaN(incident.longitude);
+  const severityLabel = String(incident.severity_level ?? '').replace(/_/g, ' ');
 
 
   return (
     <div className="space-y-6">
-      <button
-        onClick={() => navigate("/lgu/incidents")}
-        className="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-      >
-        <ArrowLeft size={16} />
-        {t('incidents.details.backToIncidents')}
-      </button>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{incident.title}</h1>
-                  {titleStatusBadge && (
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${titleStatusBadge.className}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${titleStatusBadge.dotClassName}`} />
-                      {titleStatusBadge.label}
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-1">Incident #{incident.id}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-primary-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Category</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatCategoryName(incident.category?.category_name)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <MapPin className="text-purple-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Barangay</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.barangay?.barangay_name || "N/A"}
-                  </p>
-                  {incident.latitude !== null && incident.longitude !== null && (
-                    <button
-                      className="mt-2 px-3 py-1 bg-primary-600 text-white text-xs rounded hover:bg-primary-700 transition-colors"
-                      onClick={() => setIsMapOpen(true)}
-                    >
-                      View Incident Location
-                    </button>
-                  )}
-                </div>
-              </div>
-      {/* Map Modal */}
-      {incident.latitude !== null && incident.longitude !== null && (
-        <MapModal
-          open={isMapOpen}
-          onClose={() => setIsMapOpen(false)}
-          latitude={incident.latitude}
-          longitude={incident.longitude}
-          incidentTitle={incident.title}
-        />
-      )}
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg  flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-orange-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">Severity Level</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.severity_level.replace("_", " ")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <Users className="text-green-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.totalComplaints')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {incident.complaint_count}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-slate-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.firstReported')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatDateTime(incident.first_reported_at)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0">
-                  <AlertCircle className="text-slate-600" size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500">{t('incidents.details.lastReported')}</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {formatDateTime(incident.last_reported_at)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{t('incidents.details.description')}</h2>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {incident.description}
-            </p>
-          </div>
-
-        </div>
-
-        <div className="space-y-4 sm:space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              {t('incidents.details.remarks')}
-            </h2>
-            {sortedResponses.length === 0 ? (
-              <p className="text-sm text-gray-600">No responses yet.</p>
-            ) : (
-              <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
-                {sortedResponses.map((response) => {
-                  const attachments = response.response_attachments ?? [];
-
-                  return (
-                    <div key={response.id} className="rounded-md border border-gray-200 p-3">
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap leading-6">
-                        {response.actions_taken}
-                      </p>
-
-                      {attachments.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {attachments.map((attachment: any, idx: number) => (
-                            <ResponseMediaAction
-                              key={attachment.id ?? idx}
-                              attachment={attachment}
-                              onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <p className="text-xs text-gray-500">
-                          {getResponseAuthorName(response, incident)}
-                        </p>
-                        <p className="text-[11px] text-gray-400">
-                          {formatDateTime(response.response_date)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="border-t pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                  {t('incidents.details.relatedComplaints')} ({incident.complaint_count})
-                </h3>
-                <button
-                  onClick={handleViewAllComplaints}
-                  className="px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-                >
-                  {t('incidents.details.viewAllComplaints')}
-                </button>
-              </div>
-              <p className="text-sm text-gray-600">
-                View all the related complaints in this incident.
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate("/lgu/incidents")} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer">
+          <ArrowLeft size={16} />
+          {t('incidents.details.backToIncidents')}
+        </button>
+        <span className="text-sm text-slate-500">Incident #{incident.id}</span>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-        {shouldShowActions && (
-          <>
-            <button
-              onClick={handleReview}
-              disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isUnderReviewByBarangay}
-              className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for Review"}
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={rejectIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay}
-              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {rejectIncidentMutation.isPending ? "Rejecting..." : "Reject Incident"}
-            </button>
-            <button
-              onClick={handleResolve}
-              disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay}
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {resolveIncidentMutation.isPending ? "Resolving..." : "Resolve Incident"}
-            </button>
-          </>
-        )}
+      <div className={`${card} flex flex-wrap items-start justify-between gap-3`}>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold text-gray-900 wrap-break-word">{incident.title}</h1>
+            {titleStatusBadge && <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-sm font-medium ${titleStatusBadge.className}`}><span className={`w-1.5 h-1.5 rounded-full ${titleStatusBadge.dotClassName}`} />{titleStatusBadge.label}</div>}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary-50 text-sm font-medium text-primary-700 border border-primary-100"><AlertCircle size={14} />{formatCategoryName(incident.category?.category_name)}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 text-sm font-medium text-orange-700 border border-orange-100 capitalize"><AlertCircle size={14} />severity: {severityLabel}</span>
+          </div>
+        </div>
+        {hasLocation && <button onClick={() => setIsMapOpen(true)} className={glassGreenButton}><MapPin size={15} />View incident location</button>}
       </div>
+
+      {hasLocation && <MapModal open={isMapOpen} onClose={() => setIsMapOpen(false)} latitude={incident.latitude} longitude={incident.longitude} originLatitude={incident.barangay?.latitude ?? null} originLongitude={incident.barangay?.longitude ?? null} incidentTitle={incident.title} />}
+
+      <dl className={`${card} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4`}>
+        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0"><MapPin size={20} /></div><div className="min-w-0"><dt className="text-sm font-medium text-slate-500">Barangay</dt><dd className="mt-0.5 text-base font-semibold text-slate-900">{incident.barangay?.barangay_name || "N/A"}</dd></div></div>
+        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center shrink-0"><Users size={20} /></div><div className="min-w-0"><dt className="text-sm font-medium text-slate-500">{t('incidents.details.totalComplaints')}</dt><dd className="mt-0.5 text-base font-semibold text-primary-700">{incident.complaint_count}</dd></div></div>
+        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><AlertCircle size={20} /></div><div className="min-w-0"><dt className="text-sm font-medium text-slate-500">{t('incidents.details.firstReported')}</dt><dd className="mt-0.5 text-base font-semibold text-slate-900">{formatDate(incident.first_reported_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}</dd></div></div>
+        <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0"><AlertCircle size={20} /></div><div className="min-w-0"><dt className="text-sm font-medium text-slate-500">{t('incidents.details.lastReported')}</dt><dd className="mt-0.5 text-base font-semibold text-slate-900">{formatDate(incident.last_reported_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}</dd></div></div>
+      </dl>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <section className={`${card} lg:col-span-3`}><h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.description')}</h2><p className="text-base text-slate-800 leading-relaxed whitespace-pre-wrap">{incident.description}</p><div className="mt-6 pt-4 border-t border-gray-400 flex items-center justify-between gap-3"><div className="min-w-0"><h3 className="text-base font-semibold text-primary-700">{t('incidents.details.relatedComplaints')} ({incident.complaint_count})</h3><p className="text-sm text-slate-600">View all complaints associated with this incident.</p></div><button onClick={handleViewAllComplaints} className={glassOutlineButton}><Users size={15} />{t('incidents.details.viewAllComplaints')}</button></div></section>
+        <section className={`${card} lg:col-span-2`}><h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.remarks')}</h2>{sortedResponses.length === 0 ? <p className="text-base text-slate-500">No responses yet.</p> : <div className={`${sortedResponses.length > 2 ? 'max-h-80 overflow-y-auto' : ''} space-y-3 pr-1`}>{sortedResponses.map((response) => { const attachments = response.response_attachments ?? []; const assignedMembers = response.barangay_members ?? []; return <div key={response.id} className="rounded-lg border border-gray-200 bg-slate-50 p-4 shadow-sm"><p className="text-base text-slate-800 whitespace-pre-wrap leading-6">{response.actions_taken}</p>{attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((attachment: any, idx: number) => <ResponseMediaAction key={attachment.id ?? idx} attachment={attachment} onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })} />)}</div>}{assignedMembers.length > 0 && <p className="mt-2 text-sm text-slate-600">Assigned to: {assignedMembers.map((member: any) => member.name).join(", ")}</p>}<div className="mt-2 flex items-center justify-between gap-3"><p className="text-sm font-medium text-slate-600">{getResponseAuthorName(response, incident)}</p><p className="text-xs text-slate-400">{formatDateTime(response.response_date, { year: 'numeric', month: 'numeric', day: 'numeric' })}</p></div></div>; })}</div>}</section>
+      </div>
+
+      {shouldShowActions && <div className={`${card} flex flex-wrap items-center justify-end gap-2`}><button onClick={handleReview} disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isUnderReviewByBarangay} className={glassYellowButton}>{reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for review"}</button><button onClick={handleReject} disabled={rejectIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay} className={glassDangerButton}>{rejectIncidentMutation.isPending ? "Rejecting..." : "Reject"}</button><button onClick={handleResolve} disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay} className={glassGreenButton}>{resolveIncidentMutation.isPending ? "Resolving..." : "Resolve"}</button></div>}
 
       {lightboxAttachment && (
         <ResponseMediaLightbox

@@ -1,10 +1,10 @@
 import { lguApi } from "../axios/apiServices";
 import type { Incident } from "../../types/complaints/incident";
 import type { PaginatedResponse } from "../../types/general/pagination";
-import type { PaginationQueryParams } from "../../types/general/pagination";
+import type { IncidentQueryParams } from "../incidents/incidents";
 import { buildQueryString } from "../../utils/buildQuery";
 
-export const getAllForwardedIncidents = async (params?: PaginationQueryParams): Promise<PaginatedResponse<Incident>> => {
+export const getAllForwardedIncidents = async (params?: IncidentQueryParams): Promise<PaginatedResponse<Incident>> => {
   try {
     const queryString = buildQueryString(params || {});
     return await lguApi.get(`/forwarded-incidents?${queryString}`);
@@ -14,7 +14,7 @@ export const getAllForwardedIncidents = async (params?: PaginationQueryParams): 
   };
 };
 
-export const getForwardedIncidents = async (barangayId: number, params?: PaginationQueryParams): Promise<PaginatedResponse<Incident>> => {
+export const getForwardedIncidents = async (barangayId: number, params?: IncidentQueryParams): Promise<PaginatedResponse<Incident>> => {
   try {
     const queryString = buildQueryString(params || {});
     return await lguApi.get(`/forwarded-incidents/${barangayId}?${queryString}`);

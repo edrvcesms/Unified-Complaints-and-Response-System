@@ -1,12 +1,16 @@
-import { ArchivedIncidentsPage } from "../../general/ArchivedIncidentsPage";
+import { ArchivedIncidentsPage } from "../../general/pages/ArchivedIncidentsPage";
+import { useTranslation } from "react-i18next";
+import { BARANGAY_ARCHIVE_STATUS_FILTERS } from "../../../types/complaints/complaint";
 
 export const ArchiveIncidents: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <ArchivedIncidentsPage
-      title="Incident Archive"
-      description="Browse all incidents recorded across the system."
+      title={t('archive.title')}
+      description={t('archive.description')}
       detailPathBase="/dashboard/incidents"
-      emptyMessage="No archived incidents found for barangay users."
+      emptyMessage={t('archive.emptyBarangay')}
+      statusOptions={BARANGAY_ARCHIVE_STATUS_FILTERS}
     />
   );
 };

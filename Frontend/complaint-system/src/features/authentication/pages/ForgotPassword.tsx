@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "../../general/LanguageSwitcher";
 import { createNewPassword, requestResetPassword, verifyResetPasswordOtp } from "../../../services/authentication/auth";
 import { validateEmail, validatePassword } from "../../../utils/validators";
 import type { LoginRequestData } from "../../../types/auth/login";
+import { translateAuthError } from "../authErrorMessages";
 
 type Step = "request" | "verify" | "reset" | "done";
 
@@ -56,7 +57,7 @@ export const ForgotPasswordPage: React.FC = () => {
 			setStep("verify");
 		},
 		onError: (error: any) => {
-			setErrors({ general: error?.message || "Request failed. Please try again." });
+		setErrors({ general: error?.message || t("auth.requestFailed") });
 		},
 	});
 
@@ -68,7 +69,7 @@ export const ForgotPasswordPage: React.FC = () => {
 			setStep("reset");
 		},
 		onError: (error: any) => {
-			setErrors({ general: error?.message || "Verification failed. Please try again." });
+			setErrors({ general: error?.message || t("auth.verificationFailed") });
 		},
 	});
 
@@ -83,7 +84,7 @@ export const ForgotPasswordPage: React.FC = () => {
 			setStep("done");
 		},
 		onError: (error: any) => {
-			setErrors({ general: error?.message || "Password reset failed. Please try again." });
+			setErrors({ general: error?.message || t("auth.passwordResetFailed") });
 		},
 	});
 
@@ -100,11 +101,11 @@ export const ForgotPasswordPage: React.FC = () => {
 
 	const validateOtp = () => {
 		if (!formData.otp.trim()) {
-			setErrors({ otp: "Verification code is required." });
+			setErrors({ otp: t("auth.otpRequired") });
 			return false;
 		}
 		if (formData.otp.trim().length < otpLength) {
-			setErrors({ otp: "Please enter a valid verification code." });
+			setErrors({ otp: t("auth.invalidOtp") });
 			return false;
 		}
 		return true;
@@ -117,11 +118,11 @@ export const ForgotPasswordPage: React.FC = () => {
 			return false;
 		}
 		if (!formData.confirm_new_password) {
-			setErrors({ confirm_new_password: "Please confirm your password." });
+			setErrors({ confirm_new_password: t("auth.confirmPasswordRequired") });
 			return false;
 		}
 		if (formData.confirm_new_password !== formData.new_password) {
-			setErrors({ confirm_new_password: "Passwords do not match." });
+			setErrors({ confirm_new_password: t("auth.passwordMismatch") });
 			return false;
 		}
 		return true;
@@ -260,7 +261,7 @@ export const ForgotPasswordPage: React.FC = () => {
 											: "border-primary-300 bg-white focus:ring-primary-500 focus:border-green-400"
 										}`}
 								/>
-								{errors.email && <ErrorMessage id="email-error" message={errors.email} />}
+								{errors.email && <ErrorMessage id="email-error" message={translateAuthError(errors.email, t)} />}
 							</div>
 
 							{step === "verify" && (
@@ -317,7 +318,7 @@ export const ForgotPasswordPage: React.FC = () => {
 											placeholder={t("auth.passwordPlaceholder")}
 											maxLength={128}
 										/>
-										{errors.new_password && <ErrorMessage id="new-password-error" message={errors.new_password} />}
+										{errors.new_password && <ErrorMessage id="new-password-error" message={translateAuthError(errors.new_password, t)} />}
 									</div>
 
 									<div className="space-y-1">

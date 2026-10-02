@@ -20,3 +20,4 @@ class Barangay(Base):
     complaint = relationship("Complaint", back_populates="barangay")
     incidents = relationship("IncidentModel", back_populates="barangay")
     evacuation_centers = relationship("EvacuationCenter", back_populates="barangay")
+    barangay_members = relationship("BarangayMember", back_populates="barangay")

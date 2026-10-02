@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import { useForwardedIncidents } from "../../../hooks/useIncidents";
 import { useBarangayById, useMarkBarangayViewed } from "../../../hooks/useBarangays";
-import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { LguIncidentsTable } from "../components/LguIncidentsTable";
+import { useComplaintsFilter } from "../../../hooks/useFilter";
 import { useTranslation } from "react-i18next";
-import { StatusFilterDropdown, SortDropdown, DateFilter } from "../../barangay/components/Filters";
+import { ComplaintStatusFilterDropdown, CategoryFilterDropdown, StatusFilterDropdown, DateFilter } from "../../barangay/components/Filters";
+import { CATEGORY } from "../../../types/general/category";
+import { LGU_INCIDENT_STATUS_FILTERS } from "../../../types/complaints/complaint";
 import { ErrorMessage, BackButton } from "../../general";
 import { SearchInput } from "../../general";
 import type { IncidentQueryParams } from "../../../services/incidents/incidents";
@@ -34,22 +36,24 @@ export const BarangayIncidents: React.FC = () => {
   }, [barangayIdNum]);
 
   const {
-    filterStatus,
-    searchInput,
-    sortBy,
-    dateFrom,
-    dateTo,
-    minDate,
-    maxDate,
-    paginated,
-    handleFilterChange,
-    handleSearch,
-    handleSearchSubmit,
-    handleSortChange,
-    handleDateFromChange,
-    handleDateToChange,
-    handleClearDateFilter,
+    searchInput, search, filterStatus, filterCategory, filterSeverity, dateFrom, dateTo,
+    minDate, maxDate, paginated, handleSearch, handleSearchSubmit,
+    handleFilterChange, handleCategoryChange, handleSeverityChange,
+    handleDateFromChange, handleDateToChange, handleClearDateFilter,
   } = useComplaintsFilter(incidents || []);
+
+  useEffect(() => {
+    setMetaData((prev) => ({
+      ...prev,
+      page: 1,
+      search: search || undefined,
+      complaint_status: filterStatus === "all" ? undefined : filterStatus,
+      category_name: filterCategory || undefined,
+      severity_level: filterSeverity === "all" ? undefined : filterSeverity,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+    }));
+  }, [search, filterStatus, filterCategory, filterSeverity, dateFrom, dateTo]);
   if (incidentsError) {
     return <ErrorMessage message={t('frontend.incidents.loadIncidentsFailed')} />;
   }
@@ -79,14 +83,18 @@ export const BarangayIncidents: React.FC = () => {
       {/* Filters */}
       <SearchInput value={searchInput} onChange={handleSearch} onSearch={handleSearchSubmit} placeholder={t('search.placeholder')} />
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto">
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">{t('incidents.severityLevel')}</label>
-            <StatusFilterDropdown current={filterStatus} onChange={handleFilterChange} />
+            <label className="text-sm font-medium text-gray-700">Status</label>
+            <ComplaintStatusFilterDropdown current={filterStatus} options={LGU_INCIDENT_STATUS_FILTERS} onChange={handleFilterChange} />
           </div>
           <div className="flex flex-col gap-1.5 min-w-0">
-            <label className="text-sm font-medium text-gray-700">{t('frontend.filters.sortBy')}</label>
-            <SortDropdown current={sortBy} onChange={handleSortChange} />
+            <label className="text-sm font-medium text-gray-700">Category</label>
+            <CategoryFilterDropdown current={filterCategory} categories={Object.keys(CATEGORY)} onChange={handleCategoryChange} />
+          </div>
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <label className="text-sm font-medium text-gray-700">Severity</label>
+            <StatusFilterDropdown current={filterSeverity} onChange={handleSeverityChange} />
           </div>
         </div>
 

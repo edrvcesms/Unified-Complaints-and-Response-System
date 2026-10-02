@@ -3,7 +3,7 @@ from app.dependencies.rate_limiter import limiter
 from app.dependencies.db_dependency import get_async_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
-from app.services.user_services import request_reset_password, save_push_token, set_push_notifications, verify_otp_reset_password, change_password, get_user_by_id, update_user_location, forgot_password, create_new_password, delete_account, verify_delete_account_otp
+from app.services.user_services import request_reset_password, request_change_password, save_push_token, set_push_notifications, verify_otp_reset_password, change_password, get_user_by_id, update_user_location, forgot_password, create_new_password, delete_account, verify_delete_account_otp
 from app.dependencies.auth_dependency import get_current_user
 from app.schemas.user_schema import OTPData, ResetPasswordData, UserLocationData, UserPersonalData, VerifyEmailData, ChangePasswordData
 from app.schemas.push_token_schema import PushNotificationRequest, SavePushTokenRequest
@@ -17,6 +17,11 @@ async def get_profile(request: Request, db: AsyncSession = Depends(get_async_db)
 @limiter.limit("5/minute")
 async def request_reset_password_endpoint(request: Request, email_data: VerifyEmailData, db: AsyncSession = Depends(get_async_db)):
     return await request_reset_password(email_data, db)
+
+@router.post("/request-change-password", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def request_change_password_endpoint(request: Request, current_user: User = Depends(get_current_user)):
+    return await request_change_password(current_user)
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")

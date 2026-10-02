@@ -1,5 +1,6 @@
 import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
-import { getAllBarangays, getBarangayById, markBarangayIncidentsViewed } from "../services/barangay/barangays";
+import { addBarangayMember, getAllBarangays, getBarangayById, getBarangayMembers, markBarangayIncidentsViewed, removeBarangayMember } from "../services/barangay/barangays";
+import type { BarangayMember } from "../services/barangay/barangays";
 import type { BarangayAccountData } from "../types/barangay/barangayAccount";
 import type { PaginatedResponse } from "../types/general/pagination";
 import type { PaginationQueryParams } from "../types/general/pagination";
@@ -45,3 +46,28 @@ export const useMarkBarangayViewed = () => {
     },
   });
 };
+
+export const useBarangayMembers = (barangayId?: number) => {
+  const { data, isLoading, error, refetch } = useQuery<BarangayMember[]>({
+    queryKey: ["barangayMembers", barangayId],
+    queryFn: () => getBarangayMembers(barangayId as number),
+    enabled: !!barangayId,
+  });
+
+  return {
+    members: data ?? [],
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
+export const useAddBarangayMember = (barangayId: number) => useMutation({
+  mutationFn: (payload: { name: string; position: string }) => addBarangayMember(barangayId, payload),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["barangayMembers", barangayId] }),
+});
+
+export const useRemoveBarangayMember = (barangayId: number) => useMutation({
+  mutationFn: (memberId: number) => removeBarangayMember(barangayId, memberId),
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["barangayMembers", barangayId] }),
+});

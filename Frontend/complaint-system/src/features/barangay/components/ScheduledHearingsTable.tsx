@@ -3,6 +3,7 @@ import type { Incident } from "../../../types/complaints/incident";
 import { Pagination } from "./Pagination";
 import { TableSkeleton } from "./Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { useTranslation } from "react-i18next";
 
 interface ScheduledHearingsTableProps {
   incidents: Incident[];
@@ -21,12 +22,12 @@ const formatDate = (value?: string | Date | null) => {
     : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
-const formatHearingDate = (incident: Incident) => {
+const formatHearingDate = (incident: Incident, hearingLabel: string) => {
   if (!incident.hearing_date) return "N/A";
   const date = new Date(incident.hearing_date);
   if (Number.isNaN(date.getTime())) return "N/A";
   const hearingNumber = incident.hearing_count || 1;
-  return `${hearingNumber}${hearingNumber === 1 ? "st" : hearingNumber === 2 ? "nd" : hearingNumber === 3 ? "rd" : "th"} hearing, ${date.toLocaleString(undefined, {
+  return `${hearingLabel} ${hearingNumber}, ${date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -50,25 +51,26 @@ export const ScheduledHearingsTable: React.FC<ScheduledHearingsTableProps> = ({
   totalPages,
   onPageChange,
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-3 pt-2 text-[11px] text-gray-500 sm:hidden">
-        Swipe horizontally to view all columns.
+        {t('hearings.swipeHint')}
       </div>
       <div className="overflow-x-auto -mx-2 sm:mx-0">
         <table className="w-full min-w-[820px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-center">
               {[
-                  "Incident",
-                  "First Reporter",
-                "Barangay",
-                "Category",
-                "Complaints",
-                "Date Reported",
-                "Hearing Date",
+                  t('hearings.headers.incident'),
+                  t('hearings.headers.firstReporter'),
+                  t('hearings.headers.barangay'),
+                  t('hearings.headers.category'),
+                  t('hearings.headers.complaints'),
+                  t('hearings.headers.dateReported'),
+                  t('hearings.headers.hearingDate'),
               ].map((label) => (
                 <th key={label} className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">
                   {label}
@@ -82,7 +84,7 @@ export const ScheduledHearingsTable: React.FC<ScheduledHearingsTableProps> = ({
             ) : incidents.length === 0 ? (
               <tr>
                   <td colSpan={7} className="px-4 py-16 text-center text-sm text-gray-500">
-                  No upcoming hearings found.
+                  {t('hearings.noUpcoming')}
                 </td>
               </tr>
             ) : (
@@ -101,7 +103,7 @@ export const ScheduledHearingsTable: React.FC<ScheduledHearingsTableProps> = ({
                   <td className="px-4 py-3 text-sm text-gray-600 text-center">{formatCategoryName(incident.category?.category_name)}</td>
                   <td className="px-4 py-3 text-sm text-gray-700 font-semibold text-center">{incident.complaint_count}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 text-center">{formatDate(incident.first_reported_at)}</td>
-                  <td className="px-4 py-3 text-sm text-primary-700 font-medium text-center">{formatHearingDate(incident)}</td>
+                  <td className="px-4 py-3 text-sm text-primary-700 font-medium text-center">{formatHearingDate(incident, t('hearings.hearing'))}</td>
                 </tr>
               ))
             )}

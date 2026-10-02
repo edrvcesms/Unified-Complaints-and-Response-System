@@ -25,6 +25,15 @@ class ResponseAttachmentsData(BaseModel):
         from_attributes = True
 
 
+class ResponseBarangayMemberData(BaseModel):
+    id: int
+    name: str
+    position: str
+
+    class Config:
+        from_attributes = True
+
+
 class ResponseSchema(BaseModel):
     id: int
     incident_id: int
@@ -33,13 +42,16 @@ class ResponseSchema(BaseModel):
     response_date: datetime
     user: Optional[ResponseUserData] = None
     response_attachments: Optional[List[ResponseAttachmentsData]] = []  
+    barangay_members: Optional[List[ResponseBarangayMemberData]] = []
 
     class Config:
         from_attributes = True
         
 class ResponseCreateSchema(BaseModel):
     actions_taken: str
+    barangay_member_ids: Optional[List[int]] = []
 
 class RejectComplaintSchema(BaseModel):
     actions_taken: str
     rejection_category_id: int
+    barangay_member_ids: List[int] = []

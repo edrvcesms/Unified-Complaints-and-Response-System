@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import type { LoginFormErrors, LoginRequestData } from "../types/auth/login";
@@ -6,6 +7,7 @@ import { loginAccount } from "../services/authentication/auth";
 import { validateEmail, validatePassword } from "../utils/validators";
 
 export const useLoginForm = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<LoginRequestData>({
@@ -36,7 +38,7 @@ export const useLoginForm = () => {
     onError: (error: any) => {
       console.error("Login error:", error);
       setErrors({
-        general: error.message || "Login failed. Please try again.",
+        general: error.message || t("auth.loginFailed"),
       });
       // Force a fresh Turnstile challenge on error so user can retry with a new token
       setFormData((prev) => ({ ...prev, turnstile_token: "" }));
@@ -70,7 +72,7 @@ export const useLoginForm = () => {
       }
 
       if (!formData.turnstile_token) {
-        setErrors({ turnstile: "Please complete the Turnstile challenge." });
+        setErrors({ turnstile: t("auth.turnstileRequired") });
         return;
       }
 
@@ -78,7 +80,7 @@ export const useLoginForm = () => {
     } catch (error) {
       console.error("Validation error:", error);
       setErrors({
-        general: "An error occurred. Please try again.",
+        general: t("auth.genericError"),
       });
     }
   };

@@ -64,10 +64,10 @@ export const IncidentComplaints: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-start mb-4">
           <button
             onClick={() => navigate(`/dashboard/incidents/${incidentId}`)}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            className="inline-flex items-center gap-1.5 text-sm border border-green-300 bg-green-500 rounded-md px-3 py-2 text-white hover:text-white-900 hover:bg-green-600 transition-colors cursor-pointer"
           >
             <ArrowLeft size={16} />
             {t('btn.backIncident')}

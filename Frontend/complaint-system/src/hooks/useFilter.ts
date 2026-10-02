@@ -29,10 +29,6 @@ const getPriorityScore = (incident: Incident): number => {
   return (levelWeight * 3) + incident.severity_score;
 };
 
-const isStatusFilter = (value: string | null): value is StatusFilter => {
-  return value === "all" || value === "LOW" || value === "MODERATE" || value === "HIGH" || value === "VERY_HIGH";
-};
-
 const isSortOption = (value: string | null): value is SortOption => {
   return value === "priority_high_to_low"
     || value === "priority_low_to_high"
@@ -43,15 +39,13 @@ const isSortOption = (value: string | null): value is SortOption => {
     || value === "none";
 };
 
-export function useComplaintsFilter(complaints: Incident[], filterByComplaintStatus: boolean = false) {
+export function useComplaintsFilter(complaints: Incident[]) {
   const location = useLocation();
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>(() => {
-    const severityParam = searchParams.get("severity");
-    return isStatusFilter(severityParam?.toUpperCase() ?? null) ? severityParam?.toUpperCase() as StatusFilter : "all";
-  });
-  const [filterComplaintStatus, setFilterComplaintStatus] = useState<ComplaintStatusFilter>("all");
+  const [filterStatus, setFilterStatus] = useState<ComplaintStatusFilter>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterSeverity, setFilterSeverity] = useState<StatusFilter>("all");
   const [filterSeverityScore, setFilterSeverityScore] = useState<SeverityScoreFilter>("all");
   const [search, setSearch] = useState<string>("");
   const [searchInput, setSearchInput] = useState<string>("");
@@ -63,12 +57,6 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   const [dateTo, setDateTo] = useState<string>("");
 
   useEffect(() => {
-    const severityParam = searchParams.get("severity");
-    if (isStatusFilter(severityParam?.toUpperCase() ?? null)) {
-      setFilterStatus(severityParam?.toUpperCase() as StatusFilter);
-      setCurrentPage(1);
-    }
-
     const sortParam = searchParams.get("sort");
     if (isSortOption(sortParam)) {
       setSortBy(sortParam);
@@ -119,14 +107,10 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
     return sorted.filter((c) => {
       let matchesStatus = true;
 
-      if (filterByComplaintStatus) {
-        // Filter by complaint status (from first complaint in cluster)
-        const complaintStatus = c.complaint_clusters?.[0]?.complaint?.status;
-        matchesStatus = filterComplaintStatus === "all" || complaintStatus === filterComplaintStatus;
-      } else {
-        // Filter by severity level
-        matchesStatus = filterStatus === "all" || c.severity_level === filterStatus;
-      }
+      const complaintStatus = c.complaint_clusters?.[0]?.complaint?.status || c.status;
+      matchesStatus = filterStatus === "all" || complaintStatus === filterStatus;
+      const matchesCategory = !filterCategory || c.category?.category_name === filterCategory;
+      const matchesSeverity = filterSeverity === "all" || c.severity_level === filterSeverity;
 
       const matchesSeverityScore = () => {
         if (filterSeverityScore === "all") return true;
@@ -173,9 +157,9 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
         c.barangay?.barangay_name?.toLowerCase().includes(q) ||
         String(c.id).includes(q);
 
-      return matchesStatus && matchesSeverityScore() && matchesDate() && matchesSearch;
+      return matchesStatus && matchesCategory && matchesSeverity && matchesSeverityScore() && matchesDate() && matchesSearch;
     });
-  }, [sorted, filterStatus, filterComplaintStatus, filterSeverityScore, search, dateFrom, dateTo, filterByComplaintStatus]);
+  }, [sorted, filterStatus, filterCategory, filterSeverity, filterSeverityScore, search, dateFrom, dateTo]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 
@@ -184,14 +168,18 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handleFilterChange = (value: StatusFilter) => {
+  const handleFilterChange = (value: ComplaintStatusFilter) => {
     setFilterStatus(value);
     setCurrentPage(1);
   };
 
-  const handleComplaintStatusFilterChange = (value: ComplaintStatusFilter) => {
-    setFilterComplaintStatus(value);
+  const handleSeverityChange = (value: StatusFilter) => {
+    setFilterSeverity(value);
     setCurrentPage(1);
+  };
+
+  const handleComplaintStatusFilterChange = (value: ComplaintStatusFilter) => {
+    handleFilterChange(value);
   };
 
   const handleSeverityScoreFilterChange = (value: SeverityScoreFilter) => {
@@ -200,11 +188,21 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(e.target.value);
+    const value = e.target.value;
+    setSearchInput(value);
+    if (!value.trim()) {
+      setSearch("");
+      setCurrentPage(1);
+    }
   };
 
   const handleSearchSubmit = () => {
     setSearch(searchInput.trim());
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setFilterCategory(value);
     setCurrentPage(1);
   };
 
@@ -233,7 +231,8 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
     search,
     searchInput,
     filterStatus,
-    filterComplaintStatus,
+    filterCategory,
+    filterSeverity,
     filterSeverityScore,
     sortBy,
     dateFrom,
@@ -247,6 +246,8 @@ export function useComplaintsFilter(complaints: Incident[], filterByComplaintSta
     handleSearch,
     handleSearchSubmit,
     handleFilterChange,
+    handleSeverityChange,
+    handleCategoryChange,
     handleComplaintStatusFilterChange,
     handleSeverityScoreFilterChange,
     handleSortChange,

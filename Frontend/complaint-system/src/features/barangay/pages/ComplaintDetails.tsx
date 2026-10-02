@@ -5,7 +5,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import { StatusBadge } from '../components/StatusBadge';
 import { AttachmentButton } from '../components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
-import { formatDate, formatDateTime } from "../../../utils/dateUtils";
+import { formatDate } from "../../../utils/dateUtils";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 
 export const ComplaintDetails: React.FC = () => {

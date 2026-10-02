@@ -4,7 +4,7 @@ import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, UserRound, Building2, Clock, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, UserRound, Clock, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDate, formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";

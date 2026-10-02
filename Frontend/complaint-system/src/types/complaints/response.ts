@@ -7,6 +7,12 @@ export interface ResponseAttachmentData {
   media_type: string;
 }
 
+export interface ResponseBarangayMemberData {
+  id: number;
+  name: string;
+  position: string;
+}
+
 export interface ResponseData {
   id: number;
   incident_id: number;
@@ -15,4 +21,5 @@ export interface ResponseData {
   response_date: Date;
   user?: UserData;
   response_attachments?: ResponseAttachmentData[] | null;
+  barangay_members?: ResponseBarangayMemberData[] | null;
 }

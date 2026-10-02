@@ -12,6 +12,7 @@ export interface BarangayAccountData {
 }
 
 export interface BarangayData {
+  id?: number;
   barangay_name: string;
   latitude: number;
   longitude: number;

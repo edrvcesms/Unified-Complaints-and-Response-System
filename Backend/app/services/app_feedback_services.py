@@ -85,36 +85,27 @@ async def get_all_app_feedback(db: AsyncSession, params: ListParams) -> Paginate
 async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_id: int, db: AsyncSession) -> PostIncidentFeedbackResponse:
     try:
         result = await db.execute(
-            select(IncidentModel)
+            select(IncidentModel, Complaint)
             .join(IncidentComplaintModel, IncidentComplaintModel.incident_id == IncidentModel.id)
+            .join(Complaint, Complaint.id == IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.complaint_id == feedbackData.complaint_id)
         )
         
-             
-        incident = result.scalar_one_or_none()
-        if not incident:
+        incident_and_complaint = result.one_or_none()
+        if not incident_and_complaint:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Incident not found"
+                detail="Complaint incident not found"
             )
+
+        incident, complaint = incident_and_complaint
 
         
         # check if complaint status is resolved before allowing user to submit feedback
-        complaint_result = await db.execute(
-            select(Complaint)
-            .where(
-                Complaint.id == feedbackData.complaint_id,
-                Complaint.status.in_([
-                    ComplaintStatus.RESOLVED_BY_BARANGAY.value,
-                    ComplaintStatus.RESOLVED_BY_LGU.value,
-                ]),
-                Complaint.has_feedback == False
-            )
-        )
-
-        complaint = complaint_result.scalar_one_or_none()
-
-        if not complaint:
+        if complaint.status not in [
+            ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+            ComplaintStatus.RESOLVED_BY_LGU.value,
+        ] or complaint.has_feedback:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Feedback can only be submitted for resolved complaints"
@@ -126,6 +117,8 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         new_feedback = PostIncidentFeedback(
             user_id=user_id,
             incident_id=incident.id,
+            complaint_id=complaint.id,
+            barangay_id=complaint.barangay_id,
             ratings=feedbackData.ratings,
             message=feedbackData.message,
             created_at=datetime.now(timezone.utc)
@@ -135,7 +128,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
 
         await delete_cache(f"complaint:{feedbackData.complaint_id}")
         await delete_cache_prefix("post_incident_feedback")
-        await delete_cache(CATEGORY_FEEDBACK_RATES_CACHE_KEY)
+        await delete_cache_prefix(CATEGORY_FEEDBACK_RATES_CACHE_KEY)
         
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,

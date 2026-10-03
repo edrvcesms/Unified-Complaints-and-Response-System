@@ -488,8 +488,18 @@ const handleBellClick = () => {
             await refetchMembers();
           }}
           onRemove={async (memberId) => {
-            await removeMemberMutation.mutateAsync(memberId);
-            await refetchMembers();
+            const member = members.find((item) => item.id === memberId);
+            confirmationModal.openModal({
+              title: "Remove barangay member",
+              message: `Are you sure you want to remove ${member?.name ?? "this member"}?`,
+              confirmText: "Remove",
+              confirmColor: "red",
+              onConfirm: async () => {
+                await removeMemberMutation.mutateAsync(memberId);
+                await refetchMembers();
+                confirmationModal.closeModal();
+              },
+            });
           }}
           onClose={() => setIsMembersModalOpen(false)}
         />

@@ -9,6 +9,8 @@ class PostIncidentFeedback(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False, index=True)
     incident_id = Column(Integer, ForeignKey("incidents.id"), nullable=False, index=True)
+    complaint_id = Column(Integer, ForeignKey("complaint.id"), nullable=True, index=True)
+    barangay_id = Column(Integer, ForeignKey("barangay.id"), nullable=False, index=True)
     ratings = Column(Float, nullable=False)
     message = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))

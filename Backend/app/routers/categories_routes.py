@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.services.categories_services import get_all_categories, get_all_rejection_categories
 from app.dependencies.auth_dependency import get_current_user
 from app.dependencies.db_dependency import get_async_db
 from app.core.pagination_params import ListParams
 from app.services.category_feedback_rates import get_feedback_rates_per_category
+from app.models.barangay_account import BarangayAccount
 
 
 router = APIRouter()
@@ -19,4 +21,16 @@ async def read_rejection_categories( db: AsyncSession = Depends(get_async_db), c
 
 @router.get("/feedback-rates", status_code=status.HTTP_200_OK)
 async def read_feedback_rates_per_category(db: AsyncSession = Depends(get_async_db), current_user=Depends(get_current_user)):
-    return await get_feedback_rates_per_category(db)
+    barangay_id = None
+    if current_user.role == "barangay_official":
+        result = await db.execute(
+            select(BarangayAccount.barangay_id).where(BarangayAccount.user_id == current_user.id)
+        )
+        barangay_id = result.scalar_one_or_none()
+        if barangay_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Barangay account is not configured",
+            )
+
+    return await get_feedback_rates_per_category(db, barangay_id)

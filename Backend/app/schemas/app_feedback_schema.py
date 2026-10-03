@@ -42,6 +42,8 @@ class PostIncidentFeedbackCreate(BaseModel):
 class PostIncidentFeedbackResponse(BaseModel):
     id: int
     incident_id: int
+    complaint_id: int | None = None
+    barangay_id: int
     ratings: float
     message: str | None = None
     created_at: datetime

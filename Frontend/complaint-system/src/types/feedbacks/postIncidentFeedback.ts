@@ -15,6 +15,8 @@ export interface PostIncidentFeedbackIncident {
 export interface PostIncidentFeedback {
   id: number;
   incident_id: number;
+  complaint_id: number | null;
+  barangay_id: number;
   ratings: number;
   message: string | null;
   created_at: string;

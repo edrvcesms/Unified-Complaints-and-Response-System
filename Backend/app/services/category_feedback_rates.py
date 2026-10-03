@@ -2,8 +2,6 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.post_incident_feedback import PostIncidentFeedback
-from app.models.incident_model import IncidentModel
-from app.models.incident_complaint import IncidentComplaintModel
 from app.schemas.category_rates_schema import FeedbackPerCategory, CategoryRatesResponse
 from app.models.category import Category
 from app.models.complaint import Complaint
@@ -13,22 +11,31 @@ from app.utils.caching import get_cache, set_cache
 CATEGORY_FEEDBACK_RATES_CACHE_KEY = "category_feedback_rates"
 CATEGORY_FEEDBACK_RATES_CACHE_TTL_SECONDS = 300
 
+def _category_feedback_rates_cache_key(barangay_id: int | None) -> str:
+    return f"{CATEGORY_FEEDBACK_RATES_CACHE_KEY}:{barangay_id or 'all'}"
+
 # this function will calculate the feedback rates per category and return the result as a CategoryRatesResponse object
-async def get_feedback_rates_per_category(db: AsyncSession) -> CategoryRatesResponse:
+async def get_feedback_rates_per_category(db: AsyncSession, barangay_id: int | None = None) -> CategoryRatesResponse:
     try:
-        cached_rates = await get_cache(CATEGORY_FEEDBACK_RATES_CACHE_KEY)
+        cache_key = _category_feedback_rates_cache_key(barangay_id)
+        cached_rates = await get_cache(cache_key)
         if cached_rates is not None:
             return CategoryRatesResponse.model_validate(cached_rates)
 
+        resolved_filter = [
+            Complaint.status.in_([ComplaintStatus.RESOLVED_BY_LGU, ComplaintStatus.RESOLVED_BY_BARANGAY])
+        ]
+        if barangay_id is not None:
+            resolved_filter.append(Complaint.barangay_id == barangay_id)
+
         result = await db.execute(
             select(
-                func.count(Complaint.id).label("total_resolved"),
+                func.count(func.distinct(Complaint.id)).label("total_resolved"),
                 func.coalesce(func.sum(PostIncidentFeedback.ratings), 0).label("total_rate"),
                 func.coalesce(func.avg(PostIncidentFeedback.ratings), 0).label("average_rate")
             )
-            .join(IncidentComplaintModel, IncidentComplaintModel.complaint_id == Complaint.id)
-            .join(PostIncidentFeedback, PostIncidentFeedback.incident_id == IncidentComplaintModel.incident_id)
-            .where(Complaint.status.in_([ComplaintStatus.RESOLVED_BY_LGU, ComplaintStatus.RESOLVED_BY_BARANGAY]))
+            .join(PostIncidentFeedback, PostIncidentFeedback.complaint_id == Complaint.id)
+            .where(*resolved_filter)
         )
         total_resolved, total_rate, average_rate = result.fetchone()
         
@@ -37,16 +44,14 @@ async def get_feedback_rates_per_category(db: AsyncSession) -> CategoryRatesResp
             select(
                 Category.id.label("category_id"),
                 Category.category_name.label("category_name"),
-                func.count(PostIncidentFeedback.id).label("total_feedbacks"),
+                func.count(func.distinct(PostIncidentFeedback.id)).label("total_feedbacks"),
                 func.coalesce(func.avg(PostIncidentFeedback.ratings), 0).label("average_rating"),
-                func.count(Complaint.id).label("total_resolved"),
+                func.count(func.distinct(Complaint.id)).label("total_resolved"),
                 func.coalesce(func.sum(PostIncidentFeedback.ratings), 0).label("total_rate")
             )
-            .join(IncidentModel, IncidentModel.category_id == Category.id)
-            .join(PostIncidentFeedback, PostIncidentFeedback.incident_id == IncidentModel.id)
-            .join(IncidentComplaintModel, IncidentComplaintModel.incident_id == IncidentModel.id)
-            .join(Complaint, Complaint.id == IncidentComplaintModel.complaint_id)
-            .where(Complaint.status.in_([ComplaintStatus.RESOLVED_BY_LGU, ComplaintStatus.RESOLVED_BY_BARANGAY]))
+            .join(Complaint, Complaint.category_id == Category.id)
+            .join(PostIncidentFeedback, PostIncidentFeedback.complaint_id == Complaint.id)
+            .where(*resolved_filter)
             .group_by(Category.id)
         )
         categories = result.fetchall()
@@ -66,7 +71,7 @@ async def get_feedback_rates_per_category(db: AsyncSession) -> CategoryRatesResp
             ]
         )
         await set_cache(
-            CATEGORY_FEEDBACK_RATES_CACHE_KEY,
+            cache_key,
             response.model_dump(mode="json"),
             CATEGORY_FEEDBACK_RATES_CACHE_TTL_SECONDS,
         )

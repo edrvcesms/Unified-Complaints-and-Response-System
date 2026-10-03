@@ -50,7 +50,7 @@ export const BarangayMembersModal: React.FC<BarangayMembersModalProps> = ({
               {members.map((member) => (
                 <div key={member.id} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-3">
                   <div><p className="text-sm font-medium text-gray-900">{member.name}</p><p className="text-xs text-gray-500">{member.position}</p></div>
-                  <button type="button" onClick={() => onRemove(member.id)} disabled={removingMemberId === member.id} className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50">
+                  <button type="button" onClick={() => onRemove(member.id)} disabled={removingMemberId !== undefined} className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50">
                     {removingMemberId === member.id ? (
                       <span className="inline-flex items-center gap-1.5">
                         <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">

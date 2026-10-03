@@ -121,8 +121,9 @@ export const FeedbacksPage: React.FC = () => {
         <GridCardSkeleton count={3} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Center the no feedbacks yet if there are none */}
           {totalFeedbacks === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+            <div className="col-span-full flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-10 text-center">
               <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
                 <MessageSquare className="h-5 w-5 text-slate-500" />
               </div>

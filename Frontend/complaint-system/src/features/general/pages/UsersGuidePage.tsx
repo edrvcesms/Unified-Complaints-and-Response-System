@@ -1,6 +1,6 @@
 import maryapp from "../../../assets/maryapp.jpg";
 
-const cloudinaryVideoUrl = "https://player.cloudinary.com/embed/?cloud_name=lrodnivq&public_id=marryappguide";
+const youtubeVideoUrl = "https://www.youtube.com/embed/ld242E91N7s";
 
 export const UsersGuidePage: React.FC = () => {
   return (
@@ -20,12 +20,12 @@ export const UsersGuidePage: React.FC = () => {
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">A short guide to submitting complaints and following their progress.</p>
 
           <div className="relative mt-8 aspect-video overflow-hidden rounded-lg border border-slate-200 bg-black">
-            {cloudinaryVideoUrl && (
+            {youtubeVideoUrl && (
               <iframe
-                src={cloudinaryVideoUrl}
+                src={youtubeVideoUrl}
                 title="Mary App user guide video"
                 className="absolute inset-0 h-full w-full border-0"
-                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             )}

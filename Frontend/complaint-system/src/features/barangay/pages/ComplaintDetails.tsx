@@ -1,12 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import { useComplaintDetails } from "../../../hooks/useComplaints";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, CalendarDays, FileText, Mail, MapPin, Paperclip, Phone, UserRound } from "lucide-react";
 import { StatusBadge } from '../components/StatusBadge';
 import { AttachmentButton } from '../components/AttachmentButton';
 import LoadingIndicator from "../../general/LoadingIndicator";
 import { formatDate } from "../../../utils/dateUtils";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+
+const card = "bg-white border border-gray-200 rounded-xl shadow-sm p-5";
 
 export const ComplaintDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -67,49 +69,76 @@ export const ComplaintDetails: React.FC = () => {
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4 border-y border-gray-200 py-4">
-        <div>
-          <dt className="text-sm font-medium text-slate-500">Location</dt>
-          <dd className="mt-0.5 text-base font-semibold text-slate-900 wrap-break-word">{complaint.location_details || t('common.na')}</dd>
+      <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className="w-11 h-11 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+            <MapPin size={20} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">Location</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900 wrap-break-word">{complaint.location_details || t('common.na')}</dd>
+          </div>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-500">Reported by</dt>
-          <dd className="mt-0.5 text-base font-semibold text-slate-900 wrap-break-word">
-            {complaint.user ? `${complaint.user.first_name} ${complaint.user.last_name}` : t('common.na')}
-          </dd>
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className="w-11 h-11 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center shrink-0">
+            <UserRound size={20} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">Reported by</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900 wrap-break-word">
+              {complaint.user ? `${complaint.user.first_name} ${complaint.user.last_name}` : t('common.na')}
+            </dd>
+          </div>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-500">Submitted</dt>
-          <dd className="mt-0.5 text-base font-semibold text-slate-900">{formatDate(complaint.created_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}</dd>
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <CalendarDays size={20} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">Submitted</dt>
+            <dd className="mt-0.5 text-base font-semibold text-slate-900">{formatDate(complaint.created_at, { year: 'numeric', month: 'numeric', day: 'numeric' })}</dd>
+          </div>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-slate-500">Status</dt>
-          <dd className="mt-0.5 text-base font-semibold text-primary-700 capitalize">{complaint.status.replace(/_/g, ' ')}</dd>
+        <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div className="w-11 h-11 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+            <FileText size={20} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <dt className="text-sm font-medium text-slate-500">Status</dt>
+            <dd className="mt-0.5 text-base font-semibold text-primary-700 capitalize">{complaint.status.replace(/_/g, ' ')}</dd>
+          </div>
         </div>
       </dl>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        <section className="lg:col-span-3">
+        <section className={`${card} lg:col-span-3`}>
           <h2 className="text-base font-semibold text-primary-700 mb-2">{t('complaint.details.title')}</h2>
           <p className="text-base text-slate-800 leading-relaxed whitespace-pre-wrap">{complaint.description}</p>
         </section>
 
-        <section className="lg:col-span-2 lg:border-l lg:border-gray-200 lg:pl-8">
+        <section className={`${card} lg:col-span-2`}>
           <h2 className="text-base font-semibold text-primary-700 mb-2">{t('complaint.additionalInfo')}</h2>
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-slate-500">{t('complaint.reporterEmail')}</p>
+              <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                <Mail size={15} aria-hidden="true" />
+                {t('complaint.reporterEmail')}
+              </p>
               <p className="mt-0.5 text-base text-slate-900 wrap-break-word">{complaint.user?.email || t('common.na')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-500">{t('complaint.reporterPhone')}</p>
+              <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                <Phone size={15} aria-hidden="true" />
+                {t('complaint.reporterPhone')}
+              </p>
               <p className="mt-0.5 text-base text-slate-900">{complaint.user?.phone_number || t('common.na')}</p>
             </div>
           </div>
 
           {complaint.attachment && complaint.attachment.length > 0 && (
             <div className="mt-6 pt-4 border-t border-primary-200">
-              <h3 className="text-base font-semibold text-primary-700 mb-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold text-primary-700 mb-3">
+                <Paperclip size={18} aria-hidden="true" />
                 {t('complaint.attachments')} ({complaint.attachment.length})
               </h3>
               <div className="space-y-3">

@@ -655,7 +655,7 @@ export const IncidentDetails: React.FC = () => {
         {hasLocation && (
           <button onClick={() => navigate(`/dashboard/incidents/${incident.id}/tracking`)} className={btnGreen}>
             <MapPin size={15} />
-            Start live tracking
+            View Incident Location
           </button>
         )}
       </div>

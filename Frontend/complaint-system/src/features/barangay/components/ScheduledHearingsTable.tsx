@@ -22,12 +22,28 @@ const formatDate = (value?: string | Date | null) => {
     : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
+const formatOrdinal = (value: number) => {
+  const remainder = value % 100;
+  if (remainder >= 11 && remainder <= 13) return `${value}th`;
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+};
+
 const formatHearingDate = (incident: Incident, hearingLabel: string) => {
   if (!incident.hearing_date) return "N/A";
   const date = new Date(incident.hearing_date);
   if (Number.isNaN(date.getTime())) return "N/A";
   const hearingNumber = incident.hearing_count || 1;
-  return `${hearingLabel} ${hearingNumber}, ${date.toLocaleString(undefined, {
+  return `${formatOrdinal(hearingNumber)} ${hearingLabel}, ${date.toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",

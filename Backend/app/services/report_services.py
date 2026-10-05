@@ -83,7 +83,7 @@ def _draw_page(canvas, document):
   canvas.saveState()
   canvas.setFont("Helvetica", 7)
   canvas.drawString(18 * mm, 10 * mm, "Complaints and Feedback Management System")
-  canvas.drawRightString(285 * mm, 10 * mm, f"Page {canvas.getPageNumber()}")
+  canvas.drawRightString(document.pagesize[0] - 18 * mm, 10 * mm, f"Page {canvas.getPageNumber()}")
   canvas.restoreState()
 
 
@@ -125,16 +125,18 @@ def _build_complaint_report_pdf(report: dict) -> bytes:
     ("Rejected", "rejected"),
   ]:
     summary_rows.append([_p(label, styles["table"]), _p(report["summary"][key], styles["table_right"])])
-  summary = Table(summary_rows, colWidths=[110 * mm, 35 * mm], repeatRows=1)
+  summary = Table(summary_rows, colWidths=[90 * mm, 25 * mm], repeatRows=1)
   summary.setStyle(TableStyle([
     ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
     ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-    ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
   ]))
   story.append(summary)
+  story.append(Spacer(1, 2 * mm))
+  story.append(_p(report["summary_interpretation"], styles["body"]))
   story.append(_p("II. DISTRIBUTION OF COMPLAINTS BY BARANGAY", styles["section"]))
 
   status_headers = ["No.", "Barangay", "Total", "Resolved", "Under Review", "Escalated", "Rejected"]
@@ -142,15 +144,17 @@ def _build_complaint_report_pdf(report: dict) -> bytes:
   for index, row in enumerate(report["barangays"], 1):
     distribution_rows.append([_p(index, styles["table_center"]), _p(row["name"], styles["table"])] + [_p(row[key], styles["table_right"]) for key in ["total", "resolved", "under_review", "escalated", "rejected"]])
   distribution_rows.append([_p("", styles["table_center"]), _p("TOTAL", styles["table"])] + [_p(report["summary"][key], styles["table_right"]) for key in ["total", "resolved", "under_review", "escalated", "rejected"]])
-  distribution = Table(distribution_rows, colWidths=[10 * mm, 48 * mm, 18 * mm, 22 * mm, 25 * mm, 20 * mm, 20 * mm], repeatRows=1)
+  distribution = Table(distribution_rows, colWidths=[8 * mm, 38 * mm, 15 * mm, 18 * mm, 20 * mm, 17 * mm, 17 * mm], repeatRows=1)
   distribution.setStyle(TableStyle([
     ("GRID", (0, 0), (-1, -1), 0.35, colors.black), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
     ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EDEDED")), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
     ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
   ]))
   story.append(distribution)
+  story.append(Spacer(1, 2 * mm))
+  story.append(_p(report["barangay_interpretation"], styles["body"]))
   story.append(_p("III. CLASSIFICATION OF COMPLAINTS BY BARANGAY", styles["section"]))
 
   category_headers = ["No.", "Barangay", *[_display_category_name(category) for category in report["categories"]], "Total"]
@@ -158,19 +162,200 @@ def _build_complaint_report_pdf(report: dict) -> bytes:
   for index, row in enumerate(report["barangays"], 1):
     category_rows.append([_p(index, styles["table_center"]), _p(row["name"], styles["table"])] + [_p(row["categories"][category], styles["table_right"]) for category in report["categories"]] + [_p(row["total"], styles["table_right"])])
   category_rows.append([_p("", styles["table_center"]), _p("TOTAL", styles["table"])] + [_p(report["category_totals"][category], styles["table_right"]) for category in report["categories"]] + [_p(report["summary"]["total"], styles["table_right"])])
-  fixed_category_table_width = 10 * mm + 42 * mm + 18 * mm
-  category_width = (document.width - fixed_category_table_width) / max(len(report["categories"]), 1)
-  category = Table(category_rows, colWidths=[10 * mm, 42 * mm, *([category_width] * len(report["categories"])), 18 * mm], repeatRows=1)
+  # Keep numeric category columns compact; long category names wrap in the header
+  # instead of stretching every column across the full page.
+  category_column_width = 15 * mm
+  category = Table(
+    category_rows,
+    colWidths=[
+      8 * mm,
+      40 * mm,
+      *([category_column_width] * len(report["categories"])),
+      15 * mm,
+    ],
+    repeatRows=1,
+  )
   category.setStyle(TableStyle([
     ("GRID", (0, 0), (-1, -1), 0.35, colors.black), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
     ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EDEDED")), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
     ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+  ]))
+  story.append(category)
+  story.append(Spacer(1, 4 * mm))
+  story.append(_p("IV. CATEGORY INTERPRETATION", styles["section"]))
+  story.append(_p(report["category_interpretation"], styles["body"]))
+  document.build(story)
+  return output.getvalue()
+
+
+def _build_barangay_complaint_report_pdf(report: dict) -> bytes:
+  styles = _report_styles()
+  output = BytesIO()
+  document = BaseDocTemplate(
+    output,
+    pagesize=A4,
+    leftMargin=18 * mm,
+    rightMargin=18 * mm,
+    topMargin=16 * mm,
+    bottomMargin=18 * mm,
+    title="Barangay Complaint Report",
+    author="Complaints and Feedback Management System",
+  )
+  frame = Frame(document.leftMargin, document.bottomMargin, document.width, document.height, id="normal")
+  document.addPageTemplates([PageTemplate(id="report", frames=frame, onPage=_draw_page)])
+
+  story = [
+    _p("REPUBLIC OF THE PHILIPPINES", styles["header"]),
+    _p("MUNICIPALITY OF SANTA MARIA", styles["header"]),
+    _p("BARANGAY COMPLAINT REPORT", styles["title"]),
+    _p(f"Barangay: {report['barangay_name']}", styles["body"]),
+    _p(f"Reporting Period: {report['period_label']}", styles["body"]),
+    _p(f"Date Generated: {report['generated_label']}", styles["body"]),
+    Spacer(1, 4 * mm),
+    _p("I. WRITTEN INTERPRETATION", styles["section"]),
+    _p(report["interpretation"], styles["body"]),
+    Spacer(1, 2 * mm),
+    _p("II. COMPLAINT STATUS SUMMARY", styles["section"]),
+  ]
+
+  summary_rows = [[_p("STATUS", styles["table"]), _p("TOTAL", styles["table_center"])]]
+  for label, key in [
+    ("Total Complaints Submitted During Period", "total"),
+    ("Resolved", "resolved"),
+    ("Forwarded to LGU", "forwarded"),
+    ("Still Under Review", "under_review"),
+  ]:
+    summary_rows.append([_p(label, styles["table"]), _p(report["summary"][key], styles["table_right"])])
+  summary = Table(summary_rows, colWidths=[105 * mm, 25 * mm], repeatRows=1)
+  summary.setStyle(TableStyle([
+    ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
+    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
   ]))
-  story.append(category)
+  story.append(summary)
+  story.append(Spacer(1, 4 * mm))
+  story.append(_p("III. STATUS INTERPRETATION", styles["section"]))
+  interpretation_rows = [
+    [_p("Metric", styles["table"]), _p("Interpretation", styles["table"])],
+    [_p("Resolved", styles["table"]), _p("Complaints completed by the barangay or LGU during the selected period.", styles["table"])],
+    [_p("Forwarded to LGU", styles["table"]), _p("Complaints escalated to the LGU for further action.", styles["table"])],
+    [_p("Still Under Review", styles["table"]), _p("Complaints that remain submitted or are being reviewed.", styles["table"])],
+  ]
+  interpretations = Table(interpretation_rows, colWidths=[38 * mm, 92 * mm], repeatRows=1)
+  interpretations.setStyle(TableStyle([
+    ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8F1E8")),
+    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+  ]))
+  story.append(interpretations)
+  story.append(Spacer(1, 4 * mm))
+  story.append(_p("IV. COMPLAINT CATEGORIES", styles["section"]))
+  category_rows = [[_p("CATEGORY", styles["table"]), _p("TOTAL COMPLAINTS", styles["table_center"])]]
+  for category in report["categories"]:
+    category_rows.append([
+      _p(_display_category_name(category["name"]), styles["table"]),
+      _p(category["total"], styles["table_right"]),
+    ])
+  if not report["categories"]:
+    category_rows.append([_p("No complaints recorded during this period.", styles["table"]), _p(0, styles["table_right"])])
+  categories = Table(category_rows, colWidths=[105 * mm, 25 * mm], repeatRows=1)
+  categories.setStyle(TableStyle([
+    ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
+    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+  ]))
+  story.append(categories)
+  story.append(Spacer(1, 3 * mm))
+  story.append(_p(report["category_interpretation"], styles["body"]))
   document.build(story)
   return output.getvalue()
+
+
+async def generate_barangay_complaint_report(request: ComplaintReportRequest, current_user: User, db: AsyncSession) -> bytes:
+  if current_user.role != UserRole.BARANGAY_OFFICIAL or not current_user.barangay_account:
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+  if request.from_date > request.to_date:
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="from_date must not be after to_date")
+
+  try:
+    start_local = datetime.combine(request.from_date, time.min, tzinfo=APP_TIMEZONE)
+    end_local = datetime.combine(request.to_date + timedelta(days=1), time.min, tzinfo=APP_TIMEZONE)
+    date_filter = (
+      Complaint.barangay_id == current_user.barangay_account.barangay_id,
+      Complaint.created_at >= start_local.astimezone(timezone.utc),
+      Complaint.created_at < end_local.astimezone(timezone.utc),
+    )
+    status_group = case(
+      (Complaint.status.in_([ComplaintStatus.RESOLVED_BY_BARANGAY.value, ComplaintStatus.RESOLVED_BY_LGU.value]), "resolved"),
+      (Complaint.status == ComplaintStatus.FORWARDED_TO_LGU.value, "forwarded"),
+      (Complaint.status.in_([ComplaintStatus.SUBMITTED.value, ComplaintStatus.REVIEWED_BY_BARANGAY.value, ComplaintStatus.REVIEWED_BY_LGU.value]), "under_review"),
+      else_="other",
+    ).label("status_group")
+    rows = (await db.execute(
+      select(status_group, func.count(Complaint.id))
+      .where(*date_filter)
+      .group_by(status_group)
+    )).all()
+    counts = {group: count for group, count in rows}
+    summary = {
+      "total": sum(counts.values()),
+      "resolved": counts.get("resolved", 0),
+      "forwarded": counts.get("forwarded", 0),
+      "under_review": counts.get("under_review", 0),
+    }
+    category_rows = (await db.execute(
+      select(Category.category_name, func.count(Complaint.id))
+      .join(Category, Category.id == Complaint.category_id)
+      .where(*date_filter)
+      .group_by(Category.category_name)
+      .order_by(func.count(Complaint.id).desc(), Category.category_name.asc())
+    )).all()
+    category_totals = [{"name": name, "total": count} for name, count in category_rows]
+    if category_totals:
+      top_category = category_totals[0]
+      category_interpretation = (
+        f"The most complained category was {_display_category_name(top_category['name'])} "
+        f"with {top_category['total']} complaint(s)."
+      )
+    else:
+      category_interpretation = "No complaint categories were recorded during this period."
+    period_label = f"{_format_report_date(request.from_date)} - {_format_report_date(request.to_date)}"
+    barangay = (await db.execute(
+      select(Barangay).where(Barangay.id == current_user.barangay_account.barangay_id)
+    )).scalar_one_or_none()
+    if not barangay:
+      raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay not found")
+    report = {
+      "barangay_name": barangay.barangay_name,
+      "period_label": period_label,
+      "generated_label": _format_report_date(datetime.now(APP_TIMEZONE).date()),
+      "summary": summary,
+      "categories": category_totals,
+      "category_interpretation": category_interpretation,
+      "interpretation": (
+        f"During {period_label}, {summary['total']} complaint(s) were recorded for "
+        f"{barangay.barangay_name}. Of these, "
+        f"{summary['resolved']} were resolved, {summary['forwarded']} were forwarded to the LGU, "
+        f"and {summary['under_review']} remain under review."
+      ),
+    }
+    return _build_barangay_complaint_report_pdf(report)
+  except HTTPException:
+    raise
+  except Exception as exc:
+    logger.exception("Error generating barangay complaint report: %s", exc)
+    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while generating the report.") from exc
 
 
 async def generate_municipal_complaint_report(request: ComplaintReportRequest, current_user: User, db: AsyncSession) -> bytes:
@@ -216,12 +401,43 @@ async def generate_municipal_complaint_report(request: ComplaintReportRequest, c
       row["total"] = sum(row[key] for key in ["resolved", "under_review", "escalated", "rejected"])
       row["category_total"] = sum(row["categories"].values())
     summary = {key: sum(row[key] for row in report_barangays) for key in ["total", "resolved", "under_review", "escalated", "rejected"]}
-    category_totals = {category.category_name: sum(row["categories"][category.category_name] for row in report_barangays) for category in categories}
+    active_barangays = [row for row in report_barangays if row["total"] > 0]
+    if active_barangays:
+      top_barangay = max(active_barangays, key=lambda row: (row["total"], row["name"]))
+      barangay_interpretation = (
+        f"{top_barangay['name']} has the most complaints with {top_barangay['total']} "
+        f"complaint(s) during the selected period."
+      )
+    else:
+      barangay_interpretation = "No barangay complaints were recorded during this period."
+    summary_interpretation = (
+      f"The municipality recorded {summary['total']} complaint(s): {summary['resolved']} resolved, "
+      f"{summary['under_review']} under review, {summary['escalated']} escalated, and "
+      f"{summary['rejected']} rejected."
+    )
+    all_category_totals = {category.category_name: sum(row["categories"][category.category_name] for row in report_barangays) for category in categories}
+    category_totals = {
+      category_name: total
+      for category_name, total in all_category_totals.items()
+      if total > 0
+    }
+    if category_totals:
+      top_category_name, top_category_total = max(category_totals.items(), key=lambda item: (item[1], item[0]))
+      category_interpretation = (
+        f"The most complained category across the municipality was "
+        f"{_display_category_name(top_category_name)} with {top_category_total} complaint(s). "
+        f"The category table includes only categories with at least one complaint during the selected period."
+      )
+    else:
+      category_interpretation = "No complaint categories were recorded during this period."
     report = {
       "summary": summary,
+      "summary_interpretation": summary_interpretation,
       "barangays": report_barangays,
-      "categories": [category.category_name for category in categories],
+      "barangay_interpretation": barangay_interpretation,
+      "categories": list(category_totals),
       "category_totals": category_totals,
+      "category_interpretation": category_interpretation,
       "period_label": f"{_format_report_date(request.from_date)} - {_format_report_date(request.to_date)}",
       "generated_label": _format_report_date(datetime.now(APP_TIMEZONE).date()),
     }

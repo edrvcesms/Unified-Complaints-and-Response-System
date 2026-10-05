@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,6 +17,7 @@ import {
   type Plugin,
 } from "chart.js";
 import { Line, Bar as ChartJsBar, Pie as ChartJsPie } from "react-chartjs-2";
+import { Download, FileText, LoaderCircle, Printer, X } from "lucide-react";
 
 import type { Complaint, ComplaintSummary } from "../../../types/complaints/complaint";
 import type { Period } from "../../../types/general/stats";
@@ -38,6 +39,7 @@ import { TotalIcon, PendingIcon, ReviewIcon, ResolvedIcon, ForwardedIcon } from 
 import { StatCard } from "../../general";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { utcToLocal } from "../../../utils/dateUtils";
+import { generateBarangayComplaintReport } from "../../../services/reports/barangayReport";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartJsTooltip, ChartJsLegend);
 
@@ -433,6 +435,10 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
 
 // ─── Stable dashboard summary ────────────────────────────────────────────────
 
+function formatDateInput(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function useDashboardCardStats(summary: ComplaintSummary | undefined, complaints: Complaint[]) {
   return useMemo(() => {
     if (summary) {
@@ -476,6 +482,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [period, setPeriod] = useState<Period>("weekly");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [reportFromDate, setReportFromDate] = useState(`${now.getFullYear()}-01-01`);
+  const [reportToDate, setReportToDate] = useState(formatDateInput(now));
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportUrl, setReportUrl] = useState<string | null>(null);
+  const [reportFileName, setReportFileName] = useState("barangay-complaint-report.pdf");
+  const reportFrameRef = useRef<HTMLIFrameElement>(null);
 
   // Hooks (only the active one will actually fetch)
   const weekly = useWeeklyStats();
@@ -520,6 +534,46 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     [complaints]
   );
 
+  const handleGenerateReport = async () => {
+    if (!reportFromDate || !reportToDate) {
+      setReportError("Please select both a start date and an end date.");
+      return;
+    }
+    if (reportFromDate > reportToDate) {
+      setReportError("The start date must not be after the end date.");
+      return;
+    }
+    setIsReportLoading(true);
+    setReportError(null);
+    try {
+      const reportBlob = await generateBarangayComplaintReport(reportFromDate, reportToDate);
+      if (reportUrl) URL.revokeObjectURL(reportUrl);
+      setReportUrl(URL.createObjectURL(reportBlob));
+      setReportFileName(`barangay-complaint-report-${reportFromDate}-to-${reportToDate}.pdf`);
+      setIsReportDialogOpen(false);
+    } catch (reportRequestError) {
+      const responseData = (reportRequestError as { response?: { data?: Blob | { detail?: string } } })?.response?.data;
+      let responseDetail = typeof responseData === "object" && responseData && "detail" in responseData
+        ? responseData.detail
+        : undefined;
+      if (!responseDetail && responseData instanceof Blob) {
+        try {
+          responseDetail = (JSON.parse(await responseData.text()) as { detail?: string }).detail;
+        } catch {
+          responseDetail = undefined;
+        }
+      }
+      setReportError(responseDetail || "Unable to generate the report. Please try again.");
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
+  const closeReportPreview = () => {
+    if (reportUrl) URL.revokeObjectURL(reportUrl);
+    setReportUrl(null);
+  };
+
   return (
     <div className="min-w-0 space-y-5 sm:space-y-6">
       {/* Header */}
@@ -536,7 +590,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <StatCard label={t("dashboard.totalComplaints")} value={cardStats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} onClick={() => navigate("/dashboard/incidents")} />
+            <StatCard label={t("dashboard.totalComplaints")} value={cardStats.total} color="text-primary-700" bg="bg-primary-50" border="border-primary-100" icon={<TotalIcon />} onClick={() => navigate("/dashboard/archive")} />
             <StatCard label={t("dashboard.submitted")} value={cardStats.submitted} color="text-yellow-700" bg="bg-yellow-50" border="border-yellow-100" icon={<PendingIcon />} onClick={() => navigate("/dashboard/incidents?complaint_status=submitted")} />
             <StatCard label={t("dashboard.underReview")} value={cardStats.underReview} color="text-indigo-700" bg="bg-indigo-50" border="border-indigo-100" icon={<ReviewIcon />} onClick={() => navigate("/dashboard/incidents?complaint_status=reviewed_by_barangay")} />
             <StatCard label={t("dashboard.forwarded")} value={cardStats.forwarded} color="text-orange-700" bg="bg-orange-50" border="border-orange-100" icon={<ForwardedIcon />} onClick={() => navigate("/dashboard/archive?complaint_status=forwarded_to_lgu")} />
@@ -571,6 +625,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               onYearChange={setYear}
               onMonthChange={setMonth}
             />
+            <button
+              type="button"
+              onClick={() => { setReportError(null); setIsReportDialogOpen(true); }}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
+            >
+              <FileText size={16} aria-hidden="true" />
+              Generate Report
+            </button>
           </div>
         </div>
 
@@ -635,6 +697,64 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
         </div>
       </div>
+
+      {isReportDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="barangay-report-dialog-title">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="barangay-report-dialog-title" className="text-lg font-semibold text-gray-900">Generate barangay report</h2>
+                <p className="mt-1 text-sm text-gray-500">Choose the reporting period for this barangay.</p>
+              </div>
+              <button type="button" onClick={() => setIsReportDialogOpen(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700" aria-label="Close report dialog">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-gray-700">
+                From date
+                <input type="date" value={reportFromDate} onChange={(event) => setReportFromDate(event.target.value)} className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </label>
+              <label className="text-sm font-medium text-gray-700">
+                To date
+                <input type="date" value={reportToDate} onChange={(event) => setReportToDate(event.target.value)} className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              </label>
+            </div>
+            {reportError && <p className="mt-3 text-sm text-red-600" role="alert">{reportError}</p>}
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setIsReportDialogOpen(false)} className="rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleGenerateReport} disabled={isReportLoading} className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
+                {isReportLoading && <LoaderCircle size={16} className="animate-spin" />}
+                {isReportLoading ? "Generating..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="barangay-report-preview-title">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:px-5">
+              <h2 id="barangay-report-preview-title" className="text-base font-semibold text-gray-900">Barangay complaint report</h2>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => reportFrameRef.current?.contentWindow?.print()} className="inline-flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  <Printer size={16} aria-hidden="true" />
+                  Print
+                </button>
+                <a href={reportUrl} download={reportFileName} className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                  <Download size={16} aria-hidden="true" />
+                  Download PDF
+                </a>
+                <button type="button" onClick={closeReportPreview} className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800" aria-label="Close report preview">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <iframe ref={reportFrameRef} src={reportUrl} title="Barangay complaint report PDF preview" className="min-h-0 flex-1 bg-gray-100" />
+          </div>
+        </div>
+      )}
 
       {/* Recent Barangay Activities table */}
       <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden">

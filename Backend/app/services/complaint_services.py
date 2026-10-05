@@ -12,7 +12,7 @@ from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from app.schemas.complaint_schema import ComplaintCreateData, ComplaintWithUserData,MyComplaintData, ComplaintOut
 from datetime import datetime
 from app.utils.logger import logger
@@ -105,6 +105,30 @@ async def get_all_complaints(db: AsyncSession, params: ListParams, barangay_id: 
 
     except Exception as e:
         logger.exception(f"Error in get_all_complaints: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+async def get_complaint_summary(barangay_id: int, db: AsyncSession) -> dict[str, int]:
+    """Return all-time complaint totals for a barangay without loading a page."""
+    try:
+        result = await db.execute(
+            select(Complaint.status, func.count(Complaint.id))
+            .where(Complaint.barangay_id == barangay_id)
+            .group_by(Complaint.status)
+        )
+        counts = {status_value: count for status_value, count in result.all()}
+        resolved_statuses = {
+            ComplaintStatus.RESOLVED_BY_BARANGAY.value,
+        }
+        return {
+            "total": sum(counts.values()),
+            "submitted": counts.get("submitted", 0),
+            "under_review": counts.get("reviewed_by_barangay", 0),
+            "forwarded": counts.get("forwarded_to_lgu", 0),
+            "resolved": sum(counts.get(status_value, 0) for status_value in resolved_statuses),
+        }
+    except Exception as e:
+        logger.exception(f"Error in get_complaint_summary: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     
     

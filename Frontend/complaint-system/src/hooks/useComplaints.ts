@@ -2,9 +2,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   getComplaintById,
   getComplaints,
+  getComplaintSummary,
   getWeeklyComplaintStats,
 } from "../services/complaints/complaints";
-import type { Complaint, WeeklyComplaintStats } from "../types/complaints/complaint";
+import type { Complaint, ComplaintSummary, WeeklyComplaintStats } from "../types/complaints/complaint";
 import type { PaginatedResponse } from "../types/general/pagination";
 import type { PaginationQueryParams } from "../types/general/pagination";
 
@@ -57,3 +58,16 @@ export const useWeeklyComplaintStats = () => {
     error,
   };
 }
+
+export const useComplaintSummary = () => {
+  const { data, isLoading, error } = useQuery<ComplaintSummary>({
+    queryKey: ["complaints", "summary"],
+    queryFn: getComplaintSummary,
+    staleTime: 1000 * 60 * 5,
+  });
+  return {
+    summary: data,
+    isLoading,
+    error,
+  };
+};

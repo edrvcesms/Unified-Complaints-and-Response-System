@@ -32,6 +32,7 @@ import { LguArchiveIncidents } from "./features/lgu/pages/ArchiveIncidents"
 import { LguAnnouncements } from "./features/lgu/pages/Announcements"
 import { MonthlyBarangayReports } from "./features/lgu/pages/MonthlyBarangayReports"
 import { EmergencyIncidentsPage } from "./features/barangay/pages/EmergencyIncidents"
+import IncidentTrackingPage from "./features/general/pages/IncidentTrackingPage"
 import { MonthlyReportDetails } from "./features/lgu/pages/MonthlyReportDetails"
 import { CategoryIncidents } from "./features/lgu/pages/CategoryIncidents"
 import { SuperAdminAccounts, SuperAdminCategories, SuperAdminDashboard, SuperAdminEmergencyHotlines, SuperAdminEvacuationCenters, SuperAdminResidentAccountManagement, SuperAdminUserDetails, SuperAdminUserRejectedComplaints, SuperAdminVerifyUsers } from "./features/superadmin/pages"
@@ -89,6 +90,7 @@ function App() {
               <Route path="scheduled-hearings" element={<ScheduledHearings />} />
               <Route path="archive" element={<BarangayArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<IncidentDetails />} />
+              <Route path="incidents/:incidentId/tracking" element={<IncidentTrackingPage />} />
               <Route path="incidents/:incidentId/complaints" element={<IncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<ComplaintDetails />} />
               <Route path="emergency-incidents" element={<EmergencyIncidentsPage />} />
@@ -108,6 +110,7 @@ function App() {
               <Route path="incidents" element={<LguIncidents />} />
               <Route path="archive" element={<LguArchiveIncidents />} />
               <Route path="incidents/:incidentId" element={<LguIncidentDetails />} />
+              <Route path="incidents/:incidentId/tracking" element={<IncidentTrackingPage />} />
               <Route path="incidents/:incidentId/complaints" element={<LguIncidentComplaints />} />
               <Route path="incidents/complaints/:id" element={<LguComplaintDetails />} />
               <Route path="monthly-reports" element={<MonthlyBarangayReports />} />

@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
-import MapModal from '../../../components/MapModal';
 import { useIncidentDetails } from "../../../hooks/useIncidents";
 import { ArrowLeft, AlertCircle, MapPin, Users, Play, X, Image as ImageIcon } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
@@ -95,9 +94,6 @@ export const LguIncidentDetails: React.FC = () => {
     { isOpen: false, title: '', message: '' }
   );
   const [lightboxAttachment, setLightboxAttachment] = useState<{ url: string; type: string } | null>(null);
-
-  // Map modal state
-  const [isMapOpen, setIsMapOpen] = useState(false);
 
 
   useEffect(() => {
@@ -336,10 +332,8 @@ export const LguIncidentDetails: React.FC = () => {
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 text-sm font-medium text-orange-700 border border-orange-100 capitalize"><AlertCircle size={14} />severity: {severityLabel}</span>
           </div>
         </div>
-        {hasLocation && <button onClick={() => setIsMapOpen(true)} className={glassGreenButton}><MapPin size={15} />View incident location</button>}
+        {hasLocation &&         <button onClick={() => navigate(`/lgu/incidents/${incident.id}/tracking`)} className={glassGreenButton}><MapPin size={15} />Start live tracking</button>}
       </div>
-
-      {hasLocation && <MapModal open={isMapOpen} onClose={() => setIsMapOpen(false)} latitude={incident.latitude} longitude={incident.longitude} originLatitude={incident.barangay?.latitude ?? null} originLongitude={incident.barangay?.longitude ?? null} incidentTitle={incident.title} />}
 
       <dl className={`${card} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4`}>
         <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0"><MapPin size={20} /></div><div className="min-w-0"><dt className="text-sm font-medium text-slate-500">Barangay</dt><dd className="mt-0.5 text-base font-semibold text-slate-900">{incident.barangay?.barangay_name || "N/A"}</dd></div></div>

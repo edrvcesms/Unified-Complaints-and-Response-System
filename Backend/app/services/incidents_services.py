@@ -36,23 +36,6 @@ from app.models.barangay import Barangay
 from app.schemas.web_push_schema import PushNotificationPayload
 from app.utils.incident_filter import _apply_incident_filters_and_sort, PRIORITY_SCORE
 
-def _active_statuses_by_role(role: str) -> set[str]:
-    if role == UserRole.BARANGAY_OFFICIAL:
-        return {
-            ComplaintStatus.SUBMITTED.value,
-            ComplaintStatus.REVIEWED_BY_BARANGAY.value,
-        }
-
-    if role == UserRole.LGU_OFFICIAL:
-        return {
-            ComplaintStatus.FORWARDED_TO_LGU.value,
-            ComplaintStatus.REVIEWED_BY_LGU.value,
-        }
-
-    return set()
-
-
-
 async def get_incidents_by_barangay(barangay_id: int, db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentOut]:
     try:
         cache_key = build_list_cache_key("incidents", params.model_dump(mode="json"), barangay_id=barangay_id, view="active")
@@ -357,8 +340,6 @@ async def mark_incident_as_viewed(user_id: int, incident_id: int, db: AsyncSessi
 async def get_all_incidents(current_user: User, db: AsyncSession, params: IncidentListParams) -> PaginatedResponse[IncidentOut]:
     try:
         role = current_user.role
-        active_statuses = _active_statuses_by_role(role)
-        archive_statuses = [status_value for status_value in ComplaintStatus if status_value.value not in active_statuses]
 
         if role == UserRole.BARANGAY_OFFICIAL:
             barangay_account = getattr(current_user, "barangay_account", None)
@@ -366,22 +347,9 @@ async def get_all_incidents(current_user: User, db: AsyncSession, params: Incide
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Barangay account not found for current user")
 
             barangay_id = barangay_account.barangay_id
-            archive_filter = (
-                select(IncidentComplaintModel.incident_id)
-                .join(IncidentComplaintModel.complaint)
-                .where(
-                    IncidentComplaintModel.incident_id == IncidentModel.id,
-                    Complaint.status.in_([s.value for s in archive_statuses]),
-                )
-                .exists()
-            )
-
             statement = (
                 select(IncidentModel)
-                .where(
-                    IncidentModel.barangay_id == barangay_id,
-                    archive_filter,
-                )
+                .where(IncidentModel.barangay_id == barangay_id)
                 .options(*QueryOptions.incident_minimal())
             )
             statement = _apply_incident_filters_and_sort(statement, params)
@@ -389,19 +357,8 @@ async def get_all_incidents(current_user: User, db: AsyncSession, params: Incide
             return PaginatedResponse[IncidentOut].model_validate(page)
 
         if role == UserRole.LGU_OFFICIAL:
-            archive_filter = (
-                select(IncidentComplaintModel.incident_id)
-                .join(IncidentComplaintModel.complaint)
-                .where(
-                    IncidentComplaintModel.incident_id == IncidentModel.id,
-                    Complaint.status.in_([s.value for s in archive_statuses]),
-                )
-                .exists()
-            )
-
             statement = (
                 select(IncidentModel)
-                .where(archive_filter)
                 .options(*QueryOptions.incident_minimal())
             )
             statement = _apply_incident_filters_and_sort(statement, params)

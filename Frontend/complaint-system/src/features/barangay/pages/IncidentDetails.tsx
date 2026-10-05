@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
-import MapModal from '../../../components/MapModal';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
@@ -153,9 +152,6 @@ export const IncidentDetails: React.FC = () => {
       setAttachmentError('');
     }
   }, [isRejectModalOpen]);
-
-  // Map modal state
-  const [isMapOpen, setIsMapOpen] = useState(false);
 
   // Handle successful resolve
   useEffect(() => {
@@ -657,25 +653,12 @@ export const IncidentDetails: React.FC = () => {
         </div>
 
         {hasLocation && (
-          <button onClick={() => setIsMapOpen(true)} className={btnGreen}>
+          <button onClick={() => navigate(`/dashboard/incidents/${incident.id}/tracking`)} className={btnGreen}>
             <MapPin size={15} />
-            View incident location
+            Start live tracking
           </button>
         )}
       </div>
-
-      {/* Map modal (directions are shown inside the modal when available) */}
-      {hasLocation && (
-        <MapModal
-          open={isMapOpen}
-          onClose={() => setIsMapOpen(false)}
-          latitude={incident.latitude}
-          longitude={incident.longitude}
-          originLatitude={incident.barangay?.latitude ?? null}
-          originLongitude={incident.barangay?.longitude ?? null}
-          incidentTitle={incident.title}
-        />
-      )}
 
       {/* Metadata cards */}
       <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

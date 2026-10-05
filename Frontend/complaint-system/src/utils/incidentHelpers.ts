@@ -18,7 +18,7 @@ export const getStatusColor = (status: string, _userRole?: string): string => {
     under_review: "bg-primary-100 text-primary-800",
     reviewed_by_barangay: "bg-primary-100 text-primary-800",
     reviewed_by_lgu: "bg-yellow-100 text-yellow-800",
-    submitted: "bg-yellow-100 text-yellow-800",
+    submitted: "bg-gray-100 text-gray-800",
     in_progress: "bg-orange-100 text-orange-800",
     pending: "bg-gray-100 text-gray-800",
     forwarded_to_lgu: "bg-blue-100 text-blue-800",

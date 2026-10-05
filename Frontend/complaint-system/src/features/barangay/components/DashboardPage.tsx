@@ -18,8 +18,8 @@ import {
 } from "chart.js";
 import { Line, Bar as ChartJsBar, Pie as ChartJsPie } from "react-chartjs-2";
 
-import type { Complaint } from "../../../types/complaints/complaint";
-import type { AnyStats, Period } from "../../../types/general/stats";
+import type { Complaint, ComplaintSummary } from "../../../types/complaints/complaint";
+import type { Period } from "../../../types/general/stats";
 import {
   useWeeklyStats,
   useMonthlyStats,
@@ -45,6 +45,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 interface DashboardPageProps {
   complaints: Complaint[];
+  summary?: ComplaintSummary;
   isLoading: boolean;
 }
 
@@ -52,7 +53,7 @@ interface DashboardPageProps {
 
 // Minimalist card with a thicker bottom/right edge to give a subtle 3D look
 const CHART_CARD_CLASS =
-  "bg-white rounded-lg border border-gray-300 border-b-4 border-r-4 p-4 sm:p-5";
+  "min-w-0 bg-white rounded-lg border border-gray-300 border-b-4 border-r-4 p-3 sm:p-4 lg:p-5";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -92,14 +93,14 @@ function PeriodSelector({
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {/* Period tabs */}
-      <div className="flex rounded-lg border border-gray-200 overflow-hidden bg-white text-base">
+      <div className="flex max-w-full rounded-lg border border-gray-200 overflow-hidden bg-white text-sm sm:text-base">
         {(["weekly", "monthly", "yearly"] as Period[]).map((p) => (
           <button
             key={p}
             onClick={() => onChange(p)}
-            className={`px-3 py-1.5 font-medium capitalize transition-colors ${period === p
+            className={`px-2.5 py-1.5 font-medium capitalize transition-colors sm:px-3 ${period === p
                 ? "bg-primary-600 text-white"
                 : "text-gray-600 hover:bg-gray-50"
               }`}
@@ -114,7 +115,7 @@ function PeriodSelector({
         <select
           value={month}
           onChange={(e) => onMonthChange(Number(e.target.value))}
-          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="min-w-0 max-w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 sm:px-3 sm:text-base"
         >
           {MONTHS.map((name, idx) => (
             <option key={idx + 1} value={idx + 1}>{name}</option>
@@ -127,7 +128,7 @@ function PeriodSelector({
         <select
           value={year}
           onChange={(e) => onYearChange(Number(e.target.value))}
-          className="text-base rounded-lg border border-gray-200 px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="min-w-0 max-w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 sm:px-3 sm:text-base"
         >
           {years.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -424,26 +425,23 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
   };
 
   return (
-    <div className="h-[21rem] w-full min-w-0">
+    <div className="h-full min-h-[18rem] w-full min-w-0">
       <ChartJsBar data={barData} options={options} />
     </div>
   );
 }
 
-// ─── Card summary from active period stats ───────────────────────────────────
+// ─── Stable dashboard summary ────────────────────────────────────────────────
 
-function useDashboardCardStats(
-  activeStats: AnyStats | undefined,
-  complaints: Complaint[]
-) {
+function useDashboardCardStats(summary: ComplaintSummary | undefined, complaints: Complaint[]) {
   return useMemo(() => {
-    if (activeStats) {
+    if (summary) {
       return {
-        total: activeStats.total_complaints,
-        submitted: activeStats.total_submitted,
-        underReview: activeStats.total_under_review,
-        forwarded: activeStats.total_forwarded,
-        resolved: activeStats.total_resolved,
+        total: summary.total,
+        submitted: summary.submitted,
+        underReview: summary.under_review,
+        forwarded: summary.forwarded,
+        resolved: summary.resolved,
       };
     }
 
@@ -460,13 +458,14 @@ function useDashboardCardStats(
         (c) => c.status === "resolved_by_barangay"
       ).length,
     };
-  }, [activeStats, complaints]);
+  }, [complaints, summary]);
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   complaints,
+  summary,
   isLoading,
 }) => {
   const { t } = useTranslation();
@@ -490,7 +489,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         : yearly;
 
   const { data, isLoading: statsLoading, isError, error, isFetching } = activeQuery;
-  const cardStats = useDashboardCardStats(data, complaints);
+  // Cards use the dashboard's complaint summary and are intentionally
+  // independent from the period-specific chart query.
+  const cardStats = useDashboardCardStats(summary, complaints);
 
   // Transform to chart data
   const chartData = useMemo(() => {
@@ -520,17 +521,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
           {t("dashboard.title")}
         </h1>
-        <p className="text-base text-gray-600 mt-1">{t("dashboard.subtitle")}</p>
+        <p className="mt-1 text-sm text-gray-600 sm:text-base">{t("dashboard.subtitle")}</p>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-5">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
@@ -545,9 +546,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
       {/* Period controls + charts */}
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {/* Control row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-gray-700">
               {t("dashboard.activityOverview")}
@@ -556,9 +557,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {t("dashboard.complaintTrends")}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {isFetching && !statsLoading && (
-              <span className="text-sm text-gray-400 animate-pulse">
+              <span className="text-xs text-gray-400 animate-pulse sm:text-sm">
                 {t("dashboard.refreshing")}
               </span>
             )}
@@ -591,14 +592,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
               {t("dashboard.complaintsByStatus")}
             </h3>
-            <div className="w-full min-w-0 h-[21rem] sm:h-80">
+            <div className="h-72 w-full min-w-0 sm:h-80 lg:h-[22rem]">
               <StatusChart data={chartData} />
             </div>
           </div>
         )}
 
         {/* Category charts — side by side on larger screens */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Pie: total by category for the period */}
           {statsLoading ? (
             <SkeletonPieChart />
@@ -625,7 +626,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 {t("dashboard.residentSatisfactionByCategory")}
               </h3>
-              <div className="w-full min-w-0 h-[22rem] sm:h-80">
+              <div className="h-72 w-full min-w-0 sm:h-80 lg:h-[22rem]">
                 <CategoryFeedbackChart
                   categories={categoryFeedbackRates.data?.by_category ?? []}
                 />

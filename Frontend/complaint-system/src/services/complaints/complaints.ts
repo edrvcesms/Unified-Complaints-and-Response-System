@@ -1,5 +1,5 @@
 import { complaintsApi } from "../axios/apiServices";
-import type { Complaint, WeeklyComplaintStats } from "../../types/complaints/complaint";
+import type { Complaint, ComplaintSummary, WeeklyComplaintStats } from "../../types/complaints/complaint";
 import type { PaginatedResponse } from "../../types/general/pagination";
 import type { PaginationQueryParams } from "../../types/general/pagination";
 import { buildQueryString } from "../../utils/buildQuery";
@@ -29,5 +29,14 @@ export const getWeeklyComplaintStats = async (): Promise<WeeklyComplaintStats> =
   } catch (error) {
     console.error("Error fetching weekly complaint stats:", error);
     throw error;
-  };
+  }
+};
+
+export const getComplaintSummary = async (): Promise<ComplaintSummary> => {
+  try {
+    return await complaintsApi.get("/summary");
+  } catch (error) {
+    console.error("Error fetching complaint summary:", error);
+    throw error;
+  }
 };

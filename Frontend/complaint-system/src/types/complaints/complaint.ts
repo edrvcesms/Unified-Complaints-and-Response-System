@@ -42,6 +42,14 @@ export interface ComplaintStats {
   forwarded?: number;
 }
 
+export interface ComplaintSummary {
+  total: number;
+  submitted: number;
+  under_review: number;
+  forwarded: number;
+  resolved: number;
+}
+
 export interface DailyComplaintCounts {
   submitted: number;
   resolved: number;

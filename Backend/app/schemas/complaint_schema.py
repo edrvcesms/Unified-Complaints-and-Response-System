@@ -109,6 +109,7 @@ class ComplaintOut(BaseModel):
     status: str | None
     is_rejected_by_lgu: Optional[bool] = None
     created_at: datetime
+    category: Optional[CategoryModel] = None
     user: ComplaintUserData | None = None
 
     class Config:

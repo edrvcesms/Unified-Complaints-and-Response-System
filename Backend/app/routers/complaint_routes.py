@@ -8,6 +8,7 @@ from app.dependencies.rate_limiter import limiter
 from app.services.complaint_services import submit_complaint, get_my_complaints, get_all_complaints, get_complaint_by_id, get_complaint_summary, user_complaints_statistics, get_weekly_stats, get_monthly_stats, get_yearly_stats, get_geometric_location_details
 from app.dependencies.auth_dependency import get_current_user
 from app.services.attachment_services import upload_attachments
+from app.utils.attachments import validate_upload_files
 from app.models.user import User
 from fastapi.requests import Request
 from app.core.pagination_params import ListParams, IncidentListParams
@@ -66,6 +67,9 @@ async def get_complaint(request: Request, complaint_id: int, db: AsyncSession = 
 @limiter.limit("10/minute")
 async def create_complaint(request: Request, data: str = Form(...), attachments: List[UploadFile] = File(default=[]), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     complaint_data = ComplaintCreateData.parse_raw(data)
+    if attachments:
+        await validate_upload_files(attachments)
+
     complaint = await submit_complaint(complaint_data, current_user.id, db)
     if attachments:
         await upload_attachments(attachments, current_user.id, complaint.id, db)

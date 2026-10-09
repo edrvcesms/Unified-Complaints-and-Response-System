@@ -7,6 +7,7 @@ MAX_ATTACHMENT_SIZE_BYTES = 100 * 1024 * 1024
 ALLOWED_MEDIA_TYPES = [
     "image/jpeg",
     "image/png",
+    "image/webp",
     "video/mp4",
     "video/mpeg",
     "video/quicktime",

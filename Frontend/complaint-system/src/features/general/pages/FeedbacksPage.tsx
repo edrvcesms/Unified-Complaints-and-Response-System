@@ -7,7 +7,7 @@ import { useFeedbacks } from "../../../hooks/useFeedbacks";
 import { useAuthStore } from "../../../store/authStore";
 import { Pagination } from "../../barangay/components/Pagination";
 import { GridCardSkeleton } from "../../barangay/components/Skeletons";
-import { maskEmail, maskFullName } from "../../../utils/privacy";
+import { maskFullName } from "../../../utils/privacy";
 
 const FEEDBACKS_PER_PAGE = 6;
 

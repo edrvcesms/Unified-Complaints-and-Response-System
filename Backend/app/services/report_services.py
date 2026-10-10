@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.barangay import Barangay
 from app.models.category import Category
 from app.models.complaint import Complaint
+from app.models.post_incident_feedback import PostIncidentFeedback
 from app.constants.complaint_status import ComplaintStatus
 from app.constants.roles import UserRole
 from app.schemas.report_schema import ComplaintReportRequest
@@ -42,6 +43,20 @@ def _format_report_date(value):
 
 def _display_category_name(category_name):
   return str(category_name).replace("_", " ").replace("-", " ").title()
+
+
+def _satisfaction_performance(average_rating):
+  if average_rating is None:
+    return "No Rating"
+  if average_rating <= 1.5:
+    return "Poor"
+  if average_rating < 3:
+    return "Below Average"
+  if average_rating < 4:
+    return "Average"
+  if average_rating <= 4.5:
+    return "Good"
+  return "Excellent"
 
 
 def _status_group_expression():
@@ -207,6 +222,7 @@ def _build_barangay_complaint_report_pdf(report: dict) -> bytes:
   document.addPageTemplates([PageTemplate(id="report", frames=frame, onPage=_draw_page)])
 
   story = [
+    ## the font must be Times New Roman 
     _p("REPUBLIC OF THE PHILIPPINES", styles["header"]),
     _p("MUNICIPALITY OF SANTA MARIA", styles["header"]),
     _p("BARANGAY COMPLAINT REPORT", styles["title"]),
@@ -278,6 +294,40 @@ def _build_barangay_complaint_report_pdf(report: dict) -> bytes:
   story.append(categories)
   story.append(Spacer(1, 3 * mm))
   story.append(_p(report["category_interpretation"], styles["body"]))
+  story.append(Spacer(1, 4 * mm))
+  story.append(_p("V. RESIDENT SATISFACTION BY CATEGORY", styles["section"]))
+  satisfaction_rows = [[
+    _p("CATEGORY", styles["table"]),
+    _p("RESPONSES", styles["table_center"]),
+    _p("AVERAGE RATING", styles["table_center"]),
+    _p("PERFORMANCE", styles["table_center"]),
+  ]]
+  for category in report["satisfaction_by_category"]:
+    satisfaction_rows.append([
+      _p(_display_category_name(category["name"]), styles["table"]),
+      _p(category["responses"], styles["table_right"]),
+      _p(category["average_rating"], styles["table_right"]),
+      _p(category["performance"], styles["table_center"]),
+    ])
+  if not report["satisfaction_by_category"]:
+    satisfaction_rows.append([
+      _p("No resident satisfaction ratings recorded during this period.", styles["table"]),
+      _p(0, styles["table_right"]),
+      _p("N/A", styles["table_right"]),
+      _p("No Rating", styles["table_center"]),
+    ])
+  satisfaction = Table(satisfaction_rows, colWidths=[62 * mm, 22 * mm, 28 * mm, 28 * mm], repeatRows=1)
+  satisfaction.setStyle(TableStyle([
+    ("GRID", (0, 0), (-1, -1), 0.4, colors.black),
+    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
+    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("LEFTPADDING", (0, 0), (-1, -1), 3), ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+  ]))
+  story.append(satisfaction)
+  story.append(Spacer(1, 3 * mm))
+  story.append(_p(report["satisfaction_interpretation"], styles["body"]))
   document.build(story)
   return output.getvalue()
 
@@ -330,6 +380,40 @@ async def generate_barangay_complaint_report(request: ComplaintReportRequest, cu
       )
     else:
       category_interpretation = "No complaint categories were recorded during this period."
+    satisfaction_rows = (await db.execute(
+      select(
+        Category.category_name,
+        func.count(PostIncidentFeedback.id),
+        func.avg(PostIncidentFeedback.ratings),
+      )
+      .join(Complaint, Complaint.category_id == Category.id)
+      .join(PostIncidentFeedback, PostIncidentFeedback.complaint_id == Complaint.id)
+      .where(*date_filter)
+      .group_by(Category.category_name)
+      .order_by(func.avg(PostIncidentFeedback.ratings).asc(), Category.category_name.asc())
+    )).all()
+    satisfaction_by_category = [
+      {
+        "name": name,
+        "responses": responses,
+        "average_rating": round(float(average_rating), 2),
+        "performance": _satisfaction_performance(float(average_rating)),
+      }
+      for name, responses, average_rating in satisfaction_rows
+    ]
+    overall_satisfaction = (await db.execute(
+      select(func.avg(PostIncidentFeedback.ratings))
+      .join(Complaint, PostIncidentFeedback.complaint_id == Complaint.id)
+      .where(*date_filter)
+    )).scalar_one()
+    if overall_satisfaction is None:
+      satisfaction_interpretation = "No resident satisfaction ratings were recorded during this period."
+    else:
+      overall_rating = round(float(overall_satisfaction), 2)
+      satisfaction_interpretation = (
+        f"The barangay's overall resident satisfaction rating was {overall_rating:.2f} out of 5.00, "
+        f"which is {_satisfaction_performance(overall_rating).lower()}."
+      )
     period_label = f"{_format_report_date(request.from_date)} - {_format_report_date(request.to_date)}"
     barangay = (await db.execute(
       select(Barangay).where(Barangay.id == current_user.barangay_account.barangay_id)
@@ -343,6 +427,8 @@ async def generate_barangay_complaint_report(request: ComplaintReportRequest, cu
       "summary": summary,
       "categories": category_totals,
       "category_interpretation": category_interpretation,
+      "satisfaction_by_category": satisfaction_by_category,
+      "satisfaction_interpretation": satisfaction_interpretation,
       "interpretation": (
         f"During {period_label}, {summary['total']} complaint(s) were recorded for "
         f"{barangay.barangay_name}. Of these, "

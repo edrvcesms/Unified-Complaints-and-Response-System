@@ -7,6 +7,7 @@ import { useFeedbacks } from "../../../hooks/useFeedbacks";
 import { useAuthStore } from "../../../store/authStore";
 import { Pagination } from "../../barangay/components/Pagination";
 import { GridCardSkeleton } from "../../barangay/components/Skeletons";
+import { maskEmail, maskFullName } from "../../../utils/privacy";
 
 const FEEDBACKS_PER_PAGE = 6;
 
@@ -18,7 +19,7 @@ interface PaginationQueryParams {
 
 const getDisplayName = (firstName?: string | null, lastName?: string | null) => {
   const fullName = `${firstName || ""} ${lastName || ""}`.trim();
-  return fullName;
+  return fullName ? maskFullName(fullName) : "Anonymous User";
 };
 
 const getFormattedDate = (rawDate: string) => {

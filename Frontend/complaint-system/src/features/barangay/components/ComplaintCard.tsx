@@ -3,6 +3,7 @@ import { Calendar, MapPin } from "lucide-react";
 import { StatusBadge } from './StatusBadge';
 import type { Complaint } from "../../../types/complaints/complaint";
 import { formatDate } from "../../../utils/dateUtils";
+import { maskFullName } from "../../../utils/privacy";
 
 interface ComplaintCardProps {
   complaint: Complaint;
@@ -38,7 +39,7 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({ complaint, onClick
           </h4>
           <p className="text-xs text-gray-500 mt-1">
             {complaint.user
-              ? `${complaint.user.first_name} ${complaint.user.last_name}`
+              ? maskFullName(`${complaint.user.first_name ?? ""} ${complaint.user.last_name ?? ""}`.trim())
               : "Unknown"}
           </p>
         </div>

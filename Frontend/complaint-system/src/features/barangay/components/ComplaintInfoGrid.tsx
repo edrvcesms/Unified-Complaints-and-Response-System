@@ -2,6 +2,7 @@ import { Calendar, MapPin, User, Tag } from "lucide-react";
 import type { Complaint } from "../../../types/complaints/complaint";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDate } from "../../../utils/dateUtils";
+import { maskFullName } from "../../../utils/privacy";
 
 interface InfoCardProps {
   icon: React.ReactNode;
@@ -53,8 +54,8 @@ export const ComplaintInfoGrid: React.FC<ComplaintInfoGridProps> = ({ complaint 
       icon={<User size={20} />}
       label="Reported by"
       value={
-        complaint.user 
-          ? `${complaint.user.first_name} ${complaint.user.last_name}`
+        complaint.user
+          ? maskFullName(`${complaint.user.first_name ?? ""} ${complaint.user.last_name ?? ""}`.trim())
           : "Unknown"
       }
       bgColor=""

@@ -4,6 +4,7 @@ import { Pagination } from "./Pagination";
 import { TableSkeleton } from "./Skeletons";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { useTranslation } from "react-i18next";
+import { maskEmail, maskFullName } from "../../../utils/privacy";
 
 interface ScheduledHearingsTableProps {
   incidents: Incident[];
@@ -55,8 +56,11 @@ const formatHearingDate = (incident: Incident, hearingLabel: string) => {
 const getReporterName = (incident: Incident) => {
   const reporter = incident.complaint_clusters?.[0]?.complaint?.user;
   if (!reporter) return "N/A";
+
   const name = `${reporter.first_name || ""} ${reporter.last_name || ""}`.trim();
-  return name || reporter.email || "N/A";
+  if (name) return maskFullName(name);
+  if (reporter.email) return maskEmail(reporter.email);
+  return "N/A";
 };
 
 export const ScheduledHearingsTable: React.FC<ScheduledHearingsTableProps> = ({

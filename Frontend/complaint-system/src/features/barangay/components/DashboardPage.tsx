@@ -40,6 +40,7 @@ import { StatCard } from "../../general";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { utcToLocal } from "../../../utils/dateUtils";
 import { generateBarangayComplaintReport } from "../../../services/reports/barangayReport";
+import { getSatisfactionColor, SATISFACTION_LEVELS } from "../../../utils/satisfactionColor";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, ChartJsTooltip, ChartJsLegend);
 
@@ -184,16 +185,18 @@ function StatusChart({ data }: StatusChartProps) {
     plugins: {
       legend: {
         position: "bottom",
-        maxHeight: isMobile ? 86 : 110,
+        maxHeight: isMobile ? 110 : 140,
         labels: {
           font: {
-            size: isMobile ? 10 : 13,
+            size: isMobile ? 13 : 16,
+            weight: "bold",
           },
-          boxWidth: isMobile ? 10 : 14,
-          boxHeight: isMobile ? 10 : 14,
+          color: "#1f2937",
+          boxWidth: isMobile ? 14 : 18,
+          boxHeight: isMobile ? 14 : 18,
           usePointStyle: true,
           pointStyle: "rectRounded",
-          padding: isMobile ? 8 : 12,
+          padding: isMobile ? 12 : 18,
         },
       },
       tooltip: {
@@ -316,16 +319,18 @@ function CategoryPieChart({ totalByCategory }: CategoryChartProps) {
     plugins: {
       legend: {
         position: "bottom",
-        maxHeight: isMobile ? 96 : 120,
+        maxHeight: isMobile ? 120 : 150,
         labels: {
           font: {
-            size: isMobile ? 10 : 13,
+            size: isMobile ? 13 : 16,
+            weight: "bold",
           },
-          boxWidth: isMobile ? 10 : 14,
-          boxHeight: isMobile ? 10 : 14,
+          color: "#1f2937",
+          boxWidth: isMobile ? 14 : 18,
+          boxHeight: isMobile ? 14 : 18,
           usePointStyle: true,
           pointStyle: "circle",
-          padding: isMobile ? 8 : 12,
+          padding: isMobile ? 12 : 18,
         },
       },
       tooltip: {
@@ -357,6 +362,8 @@ interface CategoryFeedbackChartProps {
 }
 
 function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
   if (categories.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-base text-gray-400">
@@ -369,9 +376,15 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
     labels: categories.map((category) => formatCategoryName(category.category_name)),
     datasets: [{
       label: "Average rating",
-      data: categories.map((category) => Math.max(0, Math.min(5, category.average_rating))),
-      backgroundColor: "#fbbf24",
-      borderColor: "#92400e",
+      data: categories.map((category) => {
+        const rating = Number(category.average_rating);
+        return Number.isFinite(rating) ? Math.max(0, Math.min(5, rating)) : null;
+      }),
+      backgroundColor: categories.map((category) => getSatisfactionColor(category.average_rating)),
+      borderColor: categories.map((category) => {
+        const rating = Number(category.average_rating);
+        return Number.isFinite(rating) ? getSatisfactionColor(rating) : "#d1d5db";
+      }),
       borderWidth: 2,
       borderSkipped: false,
       borderRadius: 4,
@@ -387,7 +400,19 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (context) => ` ${Number(context.raw).toFixed(1)} / 5`,
+          label: (context) => {
+            const category = categories[context.dataIndex ?? 0];
+            const rating = Number(category?.average_rating);
+            const name = category?.category_name
+              ? formatCategoryName(category.category_name)
+              : context.label;
+
+            if (!Number.isFinite(rating)) {
+              return ` ${name}: Unavailable`;
+            }
+
+            return ` ${name}: ${rating.toFixed(1)} / 5`;
+          },
         },
       },
     },
@@ -395,7 +420,11 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
       x: {
         ticks: {
           color: "#374151",
-          font: { weight: "bold" },
+          font: {
+            size: isMobile ? 11 : 14,
+            weight: "bold",
+          },
+          maxRotation: isMobile ? 0 : 45,
         },
         border: { display: true, color: "#374151", width: 2 },
         grid: {
@@ -410,7 +439,10 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
         ticks: {
           stepSize: 1,
           color: "#374151",
-          font: { weight: "bold" },
+          font: {
+            size: isMobile ? 11 : 14,
+            weight: "bold",
+          },
         },
         border: { display: true, color: "#374151", width: 2 },
         grid: {
@@ -419,16 +451,48 @@ function CategoryFeedbackChart({ categories }: CategoryFeedbackChartProps) {
         },
         title: {
           display: true,
-          text: "Average rating (1–5)",
+          text: "Average rating (0–5)",
           color: "#4b5563",
+          font: {
+            size: isMobile ? 11 : 14,
+            weight: "bold",
+          },
         },
       },
     },
   };
 
   return (
-    <div className="h-full min-h-[18rem] w-full min-w-0">
-      <ChartJsBar data={barData} options={options} />
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+      {/* Chart takes the remaining space */}
+      <div className="relative min-h-0 flex-1">
+        <ChartJsBar data={barData} options={options} />
+      </div>
+
+      {/* Legend keeps its own height, so it stays inside the card, the legend must be centered */}
+      <div className="mt-2 shrink-0 border-t border-gray-200 pt-2 ">
+        <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
+          {SATISFACTION_LEVELS.map((level) => (
+            <div
+              key={level.label}
+              className="flex items-center gap-2"
+              style={{
+                fontFamily: "inherit",
+                fontSize: isMobile ? 13 : 16,
+                fontWeight: 900,
+                color: "#1f2937",
+                lineHeight: 1.2,
+              }}
+            >
+              <span
+                className="h-3.5 w-3.5 shrink-0 rounded-sm sm:h-[18px] sm:w-[18px]"
+                style={{ backgroundColor: level.color }}
+              />
+              <span className="font-medium">{level.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -670,7 +734,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 {t("dashboard.complaintIssues")}
               </h3>
-              <div className="w-full min-w-0 h-72 sm:h-64">
+              <div className="w-full min-w-0 h-80">
                 <CategoryPieChart
                   totalByCategory={data?.total_by_category ?? {}}
                 />
@@ -678,17 +742,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           )}
 
-          {/* Bar: category over time */}
+          {/* Bar: resident satisfaction by category */}
           {statsLoading || categoryFeedbackRates.isLoading ? (
             <SkeletonChart />
           ) : categoryFeedbackRates.isError ? (
             <ErrorBanner message={t("dashboard.statsLoadFailed")} />
           ) : (
-            <div className="bg-white rounded-lg border border-gray-300 p-4 sm:p-5">
+            <div className={CHART_CARD_CLASS}>
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-4">
                 {t("dashboard.residentSatisfactionByCategory")}
               </h3>
-              <div className="h-72 w-full min-w-0 sm:h-80 lg:h-[22rem]">
+              <div className="h-80 w-full min-w-0">
                 <CategoryFeedbackChart
                   categories={categoryFeedbackRates.data?.by_category ?? []}
                 />

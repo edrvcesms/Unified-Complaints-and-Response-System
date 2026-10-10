@@ -9,6 +9,7 @@ import { useAuthStore } from "../../../store/authStore";
 import { formatStatus } from "../../../utils/incidentHelpers";
 import { formatDate } from "../../../utils/dateUtils";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
+import { maskEmail, maskFullName, maskPhoneNumber } from "../../../utils/privacy";
 
 const card = "bg-white border border-gray-200 rounded-xl shadow-sm p-5";
 
@@ -87,7 +88,7 @@ export const LguComplaintDetails: React.FC = () => {
           <div className="min-w-0">
             <dt className="text-sm font-medium text-slate-500">Reported by</dt>
             <dd className="mt-0.5 text-base font-semibold text-slate-900 wrap-break-word">
-              {complaint.user ? `${complaint.user.first_name} ${complaint.user.last_name}` : t('frontend.complaints.noData')}
+              {complaint.user ? maskFullName(`${complaint.user.first_name ?? ""} ${complaint.user.last_name ?? ""}`.trim()) : t('frontend.complaints.noData')}
             </dd>
           </div>
         </div>
@@ -125,14 +126,14 @@ export const LguComplaintDetails: React.FC = () => {
                 <Mail size={15} aria-hidden="true" />
                 {t('frontend.complaints.reporterEmail')}
               </p>
-              <p className="mt-0.5 text-base text-slate-900 wrap-break-word">{complaint.user?.email || t('frontend.complaints.noData')}</p>
+              <p className="mt-0.5 text-base text-slate-900 wrap-break-word">{complaint.user?.email ? maskEmail(complaint.user.email) : t('frontend.complaints.noData')}</p>
             </div>
             <div>
               <p className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
                 <Phone size={15} aria-hidden="true" />
                 {t('frontend.complaints.reporterPhone')}
               </p>
-              <p className="mt-0.5 text-base text-slate-900">{complaint.user?.phone_number || t('frontend.complaints.noData')}</p>
+              <p className="mt-0.5 text-base text-slate-900">{complaint.user?.phone_number ? maskPhoneNumber(complaint.user.phone_number) : t('frontend.complaints.noData')}</p>
             </div>
           </div>
 

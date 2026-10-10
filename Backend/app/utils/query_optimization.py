@@ -98,6 +98,12 @@ class QueryOptions:
                 Complaint.is_rejected_by_lgu,
                 Complaint.created_at,
                 Complaint.user_id,
+                Complaint.category_id,
+            ),
+            QueryOptions._category_summary_load(
+                selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.category)
             ),
             selectinload(IncidentModel.complaint_clusters)
             .selectinload(IncidentComplaintModel.complaint)
@@ -131,6 +137,12 @@ class QueryOptions:
                 Complaint.title,
                 Complaint.status,
                 Complaint.created_at,
+                Complaint.category_id,
+            ),
+            QueryOptions._category_summary_load(
+                selectinload(IncidentModel.complaint_clusters)
+                .selectinload(IncidentComplaintModel.complaint)
+                .selectinload(Complaint.category)
             )
         )
 

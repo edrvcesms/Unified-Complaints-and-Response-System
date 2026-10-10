@@ -23,12 +23,14 @@ interface PaginationQueryParams {
   search?: string;
 }
 
+import { maskEmail, maskFullName } from "../../utils/privacy";
+
 const formatName = (feedback: PostIncidentFeedback) => {
   const firstName = feedback.user.first_name || "";
   const lastName = feedback.user.last_name || "";
   const fullName = `${firstName} ${lastName}`.trim();
 
-  return fullName || feedback.user.email || `User #${feedback.user.id}`;
+  return maskFullName(fullName) || maskEmail(feedback.user.email) || `User #${feedback.user.id}`;
 };
 
 const RatingBadge: React.FC<{ rating: number }> = ({ rating }) => {
@@ -169,7 +171,7 @@ export const FeedbacksPage: React.FC<FeedbacksPageProps> = ({
                     <td className="px-4 py-3 text-sm font-mono text-gray-500">#{feedback.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <div className="font-medium">{formatName(feedback)}</div>
-                      <div className="text-xs text-gray-500">{feedback.user.email || t('frontend.feedbacks.noEmailProvided')}</div>
+                      <div className="text-xs text-gray-500">{feedback.user.email ? maskEmail(feedback.user.email) : t('frontend.feedbacks.noEmailProvided')}</div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
                       <button

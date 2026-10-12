@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentDetails } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, Play, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, Play, X, Image as ImageIcon, FileText } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDate, formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -36,16 +36,17 @@ const getResponseAuthorName = (response: any, incident: any) => {
 
 const ResponseMediaAction: React.FC<{ attachment: { file_url: string; media_type?: string }; onClick: () => void }> = ({ attachment, onClick }) => {
   const isVideo = attachment.media_type?.startsWith('video');
+  const isDocument = attachment.media_type?.startsWith('application');
 
   return (
     <button
       type="button"
       onClick={onClick}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
-      aria-label={isVideo ? 'View video response attachment' : 'View image response attachment'}
+      aria-label={isVideo ? 'View video response attachment' : isDocument ? 'Open document response attachment' : 'View image response attachment'}
     >
-      {isVideo ? <Play className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
-      View media
+      {isVideo ? <Play className="w-3.5 h-3.5" /> : isDocument ? <FileText className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+      {isDocument ? 'Open document' : 'View media'}
     </button>
   );
 };
@@ -344,7 +345,7 @@ export const LguIncidentDetails: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <section className={`${card} lg:col-span-3`}><h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.description')}</h2><p className="text-base text-slate-800 leading-relaxed whitespace-pre-wrap">{incident.description}</p><div className="mt-6 pt-4 border-t border-gray-400 flex items-center justify-between gap-3"><div className="min-w-0"><h3 className="text-base font-semibold text-primary-700">{t('incidents.details.relatedComplaints')} ({incident.complaint_count})</h3><p className="text-sm text-slate-600">View all complaints associated with this incident.</p></div><button onClick={handleViewAllComplaints} className={glassOutlineButton}><Users size={15} />{t('incidents.details.viewAllComplaints')}</button></div></section>
-        <section className={`${card} lg:col-span-2`}><h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.remarks')}</h2>{sortedResponses.length === 0 ? <p className="text-base text-slate-500">No responses yet.</p> : <div className={`${sortedResponses.length > 2 ? 'max-h-80 overflow-y-auto' : ''} space-y-3 pr-1`}>{sortedResponses.map((response) => { const attachments = response.response_attachments ?? []; const assignedMembers = response.barangay_members ?? []; return <div key={response.id} className="rounded-lg border border-gray-200 bg-slate-50 p-4 shadow-sm"><p className="text-base text-slate-800 whitespace-pre-wrap leading-6">{response.actions_taken}</p>{attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((attachment: any, idx: number) => <ResponseMediaAction key={attachment.id ?? idx} attachment={attachment} onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })} />)}</div>}{assignedMembers.length > 0 && <p className="mt-2 text-sm text-slate-600">Assigned to: {assignedMembers.map((member: any) => member.name).join(", ")}</p>}<div className="mt-2 flex items-center justify-between gap-3"><p className="text-sm font-medium text-slate-600">{getResponseAuthorName(response, incident)}</p><p className="text-xs text-slate-400">{formatDateTime(response.response_date, { year: 'numeric', month: 'numeric', day: 'numeric' })}</p></div></div>; })}</div>}</section>
+        <section className={`${card} lg:col-span-2`}><h2 className="text-base font-semibold text-primary-700 mb-2">{t('incidents.details.remarks')}</h2>{sortedResponses.length === 0 ? <p className="text-base text-slate-500">No responses yet.</p> : <div className={`${sortedResponses.length > 2 ? 'max-h-80 overflow-y-auto' : ''} space-y-3 pr-1`}>{sortedResponses.map((response) => { const attachments = response.response_attachments ?? []; const assignedMembers = response.barangay_members ?? []; return <div key={response.id} className="rounded-lg border border-gray-200 bg-slate-50 p-4 shadow-sm"><p className="text-base text-slate-800 whitespace-pre-wrap leading-6">{response.actions_taken}</p>{attachments.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{attachments.map((attachment: any, idx: number) => <ResponseMediaAction key={attachment.id ?? idx} attachment={attachment} onClick={() => { if (attachment.media_type?.startsWith('application')) { window.open(attachment.file_url, '_blank', 'noopener,noreferrer'); return; } setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' }); }} />)}</div>}{assignedMembers.length > 0 && <p className="mt-2 text-sm text-slate-600">Assigned to: {assignedMembers.map((member: any) => member.name).join(", ")}</p>}<div className="mt-2 flex items-center justify-between gap-3"><p className="text-sm font-medium text-slate-600">{getResponseAuthorName(response, incident)}</p><p className="text-xs text-slate-400">{formatDateTime(response.response_date, { year: 'numeric', month: 'numeric', day: 'numeric' })}</p></div></div>; })}</div>}</section>
       </div>
 
       {shouldShowActions && <div className={`${card} flex flex-wrap items-center justify-end gap-2`}><button onClick={handleReview} disabled={reviewIncidentMutation.isPending || isSubmitted || isUnderReviewByLgu || isResolved || isUnderReviewByBarangay} className={glassYellowButton}>{reviewIncidentMutation.isPending ? "Reviewing..." : "Mark for review"}</button><button onClick={handleReject} disabled={rejectIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay} className={glassDangerButton}>{rejectIncidentMutation.isPending ? "Rejecting..." : "Reject"}</button><button onClick={handleResolve} disabled={resolveIncidentMutation.isPending || isSubmitted || isResolved || isUnderReviewByBarangay} className={glassGreenButton}>{resolveIncidentMutation.isPending ? "Resolving..." : "Resolve"}</button></div>}

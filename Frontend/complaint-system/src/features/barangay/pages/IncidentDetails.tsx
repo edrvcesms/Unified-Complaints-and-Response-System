@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useIncidentDetails, useRejectionCategories } from "../../../hooks/useIncidents";
-import { ArrowLeft, AlertCircle, MapPin, Users, UserRound, Clock, CalendarIcon, Play, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, AlertCircle, MapPin, Users, UserRound, Clock, CalendarIcon, Play, X, Image as ImageIcon, FileText } from "lucide-react";
 import { formatCategoryName } from "../../../utils/categoryFormatter";
 import { formatDate, formatDateTime } from "../../../utils/dateUtils";
 import LoadingIndicator from "../../general/LoadingIndicator";
@@ -47,16 +47,17 @@ const getResponseAuthorName = (response: any, incident: any) => {
 
 const ResponseMediaAction: React.FC<{ attachment: { file_url: string; media_type?: string }; onClick: () => void }> = ({ attachment, onClick }) => {
   const isVideo = attachment.media_type?.startsWith('video');
+  const isDocument = attachment.media_type?.startsWith('application');
 
   return (
     <button
       type="button"
       onClick={onClick}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
-      aria-label={isVideo ? 'View video response attachment' : 'View image response attachment'}
+      aria-label={isVideo ? 'View video response attachment' : isDocument ? 'Open document response attachment' : 'View image response attachment'}
     >
-      {isVideo ? <Play className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
-      View media
+      {isVideo ? <Play className="w-3.5 h-3.5" /> : isDocument ? <FileText className="w-3.5 h-3.5" /> : <ImageIcon className="w-3.5 h-3.5" />}
+      {isDocument ? 'Open document' : 'View media'}
     </button>
   );
 };
@@ -767,7 +768,13 @@ export const IncidentDetails: React.FC = () => {
                           <ResponseMediaAction
                             key={attachment.id ?? idx}
                             attachment={attachment}
-                            onClick={() => setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' })}
+                            onClick={() => {
+                              if (attachment.media_type?.startsWith('application')) {
+                                window.open(attachment.file_url, '_blank', 'noopener,noreferrer');
+                                return;
+                              }
+                              setLightboxAttachment({ url: attachment.file_url, type: attachment.media_type ?? 'image' });
+                            }}
                           />
                         ))}
                       </div>

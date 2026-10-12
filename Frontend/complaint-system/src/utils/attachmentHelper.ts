@@ -8,6 +8,9 @@ const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   "video/quicktime",
   "video/x-msvideo",
   "video/x-ms-wmv",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
 const ALLOWED_ATTACHMENT_EXTENSIONS = [
@@ -20,6 +23,9 @@ const ALLOWED_ATTACHMENT_EXTENSIONS = [
   ".mov",
   ".avi",
   ".wmv",
+  ".pdf",
+  ".doc",
+  ".docx",
 ];
 
 const isAllowedAttachmentType = (file: File) => {
@@ -34,7 +40,7 @@ const isAllowedAttachmentType = (file: File) => {
 export const validateAttachments = (attachments: File[]): string | null => {
   const invalidFiles = attachments.filter((file) => !isAllowedAttachmentType(file));
   if (invalidFiles.length > 0) {
-    return `Unsupported file type: ${invalidFiles[0].name}. Please upload JPG, JPEG, PNG, MP4, MPEG, MOV, AVI, or WMV files only.`;
+    return `Unsupported file type: ${invalidFiles[0].name}. Please upload JPG, JPEG, PNG, MP4, MPEG, MOV, AVI, WMV, PDF, DOC, or DOCX files only.`;
   }
 
   const totalSize = attachments.reduce((sum, f) => sum + f.size, 0);

@@ -13,6 +13,7 @@ export const CATEGORY = {
   public_intoxication: "Public Intoxication",
   illegal_vending: "Illegal Vending",
   water_supply_issue: "Water Supply Issues",
+  debt_related_concerns: "Debt-Related Concerns",
   garbage_collection: "Garbage Collection Issues",
   vandalism: "Vandalism",
   other: "Other",

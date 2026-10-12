@@ -105,6 +105,7 @@ async def post_incident_feedback(feedbackData: PostIncidentFeedbackCreate, user_
         if complaint.status not in [
             ComplaintStatus.RESOLVED_BY_BARANGAY.value,
             ComplaintStatus.RESOLVED_BY_LGU.value,
+            ComplaintStatus.REJECTED.value
         ] or complaint.has_feedback:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

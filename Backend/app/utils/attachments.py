@@ -13,6 +13,9 @@ ALLOWED_MEDIA_TYPES = [
     "video/quicktime",
     "video/x-msvideo",
     "video/x-ms-wmv",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]
 
 

@@ -596,6 +596,12 @@ async def reject_complaints_by_incident(incident_id: int, rejector_id: int, resp
 
 async def reject_incident(incident_id: int, rejector_id: int, response_data: ResponseCreateSchema, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
+        if not attachments:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Attachments are required when rejecting an incident",
+            )
+
         result = await db.execute(
             select(IncidentComplaintModel.complaint_id)
             .where(IncidentComplaintModel.incident_id == incident_id)

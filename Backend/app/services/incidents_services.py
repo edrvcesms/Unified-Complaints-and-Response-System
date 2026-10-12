@@ -155,6 +155,12 @@ async def get_incident_by_id(incident_id: int, db: AsyncSession):
     
 async def forward_incident_to_lgu(response_data: ResponseCreateSchema, incident_id: int, responder_id: int, attachments: Optional[List[UploadFile]], db: AsyncSession):
     try:
+        if not attachments:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Attachments are required when escalating an incident",
+            )
+
         incident_result = await db.execute(select(IncidentModel).where(IncidentModel.id == incident_id))
         incident = incident_result.scalars().first()
         

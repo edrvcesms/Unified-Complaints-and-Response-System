@@ -75,3 +75,18 @@ async def create_complaint(request: Request, data: str = Form(...), attachments:
         await upload_attachments(attachments, current_user.id, complaint.id, db)
 #await cluster_complaints(complaint_data, current_user.id, complaint.id, db)
     return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}
+
+
+    
+@router.post("/submit-complaints", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+async def create_complaint(request: Request, user_id: int,data: str = Form(...), attachments: List[UploadFile] = File(default=[]), db: AsyncSession = Depends(get_async_db)):
+    complaint_data = ComplaintCreateData.parse_raw(data)
+    if attachments:
+        await validate_upload_files(attachments)
+
+    complaint = await submit_complaint(complaint_data, user_id=user_id, db=db)
+    if attachments:
+        await upload_attachments(attachments, user_id, complaint.id, db)
+#await cluster_complaints(complaint_data, user_id, complaint.id, db)
+    return {"message": "Complaint submitted successfully", "complaint_id": complaint.id}

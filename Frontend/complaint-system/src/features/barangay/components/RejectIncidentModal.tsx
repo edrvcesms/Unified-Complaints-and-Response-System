@@ -185,7 +185,7 @@ export const RejectIncidentModal: React.FC<RejectIncidentModalProps> = ({
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime,video/x-msvideo,video/x-ms-wmv,.jpg,.jpeg,.png,.mp4,.mpeg,.mpg,.mov,.avi,.wmv"
+                accept="image/jpeg,image/png,video/mp4,video/mpeg,video/quicktime,video/x-msvideo,video/x-ms-wmv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.jpg,.jpeg,.png,.mp4,.mpeg,.mpg,.mov,.avi,.wmv,.pdf,.doc,.docx"
                 onChange={handleFileSelect}
                 className="hidden"
                 disabled={isLoading}

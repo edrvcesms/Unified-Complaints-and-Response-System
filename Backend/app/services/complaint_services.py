@@ -10,6 +10,7 @@ from app.models.incident_model import IncidentModel
 from app.models.complaint_logs import ComplaintLogs
 from app.schemas.cluster_complaint_schema import ClusterComplaintSchema
 from app.models.complaint import Complaint
+from app.models.category import Category
 from app.models.incident_complaint import IncidentComplaintModel
 from app.models.barangay_account import BarangayAccount
 from sqlalchemy import func, select, update
@@ -569,6 +570,10 @@ async def get_my_complaints(user_id: int, params: IncidentListParams, db: AsyncS
         else:
             query = query.order_by(Complaint.created_at.desc())
             
+        if params.category_name:
+            logger.info(f"Filtering my complaints by category_name: {params.category_name}")
+            query = query.where(Complaint.category.has(Category.category_name == params.category_name))
+
         page = await paginate(db, query, params, mapper=lambda item: ComplaintOut.model_validate(item, from_attributes=True))
         response = PaginatedResponse[ComplaintOut].model_validate(page)
         await set_cache(cached_key, response.model_dump(mode="json"), expiration=DEFAULT_LIST_CACHE_TTL_SECONDS if response.data else EMPTY_LIST_CACHE_TTL_SECONDS)

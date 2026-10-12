@@ -31,7 +31,7 @@ const getStatusColor = (status: string) => {
       return "bg-green-100 text-green-800";
     case "under_review":
     case "reviewed_by_barangay":
-      return "bg-primary-100 text-primary-800";
+      return "bg-yellow-100 text-yellow-800";
     case "submitted":
       return "bg-gray-100 text-gray-800";
     case "under_review_by_lgu":

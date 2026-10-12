@@ -109,7 +109,9 @@ export const useResolveIncident = (incidentId: number) => {
     mutationKey: ["resolveIncident", incidentId],
     mutationFn: (payload: { actions_taken: string; attachments?: File[]; barangay_member_ids?: number[] }) =>
       resolveIncident(incidentId, payload),
-    onSuccess: () => {
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["complaints"] });       // list + summary + details
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
       queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
@@ -130,7 +132,9 @@ export const useReviewIncident = (incidentId: number) => {
         { actions_taken: payload.actions_taken, attachments: payload.attachments, barangay_member_ids: payload.barangay_member_ids },
         payload.signal
       ),
-    onSuccess: () => {
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ["complaints"] });       // list + summary + details
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
       queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
@@ -149,6 +153,8 @@ export const useForwardIncidentToLgu = (incidentId: number) => {
       endorseIncidentToLgu(incidentId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
+       queryClient.invalidateQueries({ queryKey: ["complaints"] });       // list + summary + details
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
       queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
@@ -162,10 +168,10 @@ export const useRejectIncident = (incidentId: number) => {
     mutationFn: (payload: { actions_taken: string; rejection_category_id?: number; attachments?: File[]; barangay_member_ids?: number[] }) =>
       rejectIncident(incidentId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["incidents"] });
-      queryClient.invalidateQueries({ queryKey: ["incidents", incidentId] });
-      queryClient.invalidateQueries({ queryKey: ["assignedIncidents"] });
-      queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
+       queryClient.invalidateQueries({ queryKey: ["complaints"] });       // list + summary + details
+    queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["complaints"] });       // list + summary + details
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
       queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
     }
@@ -225,6 +231,8 @@ export const useMarkIncidentAsViewed = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", "complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
       queryClient.invalidateQueries({ queryKey: ["allForwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["forwardedIncidents"] });
       queryClient.invalidateQueries({ queryKey: ["archiveIncidents"] });
@@ -240,6 +248,8 @@ export const useNotifyHearing = () => {
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
       queryClient.invalidateQueries({ queryKey: ["incidents", variables.incidentId] });
       queryClient.invalidateQueries({ queryKey: ["scheduledHearings"] });
+      queryClient.invalidateQueries({ queryKey: ["complaints"] });
+      queryClient.invalidateQueries({ queryKey: ["complaint-stats"] });
     }
   });
   return mutation;

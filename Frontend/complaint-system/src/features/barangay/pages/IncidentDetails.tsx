@@ -793,7 +793,15 @@ export const IncidentDetails: React.FC = () => {
                         <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
                         {getResponseAuthorName(response, incident)}
                       </p>
-                      <p className="text-xs text-slate-400">{formatDateTime(response.response_date, { year: 'numeric', month: 'numeric', day: 'numeric' })}</p>
+                      <p className="text-xs text-slate-400">
+  {formatDateTime(response.response_date, {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: undefined,
+    minute: undefined,
+  })}
+</p>
                     </div>
                   </div>
                 );

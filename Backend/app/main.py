@@ -103,4 +103,4 @@ app.include_router(emergency_queues.router, prefix="/api/v1/emergency-queue", ta
 app.include_router(emergency_routes.router, prefix="/api/v1/emergency", tags=["Emergency"])
 app.include_router(web_push_routes.router, prefix="/api/v1/web-push", tags=["Web Push"])
 app.include_router(evacuation_centers_routes.router, prefix="/api/v1/evacuation-centers", tags=["Evacuation Centers"])
-app.include_router(dummy_account.router, prefix="/api/v1/dummy-accounts", tags=["Dummy Accounts"])
+# app.include_router(dummy_account.router, prefix="/api/v1/dummy-accounts", tags=["Dummy Accounts"])

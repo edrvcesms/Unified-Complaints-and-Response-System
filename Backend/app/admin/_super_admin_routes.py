@@ -131,7 +131,6 @@ async def get_users_route(
         raise e
 
 @router.get("/stats/user-registrations", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def get_user_registration_stats_route(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
@@ -206,7 +205,6 @@ async def delete_pinecone_data_route(request: Request, index_name: str, db: Asyn
         )
         
 @router.get("/submission-restricted-users", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def get_submission_restricted_users_route(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
@@ -263,7 +261,6 @@ async def remove_submission_restriction_route(
         raise e
     
 @router.get("/rejected-complaints/{user_id}", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def get_user_rejected_complaints_route(
     request: Request,
     user_id: int,

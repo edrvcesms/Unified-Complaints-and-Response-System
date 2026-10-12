@@ -14,17 +14,14 @@ router = APIRouter()
 
 
 @router.get("/profile", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def barangay_profile(request: Request, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_barangay_account(current_user.id, db)
 
 @router.get("/all", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def list_barangays(request: Request, params: ListParams = Depends(), db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_all_barangays(db, params, current_user.id)
 
 @router.get("/{barangay_id}", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def retrieve_barangay(request: Request, barangay_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_barangay_by_id(barangay_id, db)
 
@@ -34,7 +31,6 @@ async def mark_incidents_viewed(request: Request, barangay_id: int, current_user
     return await mark_barangay_incidents_viewed(current_user.id, barangay_id)
 
 @router.get("/{barangay_id}/members", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
 async def list_barangay_members(request: Request, barangay_id: int, db: AsyncSession = Depends(get_async_db), current_user: User = Depends(get_current_user)):
     return await get_barangay_members(db, barangay_id)
 
